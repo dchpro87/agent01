@@ -1,36 +1,122 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Modern AI Chatbot with Next.js 15 and Ollama
+
+A modern, streaming chatbot built with Next.js 15, Vercel AI SDK, and Ollama. Features real-time streaming, beautiful UI, and local AI processing.
+
+## Features
+
+- 🚀 **Real-time streaming** using Vercel AI SDK
+- 💬 **Modern chat interface** with Tailwind CSS
+- 🤖 **Local AI processing** with Ollama
+- 📱 **Responsive design** that works on all devices
+- 🌙 **Dark mode support**
+- ⚡ **Fast and efficient** with Next.js 15
+- 🎨 **Beautiful UI** with smooth animations
+
+## Prerequisites
+
+Before running this application, make sure you have:
+
+1. **Node.js** (version 18 or higher)
+2. **Ollama** installed and running locally
+
+### Installing Ollama
+
+1. Download and install Ollama from [https://ollama.ai](https://ollama.ai)
+2. Once installed, pull a model (the default is `llama3.2:3b`):
+   ```bash
+   ollama pull llama3.2:3b
+   ```
+3. Make sure Ollama is running:
+   ```bash
+   ollama serve
+   ```
 
 ## Getting Started
 
-First, run the development server:
+1. **Clone and install dependencies:**
+   ```bash
+   git clone <your-repo>
+   cd agent01
+   npm install
+   ```
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+2. **Start the development server:**
+   ```bash
+   npm run dev
+   ```
+
+3. **Open your browser:**
+   Navigate to [http://localhost:3000](http://localhost:3000)
+
+## Configuration
+
+### Changing the AI Model
+
+To use a different Ollama model, edit `src/app/api/chat/route.ts`:
+
+```typescript
+const result = streamText({
+  model: ollama('your-model-name'), // Change this line
+  messages,
+  temperature: 0.7,
+  maxTokens: 2048,
+});
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Available models depend on what you have installed in Ollama. Popular options include:
+- `llama3.2:3b` (default, faster)
+- `llama3.2:7b` (more capable)
+- `codellama` (for coding tasks)
+- `mistral` (alternative option)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Customizing the UI
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The chat interface is located in `src/components/Chat.tsx`. You can customize:
+- Colors and styling
+- Message layout
+- Icons and animations
+- Error handling
 
-## Learn More
+## Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+├── app/
+│   ├── api/chat/route.ts    # Chat API endpoint
+│   ├── layout.tsx           # Root layout
+│   └── page.tsx             # Main page
+├── components/
+│   └── Chat.tsx             # Chat component
+└── types/                   # TypeScript types
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Built With
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **[Next.js 15](https://nextjs.org/)** - React framework
+- **[Vercel AI SDK](https://sdk.vercel.ai/)** - AI integration
+- **[Ollama](https://ollama.ai/)** - Local AI provider
+- **[Tailwind CSS](https://tailwindcss.com/)** - Styling
+- **[Lucide React](https://lucide.dev/)** - Icons
+- **[TypeScript](https://www.typescriptlang.org/)** - Type safety
 
-## Deploy on Vercel
+## Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+This app can be deployed to any platform that supports Next.js:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Vercel** (recommended)
+- **Netlify**
+- **Railway**
+- **DigitalOcean App Platform**
+
+Note: When deploying, you'll need to ensure Ollama is accessible to your deployed application, which typically means setting up Ollama on a server and updating the API endpoint.
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## License
+
+MIT License - see LICENSE file for details.

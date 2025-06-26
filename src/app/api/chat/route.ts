@@ -13,6 +13,7 @@ const MessageSchema = z.object({
 const RequestSchema = z.object({
   messages: z.array(MessageSchema).min(1, "At least one message is required"),
   model: z.string().optional(),
+  systemPrompt: z.string().optional(),
 });
 
 export async function POST(req: Request) {
@@ -62,11 +63,17 @@ export async function POST(req: Request) {
       );
     }
 
-    const { messages, model } = validationResult.data;
+    const { messages, model, systemPrompt } = validationResult.data;
 
     // Get configuration from environment variables, allowing model override
     const { ollama: config } = aiConfig;
     const selectedModel = model || config.model;
+
+    // Default system prompt if none provided
+    const defaultSystemPrompt =
+      "You are a helpful AI assistant. Provide clear, accurate, and helpful responses.";
+    const finalSystemPrompt =
+      systemPrompt && systemPrompt.trim() ? systemPrompt : defaultSystemPrompt;
 
     // Start logging for this request
     AILogger.startRequest(requestId, selectedModel);
@@ -115,9 +122,8 @@ export async function POST(req: Request) {
       messages: messages,
       temperature: config.temperature,
       maxTokens: config.maxTokens,
-      // Add system message for better responses
-      system:
-        "You are a helpful AI assistant. Provide clear, accurate, and helpful responses.",
+      // Use the provided system prompt or default
+      system: finalSystemPrompt,
       // Enable automatic retries for transient failures
       maxRetries: config.maxRetries,
       // Add abort signal to handle cancellation

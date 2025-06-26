@@ -2,6 +2,15 @@
 
 import { useChat } from "@ai-sdk/react";
 import { useState, useEffect, useRef } from "react";
+import React from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
+
+// Type for React element props
+interface ReactElementProps {
+  children?: React.ReactNode;
+}
 import {
   Send,
   Bot,
@@ -14,6 +23,7 @@ import {
   Brain,
 } from "lucide-react";
 import ModelSelector from "./ModelSelector";
+import SystemPromptSelector from "./SystemPromptSelector";
 
 // Component to handle assistant messages with thinking tags
 function AssistantMessage({ content }: { content: string }) {
@@ -98,20 +108,186 @@ function AssistantMessage({ content }: { content: string }) {
                   </div>
                 )}
               </div>
-              <div className='text-purple-800 dark:text-purple-200 text-sm'>
-                {part.text.split("\n").map((line, lineIndex) => (
-                  <p key={lineIndex} className='mb-2 last:mb-0'>
-                    {line}
-                  </p>
-                ))}
+              <div className='text-purple-800 dark:text-purple-200 text-sm prose prose-sm max-w-none dark:prose-invert'>
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeHighlight]}
+                  components={{
+                    p: ({ children }) => (
+                      <p className='mb-2 last:mb-0'>{children}</p>
+                    ),
+                    code: ({ children, className }) => {
+                      const isInline = !className?.includes("language-");
+                      return isInline ? (
+                        <code className='bg-purple-100 dark:bg-purple-800 px-1 py-0.5 rounded text-xs font-mono'>
+                          {children}
+                        </code>
+                      ) : (
+                        <code className={className}>{children}</code>
+                      );
+                    },
+                    ol: ({ children }) => (
+                      <ol className='list-decimal list-inside mb-2 space-y-1'>
+                        {children}
+                      </ol>
+                    ),
+                    ul: ({ children }) => (
+                      <ul className='list-disc list-inside mb-2 space-y-1'>
+                        {children}
+                      </ul>
+                    ),
+                    li: ({ children }) => {
+                      return (
+                        <li className='ml-2'>
+                          {React.Children.map(children, (child, index) => {
+                            // If it's a paragraph element, check if it's the first one
+                            if (
+                              React.isValidElement(child) &&
+                              child.type === "p"
+                            ) {
+                              if (index === 0) {
+                                // First paragraph should be inline with the list marker
+                                return (
+                                  <span key={index}>
+                                    {
+                                      (child.props as ReactElementProps)
+                                        .children
+                                    }
+                                  </span>
+                                );
+                              } else {
+                                // Subsequent paragraphs get normal block formatting
+                                return (
+                                  <div key={index} className='mt-1'>
+                                    {
+                                      (child.props as ReactElementProps)
+                                        .children
+                                    }
+                                  </div>
+                                );
+                              }
+                            }
+                            return child;
+                          })}
+                        </li>
+                      );
+                    },
+                    pre: ({ children }) => (
+                      <pre className='bg-purple-100 dark:bg-purple-800 p-2 rounded mt-2 mb-2 overflow-x-auto text-xs'>
+                        {children}
+                      </pre>
+                    ),
+                  }}
+                >
+                  {part.text}
+                </ReactMarkdown>
               </div>
             </div>
           ) : (
-            part.text.split("\n").map((line, lineIndex) => (
-              <p key={`${index}-${lineIndex}`} className='mb-2 last:mb-0'>
-                {line}
-              </p>
-            ))
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeHighlight]}
+              components={{
+                p: ({ children }) => (
+                  <p className='mb-2 last:mb-0'>{children}</p>
+                ),
+                code: ({ children, className }) => {
+                  const isInline = !className?.includes("language-");
+                  return isInline ? (
+                    <code className='bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded text-sm font-mono'>
+                      {children}
+                    </code>
+                  ) : (
+                    <code className={className}>{children}</code>
+                  );
+                },
+                pre: ({ children }) => (
+                  <pre className='bg-gray-100 dark:bg-gray-700 p-3 rounded-lg mt-2 mb-2 overflow-x-auto'>
+                    {children}
+                  </pre>
+                ),
+                blockquote: ({ children }) => (
+                  <blockquote className='border-l-4 border-gray-300 dark:border-gray-600 pl-4 my-2 italic'>
+                    {children}
+                  </blockquote>
+                ),
+                h1: ({ children }) => (
+                  <h1 className='text-xl font-bold mb-2 mt-4 first:mt-0'>
+                    {children}
+                  </h1>
+                ),
+                h2: ({ children }) => (
+                  <h2 className='text-lg font-semibold mb-2 mt-3 first:mt-0'>
+                    {children}
+                  </h2>
+                ),
+                h3: ({ children }) => (
+                  <h3 className='text-base font-medium mb-1 mt-2 first:mt-0'>
+                    {children}
+                  </h3>
+                ),
+                ul: ({ children }) => (
+                  <ul className='list-disc list-inside mb-2 space-y-1'>
+                    {children}
+                  </ul>
+                ),
+                ol: ({ children }) => (
+                  <ol className='list-decimal list-inside mb-2 space-y-1'>
+                    {children}
+                  </ol>
+                ),
+                li: ({ children }) => {
+                  return (
+                    <li className='ml-2'>
+                      {React.Children.map(children, (child, index) => {
+                        // If it's a paragraph element, check if it's the first one
+                        if (React.isValidElement(child) && child.type === "p") {
+                          if (index === 0) {
+                            // First paragraph should be inline with the list marker
+                            return (
+                              <span key={index}>
+                                {(child.props as ReactElementProps).children}
+                              </span>
+                            );
+                          } else {
+                            // Subsequent paragraphs get normal block formatting
+                            return (
+                              <div key={index} className='mt-1'>
+                                {(child.props as ReactElementProps).children}
+                              </div>
+                            );
+                          }
+                        }
+                        return child;
+                      })}
+                    </li>
+                  );
+                },
+                strong: ({ children }) => (
+                  <strong className='font-semibold'>{children}</strong>
+                ),
+                em: ({ children }) => <em className='italic'>{children}</em>,
+                table: ({ children }) => (
+                  <div className='overflow-x-auto mb-2'>
+                    <table className='min-w-full border-collapse border border-gray-300 dark:border-gray-600'>
+                      {children}
+                    </table>
+                  </div>
+                ),
+                th: ({ children }) => (
+                  <th className='border border-gray-300 dark:border-gray-600 px-2 py-1 bg-gray-50 dark:bg-gray-700 font-medium text-left'>
+                    {children}
+                  </th>
+                ),
+                td: ({ children }) => (
+                  <td className='border border-gray-300 dark:border-gray-600 px-2 py-1'>
+                    {children}
+                  </td>
+                ),
+              }}
+            >
+              {part.text}
+            </ReactMarkdown>
           )}
         </div>
       ))}
@@ -124,6 +300,9 @@ export default function Chat() {
     "checking" | "connected" | "disconnected"
   >("checking");
   const [selectedModel, setSelectedModel] = useState<string>("");
+  const [systemPrompt, setSystemPrompt] = useState<string>(
+    "You are a helpful AI assistant. Provide clear, accurate, and helpful responses."
+  );
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -144,6 +323,7 @@ export default function Chat() {
     api: "/api/chat",
     body: {
       model: selectedModel,
+      systemPrompt: systemPrompt,
     },
     onError: (err) => {
       console.error("Chat error:", err);
@@ -279,11 +459,20 @@ export default function Chat() {
               )}
             </div>
 
-            {/* Model Selector */}
-            <div className='flex-1 flex justify-center'>
+            {/* Model Selector and System Prompt */}
+            <div className='flex-1 flex justify-center items-center gap-4'>
               <ModelSelector
                 selectedModel={selectedModel}
                 onModelChange={setSelectedModel}
+                disabled={
+                  status === "streaming" ||
+                  status === "submitted" ||
+                  connectionStatus === "disconnected"
+                }
+              />
+              <SystemPromptSelector
+                selectedPrompt={systemPrompt}
+                onPromptChange={setSystemPrompt}
                 disabled={
                   status === "streaming" ||
                   status === "submitted" ||
@@ -400,11 +589,17 @@ export default function Chat() {
                       {message.role === "assistant" ? (
                         <AssistantMessage content={message.content} />
                       ) : (
-                        message.content.split("\n").map((line, index) => (
-                          <p key={index} className='mb-2 last:mb-0'>
-                            {line}
-                          </p>
-                        ))
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          rehypePlugins={[rehypeHighlight]}
+                          components={{
+                            p: ({ children }) => (
+                              <p className='mb-2 last:mb-0'>{children}</p>
+                            ),
+                          }}
+                        >
+                          {message.content}
+                        </ReactMarkdown>
                       )}
                     </div>
                   </div>

@@ -299,12 +299,41 @@ export default function Chat() {
   const [connectionStatus, setConnectionStatus] = useState<
     "checking" | "connected" | "disconnected"
   >("checking");
-  const [selectedModel, setSelectedModel] = useState<string>("");
-  const [systemPrompt, setSystemPrompt] = useState<string>(
-    "You are a helpful AI assistant. Provide clear, accurate, and helpful responses."
-  );
+
+  // Initialize selectedModel from localStorage immediately
+  const [selectedModel, setSelectedModel] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("selectedModel") || "";
+    }
+    return "";
+  });
+
+  // Initialize systemPrompt from localStorage immediately
+  const [systemPrompt, setSystemPrompt] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return (
+        localStorage.getItem("selectedSystemPrompt") ||
+        "You are Sarah, a helpful AI assistant with a warm and nurturing personality. You're naturally organized, detail-oriented, and always ready to lend a helping hand. Provide clear, accurate, and helpful responses with a caring touch. If you need more clarification, say so, or ask for it."
+      );
+    }
+    return "You are Sarah, a helpful AI assistant with a warm and nurturing personality. You're naturally organized, detail-oriented, and always ready to lend a helping hand. Provide clear, accurate, and helpful responses with a caring touch. If you need more clarification, say so, or ask for it.";
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Save selected model to localStorage whenever it changes
+  useEffect(() => {
+    if (selectedModel) {
+      localStorage.setItem("selectedModel", selectedModel);
+    }
+  }, [selectedModel]);
+
+  // Save system prompt to localStorage whenever it changes
+  useEffect(() => {
+    if (systemPrompt) {
+      localStorage.setItem("selectedSystemPrompt", systemPrompt);
+    }
+  }, [systemPrompt]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

@@ -137,9 +137,12 @@ function AssistantMessage({ content }: { content: string }) {
                       </ul>
                     ),
                     li: ({ children }) => {
+                      // Convert children to array for easier processing
+                      const childArray = React.Children.toArray(children);
+
                       return (
                         <li className='ml-2'>
-                          {React.Children.map(children, (child, index) => {
+                          {childArray.map((child, index) => {
                             // If it's a paragraph element, check if it's the first one
                             if (
                               React.isValidElement(child) &&
@@ -148,12 +151,12 @@ function AssistantMessage({ content }: { content: string }) {
                               if (index === 0) {
                                 // First paragraph should be inline with the list marker
                                 return (
-                                  <span key={index}>
+                                  <React.Fragment key={index}>
                                     {
                                       (child.props as ReactElementProps)
                                         .children
                                     }
-                                  </span>
+                                  </React.Fragment>
                                 );
                               } else {
                                 // Subsequent paragraphs get normal block formatting
@@ -237,17 +240,20 @@ function AssistantMessage({ content }: { content: string }) {
                   </ol>
                 ),
                 li: ({ children }) => {
+                  // Convert children to array for easier processing
+                  const childArray = React.Children.toArray(children);
+
                   return (
                     <li className='ml-2'>
-                      {React.Children.map(children, (child, index) => {
+                      {childArray.map((child, index) => {
                         // If it's a paragraph element, check if it's the first one
                         if (React.isValidElement(child) && child.type === "p") {
                           if (index === 0) {
                             // First paragraph should be inline with the list marker
                             return (
-                              <span key={index}>
+                              <React.Fragment key={index}>
                                 {(child.props as ReactElementProps).children}
-                              </span>
+                              </React.Fragment>
                             );
                           } else {
                             // Subsequent paragraphs get normal block formatting

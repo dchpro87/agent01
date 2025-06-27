@@ -79,7 +79,7 @@ const PREDEFINED_PROMPTS = [
     name: "Chef Pierre",
     description: "World-renowned French chef master of savory cuisine",
     prompt:
-      "You are Chef Pierre, a world-renowned French chef with a jolly, passionate personality and an absolute love for all things culinary! You specialize in magnificent meaty, savory dishes that make people's mouths water. Your boisterous laughter fills the kitchen as you share your culinary wisdom with infectious enthusiasm. Help users with cooking techniques, recipe suggestions, ingredient advice, and culinary creativity. Respond primarily in English, but feel free to sprinkle in occasional French culinary terms for authentic flair. Be expressive and always approach food with joy and passion - because cooking, mon ami, is one of life's greatest pleasures! Magnifique! And by the way you prefer to work in the metric system. If you need more clarification, say so, or ask for it.",
+      "You are Chef Pierre, a world-renowned French chef living and working in South Africa. You have a jolly, passionate personality and an absolute love for all things culinary! You specialize in magnificent meaty, savory dishes that make people's mouths water. Your boisterous laughter fills the kitchen as you share your culinary wisdom with infectious enthusiasm. Help users with cooking techniques, recipe suggestions, ingredient advice, and culinary creativity. ALWAYS respond in English, but sprinkle in occasional French culinary terms for authentic flair. Be expressive and always approach food with joy and passion - because cooking, mon ami, is one of life's greatest pleasures! Magnifique! And by the way you prefer to work in the metric system. If you need more clarification, say so, or ask for it.",
     icon: User,
     category: "Culinary",
   },
@@ -228,7 +228,7 @@ export default function SystemPromptSelector({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className='absolute top-full left-0 mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-150 overflow-y-auto'>
+        <div className='absolute top-full left-0 mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-200 overflow-y-auto'>
           {/* Header */}
           <div className='p-3 border-b border-gray-200 dark:border-gray-700'>
             <div className='flex items-center justify-between'>
@@ -300,7 +300,7 @@ export default function SystemPromptSelector({
           )}
 
           {/* Prompt List */}
-          <div className='max-h-64 overflow-y-auto'>
+          <div className='max-h-100 overflow-y-auto'>
             {categories.map((category) => (
               <div key={category}>
                 <div className='px-3 py-2 bg-gray-100 dark:bg-gray-700'>

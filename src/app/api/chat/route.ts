@@ -116,8 +116,6 @@ export async function POST(req: Request) {
       baseURL: `${config.baseURL}/v1`,
       apiKey: "ollama", // Ollama doesn't require a real API key
     });
-    console.log("system:", finalSystemPrompt);
-    console.log("messages:", messages);
 
     const result = streamText({
       model: ollama(selectedModel),

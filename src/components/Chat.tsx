@@ -4,13 +4,10 @@ import { useChat } from "@ai-sdk/react";
 import { useState, useEffect, useRef } from "react";
 import React from "react";
 import ReactMarkdown from "react-markdown";
+import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 
-// Type for React element props
-interface ReactElementProps {
-  children?: React.ReactNode;
-}
 import {
   Send,
   Bot,
@@ -25,72 +22,222 @@ import {
 import ModelSelector from "./ModelSelector";
 import SystemPromptSelector from "./SystemPromptSelector";
 
-// Component to handle assistant messages with thinking tags
-function AssistantMessage({ content }: { content: string }) {
-  // Parse the content to extract thinking sections and regular content
-  const parseContent = (text: string) => {
-    const parts = [];
+// Shared markdown components for performance
+const markdownComponents: Components = {
+  p: ({ children, ...props }) => (
+    <p className='mb-2 last:mb-0' {...props}>
+      {children}
+    </p>
+  ),
+  code: ({ children, className, ...props }) => {
+    const isInline = !className?.includes("language-");
+    return isInline ? (
+      <code
+        className='bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded text-sm font-mono'
+        {...props}
+      >
+        {children}
+      </code>
+    ) : (
+      <code className={className} {...props}>
+        {children}
+      </code>
+    );
+  },
+  pre: ({ children, ...props }) => (
+    <pre
+      className='bg-gray-100 dark:bg-gray-700 p-3 rounded-lg mt-2 mb-2 overflow-x-auto'
+      {...props}
+    >
+      {children}
+    </pre>
+  ),
+  blockquote: ({ children, ...props }) => (
+    <blockquote
+      className='border-l-4 border-gray-300 dark:border-gray-600 pl-4 my-2 italic'
+      {...props}
+    >
+      {children}
+    </blockquote>
+  ),
+  h1: ({ children, ...props }) => (
+    <h1 className='text-xl font-bold mb-2 mt-4 first:mt-0' {...props}>
+      {children}
+    </h1>
+  ),
+  h2: ({ children, ...props }) => (
+    <h2 className='text-lg font-semibold mb-2 mt-3 first:mt-0' {...props}>
+      {children}
+    </h2>
+  ),
+  h3: ({ children, ...props }) => (
+    <h3 className='text-base font-medium mb-1 mt-2 first:mt-0' {...props}>
+      {children}
+    </h3>
+  ),
+  ul: ({ children, ...props }) => (
+    <ul className='list-disc list-inside mb-2 space-y-1' {...props}>
+      {children}
+    </ul>
+  ),
+  ol: ({ children, ...props }) => (
+    <ol className='list-decimal list-inside mb-2 space-y-1' {...props}>
+      {children}
+    </ol>
+  ),
+  li: ({ children, ...props }) => (
+    <li className='ml-2' {...props}>
+      {children}
+    </li>
+  ),
+  strong: ({ children, ...props }) => (
+    <strong className='font-semibold' {...props}>
+      {children}
+    </strong>
+  ),
+  em: ({ children, ...props }) => (
+    <em className='italic' {...props}>
+      {children}
+    </em>
+  ),
+  table: ({ children, ...props }) => (
+    <div className='overflow-x-auto mb-2'>
+      <table
+        className='min-w-full border-collapse border border-gray-300 dark:border-gray-600'
+        {...props}
+      >
+        {children}
+      </table>
+    </div>
+  ),
+  th: ({ children, ...props }) => (
+    <th
+      className='border border-gray-300 dark:border-gray-600 px-2 py-1 bg-gray-50 dark:bg-gray-700 font-medium text-left'
+      {...props}
+    >
+      {children}
+    </th>
+  ),
+  td: ({ children, ...props }) => (
+    <td
+      className='border border-gray-300 dark:border-gray-600 px-2 py-1'
+      {...props}
+    >
+      {children}
+    </td>
+  ),
+  // GFM-specific elements
+  del: ({ children, ...props }) => (
+    <del className='line-through text-gray-500 dark:text-gray-400' {...props}>
+      {children}
+    </del>
+  ),
+  input: ({ checked, disabled, type, ...props }) => (
+    <input
+      type={type}
+      checked={checked}
+      disabled={disabled}
+      className='mr-2 accent-blue-500'
+      {...props}
+    />
+  ),
+};
+
+// Thinking box components for performance
+const thinkingComponents: Components = {
+  ...markdownComponents,
+  code: ({ children, className, ...props }) => {
+    const isInline = !className?.includes("language-");
+    return isInline ? (
+      <code
+        className='bg-purple-100 dark:bg-purple-800 px-1 py-0.5 rounded text-xs font-mono'
+        {...props}
+      >
+        {children}
+      </code>
+    ) : (
+      <code className={className} {...props}>
+        {children}
+      </code>
+    );
+  },
+  pre: ({ children, ...props }) => (
+    <pre
+      className='bg-purple-100 dark:bg-purple-800 p-2 rounded mt-2 mb-2 overflow-x-auto text-xs'
+      {...props}
+    >
+      {children}
+    </pre>
+  ),
+};
+
+// Example of how to configure plugins with options (for reference):
+// remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
+// rehypePlugins={[[rehypeHighlight, { detect: true, ignoreMissing: true }]]}
+
+// Optimized component to handle assistant messages with thinking tags
+const AssistantMessage = React.memo(({ content }: { content: string }) => {
+  // Use useMemo to prevent re-parsing on every render
+  const parts = React.useMemo(() => {
+    const results = [];
     let currentIndex = 0;
 
-    // Find all <think>...</think> tags (complete)
-    const thinkRegex = /<think>([\s\S]*?)<\/think>/g;
-    let match;
+    // Simple split approach - much faster than complex regex
+    const thinkStartTag = "<think>";
+    const thinkEndTag = "</think>";
 
-    while ((match = thinkRegex.exec(text)) !== null) {
-      // Add content before the thinking tag
-      if (match.index > currentIndex) {
-        const beforeText = text.slice(currentIndex, match.index).trim();
+    while (currentIndex < content.length) {
+      const thinkStart = content.indexOf(thinkStartTag, currentIndex);
+
+      if (thinkStart === -1) {
+        // No more thinking tags, add remaining content
+        const remaining = content.slice(currentIndex).trim();
+        if (remaining) {
+          results.push({ type: "content", text: remaining });
+        }
+        break;
+      }
+
+      // Add content before thinking tag
+      if (thinkStart > currentIndex) {
+        const beforeText = content.slice(currentIndex, thinkStart).trim();
         if (beforeText) {
-          parts.push({ type: "content", text: beforeText });
+          results.push({ type: "content", text: beforeText });
         }
       }
 
-      // Add the thinking content
-      const thinkContent = match[1].trim();
-      if (thinkContent) {
-        parts.push({ type: "think", text: thinkContent });
-      }
+      // Find end of thinking tag
+      const thinkContentStart = thinkStart + thinkStartTag.length;
+      const thinkEnd = content.indexOf(thinkEndTag, thinkContentStart);
 
-      currentIndex = match.index + match[0].length;
-    }
-
-    // Check for incomplete thinking tag (streaming)
-    const remainingText = text.slice(currentIndex);
-    const incompleteThinkMatch = remainingText.match(/<think>([\s\S]*)$/);
-
-    if (incompleteThinkMatch) {
-      // Add content before the incomplete thinking tag
-      const beforeIncomplete = remainingText
-        .slice(0, incompleteThinkMatch.index)
-        .trim();
-      if (beforeIncomplete) {
-        parts.push({ type: "content", text: beforeIncomplete });
-      }
-
-      // Add the incomplete thinking content
-      const incompleteThinkContent = incompleteThinkMatch[1];
-      parts.push({
-        type: "think",
-        text: incompleteThinkContent,
-        incomplete: true,
-      });
-    } else if (currentIndex < text.length) {
-      // Add remaining content after the last thinking tag
-      const remainingContent = remainingText.trim();
-      if (remainingContent) {
-        parts.push({ type: "content", text: remainingContent });
+      if (thinkEnd === -1) {
+        // Incomplete thinking tag (streaming)
+        const thinkContent = content.slice(thinkContentStart);
+        if (thinkContent) {
+          results.push({ type: "think", text: thinkContent, incomplete: true });
+        }
+        break;
+      } else {
+        // Complete thinking tag
+        const thinkContent = content.slice(thinkContentStart, thinkEnd).trim();
+        if (thinkContent) {
+          results.push({
+            type: "think",
+            text: thinkContent,
+            incomplete: false,
+          });
+        }
+        currentIndex = thinkEnd + thinkEndTag.length;
       }
     }
 
-    // If no thinking tags found, treat as regular content
-    if (parts.length === 0) {
-      parts.push({ type: "content", text: text });
+    // If no parts found, treat as regular content
+    if (results.length === 0) {
+      results.push({ type: "content", text: content });
     }
 
-    return parts;
-  };
-
-  const parts = parseContent(content);
+    return results;
+  }, [content]);
 
   return (
     <>
@@ -112,75 +259,7 @@ function AssistantMessage({ content }: { content: string }) {
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeHighlight]}
-                  components={{
-                    p: ({ children }) => (
-                      <p className='mb-2 last:mb-0'>{children}</p>
-                    ),
-                    code: ({ children, className }) => {
-                      const isInline = !className?.includes("language-");
-                      return isInline ? (
-                        <code className='bg-purple-100 dark:bg-purple-800 px-1 py-0.5 rounded text-xs font-mono'>
-                          {children}
-                        </code>
-                      ) : (
-                        <code className={className}>{children}</code>
-                      );
-                    },
-                    ol: ({ children }) => (
-                      <ol className='list-decimal list-inside mb-2 space-y-1'>
-                        {children}
-                      </ol>
-                    ),
-                    ul: ({ children }) => (
-                      <ul className='list-disc list-inside mb-2 space-y-1'>
-                        {children}
-                      </ul>
-                    ),
-                    li: ({ children }) => {
-                      // Convert children to array for easier processing
-                      const childArray = React.Children.toArray(children);
-
-                      return (
-                        <li className='ml-2'>
-                          {childArray.map((child, index) => {
-                            // If it's a paragraph element, check if it's the first one
-                            if (
-                              React.isValidElement(child) &&
-                              child.type === "p"
-                            ) {
-                              if (index === 0) {
-                                // First paragraph should be inline with the list marker
-                                return (
-                                  <React.Fragment key={index}>
-                                    {
-                                      (child.props as ReactElementProps)
-                                        .children
-                                    }
-                                  </React.Fragment>
-                                );
-                              } else {
-                                // Subsequent paragraphs get normal block formatting
-                                return (
-                                  <div key={index} className='mt-1'>
-                                    {
-                                      (child.props as ReactElementProps)
-                                        .children
-                                    }
-                                  </div>
-                                );
-                              }
-                            }
-                            return child;
-                          })}
-                        </li>
-                      );
-                    },
-                    pre: ({ children }) => (
-                      <pre className='bg-purple-100 dark:bg-purple-800 p-2 rounded mt-2 mb-2 overflow-x-auto text-xs'>
-                        {children}
-                      </pre>
-                    ),
-                  }}
+                  components={thinkingComponents}
                 >
                   {part.text}
                 </ReactMarkdown>
@@ -190,107 +269,7 @@ function AssistantMessage({ content }: { content: string }) {
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeHighlight]}
-              components={{
-                p: ({ children }) => (
-                  <p className='mb-2 last:mb-0'>{children}</p>
-                ),
-                code: ({ children, className }) => {
-                  const isInline = !className?.includes("language-");
-                  return isInline ? (
-                    <code className='bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded text-sm font-mono'>
-                      {children}
-                    </code>
-                  ) : (
-                    <code className={className}>{children}</code>
-                  );
-                },
-                pre: ({ children }) => (
-                  <pre className='bg-gray-100 dark:bg-gray-700 p-3 rounded-lg mt-2 mb-2 overflow-x-auto'>
-                    {children}
-                  </pre>
-                ),
-                blockquote: ({ children }) => (
-                  <blockquote className='border-l-4 border-gray-300 dark:border-gray-600 pl-4 my-2 italic'>
-                    {children}
-                  </blockquote>
-                ),
-                h1: ({ children }) => (
-                  <h1 className='text-xl font-bold mb-2 mt-4 first:mt-0'>
-                    {children}
-                  </h1>
-                ),
-                h2: ({ children }) => (
-                  <h2 className='text-lg font-semibold mb-2 mt-3 first:mt-0'>
-                    {children}
-                  </h2>
-                ),
-                h3: ({ children }) => (
-                  <h3 className='text-base font-medium mb-1 mt-2 first:mt-0'>
-                    {children}
-                  </h3>
-                ),
-                ul: ({ children }) => (
-                  <ul className='list-disc list-inside mb-2 space-y-1'>
-                    {children}
-                  </ul>
-                ),
-                ol: ({ children }) => (
-                  <ol className='list-decimal list-inside mb-2 space-y-1'>
-                    {children}
-                  </ol>
-                ),
-                li: ({ children }) => {
-                  // Convert children to array for easier processing
-                  const childArray = React.Children.toArray(children);
-
-                  return (
-                    <li className='ml-2'>
-                      {childArray.map((child, index) => {
-                        // If it's a paragraph element, check if it's the first one
-                        if (React.isValidElement(child) && child.type === "p") {
-                          if (index === 0) {
-                            // First paragraph should be inline with the list marker
-                            return (
-                              <React.Fragment key={index}>
-                                {(child.props as ReactElementProps).children}
-                              </React.Fragment>
-                            );
-                          } else {
-                            // Subsequent paragraphs get normal block formatting
-                            return (
-                              <div key={index} className='mt-1'>
-                                {(child.props as ReactElementProps).children}
-                              </div>
-                            );
-                          }
-                        }
-                        return child;
-                      })}
-                    </li>
-                  );
-                },
-                strong: ({ children }) => (
-                  <strong className='font-semibold'>{children}</strong>
-                ),
-                em: ({ children }) => <em className='italic'>{children}</em>,
-                table: ({ children }) => (
-                  <div className='overflow-x-auto mb-2'>
-                    <table className='min-w-full border-collapse border border-gray-300 dark:border-gray-600'>
-                      {children}
-                    </table>
-                  </div>
-                ),
-                th: ({ children }) => (
-                  <th className='border border-gray-300 dark:border-gray-600 px-2 py-1 bg-gray-50 dark:bg-gray-700 font-medium text-left'>
-                    {children}
-                  </th>
-                ),
-                td: ({ children }) => (
-                  <td className='border border-gray-300 dark:border-gray-600 px-2 py-1'>
-                    {children}
-                  </td>
-                ),
-              }}
+              components={markdownComponents}
             >
               {part.text}
             </ReactMarkdown>
@@ -299,7 +278,60 @@ function AssistantMessage({ content }: { content: string }) {
       ))}
     </>
   );
-}
+});
+
+AssistantMessage.displayName = "AssistantMessage";
+
+// Memoized message component to prevent unnecessary re-renders
+const MessageItem = React.memo(
+  ({ message }: { message: { id: string; role: string; content: string } }) => (
+    <div
+      className={`flex gap-4 ${
+        message.role === "user" ? "justify-end" : "justify-start"
+      }`}
+    >
+      {message.role === "assistant" && (
+        <div className='flex-shrink-0'>
+          <div className='w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center'>
+            <Bot className='w-4 h-4 text-white' />
+          </div>
+        </div>
+      )}
+
+      <div
+        className={`max-w-3xl px-4 py-3 rounded-2xl ${
+          message.role === "user"
+            ? "bg-blue-500 text-white ml-12"
+            : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700"
+        }`}
+      >
+        <div className='prose prose-sm max-w-none dark:prose-invert'>
+          {message.role === "assistant" ? (
+            <AssistantMessage content={message.content} />
+          ) : (
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeHighlight]}
+              components={markdownComponents}
+            >
+              {message.content}
+            </ReactMarkdown>
+          )}
+        </div>
+      </div>
+
+      {message.role === "user" && (
+        <div className='flex-shrink-0'>
+          <div className='w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center'>
+            <User className='w-4 h-4 text-white' />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+);
+
+MessageItem.displayName = "MessageItem";
 
 export default function Chat() {
   const [connectionStatus, setConnectionStatus] = useState<
@@ -345,6 +377,12 @@ export default function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Helper function to remove thinking parts from message content
+  const removeThinkingParts = (content: string): string => {
+    // Remove <think>...</think> blocks including the tags
+    return content.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+  };
+
   const {
     messages,
     input,
@@ -364,8 +402,20 @@ export default function Chat() {
       console.error("Chat error:", err);
       setConnectionStatus("disconnected");
     },
-    onFinish: () => {
+    onFinish: (message) => {
       setConnectionStatus("connected");
+
+      // If this is an assistant message, remove thinking parts from memory
+      if (message.role === "assistant") {
+        const cleanedContent = removeThinkingParts(message.content);
+
+        // Update the message in the messages array to exclude thinking parts
+        setMessages((currentMessages) =>
+          currentMessages.map((msg) =>
+            msg.id === message.id ? { ...msg, content: cleanedContent } : msg
+          )
+        );
+      }
     },
     // Custom headers for better streaming
     headers: {
@@ -599,54 +649,7 @@ export default function Chat() {
           ) : (
             <div className='space-y-6'>
               {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex gap-4 ${
-                    message.role === "user" ? "justify-end" : "justify-start"
-                  }`}
-                >
-                  {message.role === "assistant" && (
-                    <div className='flex-shrink-0'>
-                      <div className='w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center'>
-                        <Bot className='w-4 h-4 text-white' />
-                      </div>
-                    </div>
-                  )}
-
-                  <div
-                    className={`max-w-3xl px-4 py-3 rounded-2xl ${
-                      message.role === "user"
-                        ? "bg-blue-500 text-white ml-12"
-                        : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700"
-                    }`}
-                  >
-                    <div className='prose prose-sm max-w-none dark:prose-invert'>
-                      {message.role === "assistant" ? (
-                        <AssistantMessage content={message.content} />
-                      ) : (
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                          rehypePlugins={[rehypeHighlight]}
-                          components={{
-                            p: ({ children }) => (
-                              <p className='mb-2 last:mb-0'>{children}</p>
-                            ),
-                          }}
-                        >
-                          {message.content}
-                        </ReactMarkdown>
-                      )}
-                    </div>
-                  </div>
-
-                  {message.role === "user" && (
-                    <div className='flex-shrink-0'>
-                      <div className='w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center'>
-                        <User className='w-4 h-4 text-white' />
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <MessageItem key={message.id} message={message} />
               ))}
 
               {/* Show loading dots when waiting for assistant response */}

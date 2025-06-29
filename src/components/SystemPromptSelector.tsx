@@ -79,7 +79,7 @@ const PREDEFINED_PROMPTS = [
     name: "Chef Pierre",
     description: "World-renowned French chef master of savory cuisine",
     prompt:
-      "You are Chef Pierre, a world-renowned French chef living and working in South Africa. You have a jolly, passionate personality and an absolute love for all things culinary! You specialize in magnificent meaty, savory dishes that make people's mouths water. Your boisterous laughter fills the kitchen as you share your culinary wisdom with infectious enthusiasm. Help users with cooking techniques, recipe suggestions, ingredient advice, and culinary creativity. ALWAYS respond in English, but sprinkle in occasional French culinary terms for authentic flair. Be expressive and always approach food with joy and passion - because cooking, mon ami, is one of life's greatest pleasures! Magnifique! And by the way you prefer to work in the metric system. If you need more clarification, say so, or ask for it.",
+      "You are Chef Pierre, a world-renowned chef trained in classical French cuisine You have a jolly, passionate personality and an absolute love for all things culinary! You specialize in magnificent meaty, savory dishes that make people's mouths water. Your boisterous laughter fills the kitchen as you share your culinary wisdom with infectious enthusiasm. Help users with cooking techniques, recipe suggestions, ingredient advice, and culinary creativity. ALWAYS respond in English, but sprinkle in occasional French culinary terms for authentic flair. Be expressive and always approach food with joy and passion - because cooking, mon ami, is one of life's greatest pleasures! Magnifique! And by the way you prefer to work in the metric system. If you need more clarification, say so, or ask for it.",
     icon: User,
     category: "Culinary",
   },
@@ -122,6 +122,7 @@ export default function SystemPromptSelector({
   const [newPromptDescription, setNewPromptDescription] = useState("");
   const [newPromptContent, setNewPromptContent] = useState("");
   const [selectedPromptId, setSelectedPromptId] = useState("default");
+  const [isHydrated, setIsHydrated] = useState(false);
 
   // Load custom prompts from localStorage on mount
   useEffect(() => {
@@ -134,7 +135,22 @@ export default function SystemPromptSelector({
         console.error("Failed to load custom prompts:", error);
       }
     }
+    setIsHydrated(true);
   }, []);
+
+  // Sync selectedPromptId when selectedPrompt changes
+  useEffect(() => {
+    if (!isHydrated) return;
+
+    const allPrompts = [...PREDEFINED_PROMPTS, ...customPrompts];
+    const matchingPrompt = allPrompts.find((p) => p.prompt === selectedPrompt);
+
+    if (matchingPrompt) {
+      setSelectedPromptId(matchingPrompt.id);
+    } else {
+      setSelectedPromptId("default");
+    }
+  }, [selectedPrompt, customPrompts, isHydrated]);
 
   // Save custom prompts to localStorage
   const saveCustomPrompts = (prompts: SystemPrompt[]) => {
@@ -145,10 +161,11 @@ export default function SystemPromptSelector({
   // Get all prompts (predefined + custom)
   const allPrompts = [...PREDEFINED_PROMPTS, ...customPrompts];
 
-  // Find current prompt
-  const currentPrompt =
-    allPrompts.find((p) => p.prompt === selectedPrompt) ||
-    PREDEFINED_PROMPTS[0];
+  // Find current prompt (during hydration, always use default to prevent mismatch)
+  const currentPrompt = isHydrated
+    ? allPrompts.find((p) => p.prompt === selectedPrompt) ||
+      PREDEFINED_PROMPTS[0]
+    : PREDEFINED_PROMPTS[0];
 
   // Handle prompt selection
   const handlePromptSelect = (prompt: SystemPrompt) => {

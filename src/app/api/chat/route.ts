@@ -14,6 +14,7 @@ const RequestSchema = z.object({
   messages: z.array(MessageSchema).min(1, "At least one message is required"),
   model: z.string().optional(),
   systemPrompt: z.string().optional(),
+  modelOptions: z.record(z.any()).optional(),
 });
 
 export async function POST(req: Request) {
@@ -63,11 +64,18 @@ export async function POST(req: Request) {
       );
     }
 
-    const { messages, model, systemPrompt } = validationResult.data;
+    const { messages, model, systemPrompt, modelOptions } =
+      validationResult.data;
 
     // Get configuration from environment variables, allowing model override
     const { ollama: config } = aiConfig;
     const selectedModel = model || config.model;
+
+    // Merge model options with configuration defaults
+    const finalOptions = {
+      ...config.defaultOptions,
+      ...modelOptions,
+    };
 
     // Default system prompt if none provided
     const defaultSystemPrompt =
@@ -80,6 +88,7 @@ export async function POST(req: Request) {
 
     console.log("Chat API - baseURL:", config.baseURL);
     console.log("Chat API - model:", selectedModel);
+    console.log("Chat API - options:", JSON.stringify(finalOptions, null, 2));
     console.log("Chat API - messages:", JSON.stringify(messages, null, 2));
 
     // Test Ollama connection before proceeding
@@ -120,8 +129,13 @@ export async function POST(req: Request) {
     const result = streamText({
       model: ollama(selectedModel),
       messages: messages,
-      temperature: config.temperature,
-      maxTokens: config.maxTokens,
+      temperature: finalOptions.temperature || config.temperature,
+      maxTokens: finalOptions.num_predict || config.maxTokens,
+      topK: finalOptions.top_k,
+      topP: finalOptions.top_p,
+      frequencyPenalty: finalOptions.frequency_penalty,
+      presencePenalty: finalOptions.presence_penalty,
+      seed: finalOptions.seed,
       // Use the provided system prompt or default
       system: finalSystemPrompt,
       // Enable automatic retries for transient failures

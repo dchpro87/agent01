@@ -7,6 +7,7 @@ import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
+import { OllamaModelOptions } from "@/types/ollama";
 
 import {
   Send,
@@ -21,6 +22,7 @@ import {
 } from "lucide-react";
 import ModelSelector from "./ModelSelector";
 import SystemPromptSelector from "./SystemPromptSelector";
+import ModelConfigSelector from "./ModelConfigSelector";
 
 // Shared markdown components for performance
 const markdownComponents: Components = {
@@ -338,24 +340,49 @@ export default function Chat() {
     "checking" | "connected" | "disconnected"
   >("checking");
 
-  // Initialize selectedModel from localStorage immediately
-  const [selectedModel, setSelectedModel] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("selectedModel") || "";
-    }
-    return "";
+  // Initialize state with default values (avoid hydration mismatch)
+  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [systemPrompt, setSystemPrompt] = useState<string>(
+    "You are Sarah, a helpful AI assistant with a warm and nurturing personality. You're naturally organized, detail-oriented, and always ready to lend a helping hand. Provide clear, accurate, and helpful responses with a caring touch. If you need more clarification, say so, or ask for it."
+  );
+  const [modelOptions, setModelOptions] = useState<OllamaModelOptions>({
+    temperature: 0.7,
+    top_k: 40,
+    top_p: 0.9,
+    repeat_penalty: 1.1,
+    num_ctx: 2048,
+    num_predict: 512,
   });
 
-  // Initialize systemPrompt from localStorage immediately
-  const [systemPrompt, setSystemPrompt] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return (
-        localStorage.getItem("selectedSystemPrompt") ||
-        "You are Sarah, a helpful AI assistant with a warm and nurturing personality. You're naturally organized, detail-oriented, and always ready to lend a helping hand. Provide clear, accurate, and helpful responses with a caring touch. If you need more clarification, say so, or ask for it."
-      );
+  // Separate state for UI display that includes thinking text
+  const [displayMessages, setDisplayMessages] = useState<
+    Array<{ id: string; role: string; content: string }>
+  >([]);
+
+  // Store original content with thinking parts for assistant messages
+  const originalContentRef = useRef<Map<string, string>>(new Map());
+
+  // Load values from localStorage after component mounts (client-side only)
+  useEffect(() => {
+    const savedModel = localStorage.getItem("selectedModel");
+    if (savedModel) {
+      setSelectedModel(savedModel);
     }
-    return "You are Sarah, a helpful AI assistant with a warm and nurturing personality. You're naturally organized, detail-oriented, and always ready to lend a helping hand. Provide clear, accurate, and helpful responses with a caring touch. If you need more clarification, say so, or ask for it.";
-  });
+
+    const savedPrompt = localStorage.getItem("selectedSystemPrompt");
+    if (savedPrompt) {
+      setSystemPrompt(savedPrompt);
+    }
+
+    const savedOptions = localStorage.getItem("modelOptions");
+    if (savedOptions) {
+      try {
+        setModelOptions(JSON.parse(savedOptions));
+      } catch (error) {
+        console.error("Failed to parse saved model options:", error);
+      }
+    }
+  }, []);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -372,6 +399,11 @@ export default function Chat() {
       localStorage.setItem("selectedSystemPrompt", systemPrompt);
     }
   }, [systemPrompt]);
+
+  // Save model options to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("modelOptions", JSON.stringify(modelOptions));
+  }, [modelOptions]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -397,6 +429,7 @@ export default function Chat() {
     body: {
       model: selectedModel,
       systemPrompt: systemPrompt,
+      modelOptions: modelOptions,
     },
     onError: (err) => {
       console.error("Chat error:", err);
@@ -405,11 +438,14 @@ export default function Chat() {
     onFinish: (message) => {
       setConnectionStatus("connected");
 
-      // If this is an assistant message, remove thinking parts from memory
+      // If this is an assistant message, store the original content and remove thinking parts from the messages array
       if (message.role === "assistant") {
+        // Store the original content with thinking parts
+        originalContentRef.current.set(message.id, message.content);
+
         const cleanedContent = removeThinkingParts(message.content);
 
-        // Update the message in the messages array to exclude thinking parts
+        // Update the messages array to exclude thinking parts (for API)
         setMessages((currentMessages) =>
           currentMessages.map((msg) =>
             msg.id === message.id ? { ...msg, content: cleanedContent } : msg
@@ -433,6 +469,27 @@ export default function Chat() {
       }
     },
   });
+
+  // Sync displayMessages with messages, preserving original thinking content
+  useEffect(() => {
+    setDisplayMessages(
+      messages.map((message) => {
+        // For assistant messages, use original content if available (contains thinking)
+        if (
+          message.role === "assistant" &&
+          originalContentRef.current.has(message.id)
+        ) {
+          const originalContent = originalContentRef.current.get(message.id);
+          if (originalContent && originalContent.includes("<think>")) {
+            return { ...message, content: originalContent };
+          }
+        }
+        // For all other cases, use the current message content
+        return message;
+      })
+    );
+  }, [messages]);
+
   // Check connection status on mount
   useEffect(() => {
     const checkConnection = async () => {
@@ -460,25 +517,27 @@ export default function Chat() {
   // Auto-scroll to bottom when messages change or when streaming
   useEffect(() => {
     scrollToBottom();
-  }, [messages, status]);
+  }, [displayMessages, status]);
 
   // Focus input field after streaming is complete
   useEffect(() => {
-    if (status === "ready" && messages.length > 0) {
+    if (status === "ready" && displayMessages.length > 0) {
       // Small delay to ensure the UI has updated
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
     }
-  }, [status, messages.length]);
+  }, [status, displayMessages.length]);
 
   const handleReset = () => {
     // Stop any ongoing requests
     if (status === "streaming" || status === "submitted") {
       stop();
     }
-    // Clear all messages
+    // Clear all messages and original content
     setMessages([]);
+    setDisplayMessages([]);
+    originalContentRef.current.clear();
     // Reset connection status check
     setConnectionStatus("checking");
     // Re-check connection
@@ -531,7 +590,7 @@ export default function Chat() {
               </div>
 
               {/* Reset Button */}
-              {messages.length > 0 && (
+              {displayMessages.length > 0 && (
                 <button
                   onClick={handleReset}
                   disabled={status === "streaming" || status === "submitted"}
@@ -544,7 +603,7 @@ export default function Chat() {
               )}
             </div>
 
-            {/* Model Selector and System Prompt */}
+            {/* Model Selector, System Prompt, and Configuration */}
             <div className='flex-1 flex justify-center items-center gap-4'>
               <ModelSelector
                 selectedModel={selectedModel}
@@ -558,6 +617,15 @@ export default function Chat() {
               <SystemPromptSelector
                 selectedPrompt={systemPrompt}
                 onPromptChange={setSystemPrompt}
+                disabled={
+                  status === "streaming" ||
+                  status === "submitted" ||
+                  connectionStatus === "disconnected"
+                }
+              />
+              <ModelConfigSelector
+                selectedOptions={modelOptions}
+                onOptionsChange={setModelOptions}
                 disabled={
                   status === "streaming" ||
                   status === "submitted" ||
@@ -600,7 +668,7 @@ export default function Chat() {
       {/* Messages */}
       <div className='flex-1 overflow-y-auto'>
         <div className='max-w-4xl mx-auto px-4 py-6'>
-          {messages.length === 0 ? (
+          {displayMessages.length === 0 ? (
             <div className='text-center py-12'>
               <Bot className='w-12 h-12 text-gray-400 mx-auto mb-4' />
               <h2 className='text-xl font-medium text-gray-900 dark:text-white mb-2'>
@@ -648,15 +716,16 @@ export default function Chat() {
             </div>
           ) : (
             <div className='space-y-6'>
-              {messages.map((message) => (
+              {displayMessages.map((message) => (
                 <MessageItem key={message.id} message={message} />
               ))}
 
               {/* Show loading dots when waiting for assistant response */}
               {(status === "submitted" ||
                 (status === "streaming" &&
-                  messages.length > 0 &&
-                  messages[messages.length - 1]?.role === "user")) && (
+                  displayMessages.length > 0 &&
+                  displayMessages[displayMessages.length - 1]?.role ===
+                    "user")) && (
                 <div className='flex gap-4 justify-start'>
                   <div className='flex-shrink-0'>
                     <div className='w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center'>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
+import type { Message } from "@ai-sdk/react";
 import { useState, useEffect, useRef } from "react";
 import React from "react";
 import ReactMarkdown from "react-markdown";
@@ -68,7 +69,7 @@ function useConnectionStatus() {
 function usePersistedPreferences() {
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [systemPrompt, setSystemPrompt] = useState<string>(
-    "You are Sarah, a helpful AI assistant with a warm and nurturing personality. You're naturally organized, detail-oriented, and always ready to lend a helping hand. Provide clear, accurate, and helpful responses with a caring touch. If you need more clarification, say so, or ask for it."
+    "You are Sarah, a helpful AI assistant with a warm and nurturing personality. You're naturally organized, detail-oriented, and always ready to lend a helping hand. Provide clear, accurate, and helpful responses with a caring touch. If you need more clarification, say so, or ask for it.\n\nWhen you need to get the current date or time, use the getCurrentTime tool. After calling the tool and receiving the result, provide a clear and direct answer to the user using the information returned by the tool."
   );
   const [modelOptions, setModelOptions] = useState<OllamaModelOptions>({
     temperature: 0.7,
@@ -153,8 +154,8 @@ const markdownComponents: Components = {
 };
 
 // Simplified thinking tag parser
-function parseThinkingTags(content: string) {
-  const parts = [];
+function parseThinkingTags(content: string): (ContentPart | ThinkPart)[] {
+  const parts: (ContentPart | ThinkPart)[] = [];
   const thinkStartTag = "<think>";
   const thinkEndTag = "</think>";
   let currentIndex = 0;
@@ -203,21 +204,123 @@ function parseThinkingTags(content: string) {
   return parts.length > 0 ? parts : [{ type: "content", text: content }];
 }
 
-// Simplified assistant message component
-const AssistantMessage = React.memo(({ content }: { content: string }) => {
-  const parts = parseThinkingTags(content);
+// Type definitions for tool invocations (based on AI SDK structure)
+type ToolInvocation = {
+  toolCallId: string;
+  toolName: string;
+  args: Record<string, unknown>;
+  state: "partial-call" | "call" | "result";
+  result?: unknown;
+};
 
-  return (
-    <>
-      {parts.map((part, index) => (
-        <div key={index}>
-          {part.type === "think" ? (
-            <div className='mb-3 p-3 border border-purple-200 dark:border-purple-700 rounded-lg bg-purple-50 dark:bg-purple-900/20'>
-              <div className='text-xs font-medium text-purple-600 dark:text-purple-400 mb-1 uppercase tracking-wide flex items-center gap-2'>
-                <Brain className='w-4 h-4' />
-                Thinking
-              </div>
-              <div className='text-purple-800 dark:text-purple-200 text-sm'>
+// Type definitions for our custom parts
+type ContentPart = {
+  type: "content";
+  text: string;
+};
+
+type ThinkPart = {
+  type: "think";
+  text: string;
+};
+
+type ToolPart = {
+  type: "tool";
+  toolInvocation: ToolInvocation;
+};
+
+type MessagePart = ContentPart | ThinkPart | ToolPart;
+
+// Enhanced assistant message component that handles thinking tags and tool invocations
+const AssistantMessage = React.memo(
+  ({
+    content,
+    toolInvocations,
+  }: {
+    content: string;
+    toolInvocations?: ToolInvocation[];
+  }) => {
+    const parts = parseThinkingTags(content);
+
+    // If we have tool invocations, we need to integrate them into the flow
+    if (toolInvocations && toolInvocations.length > 0) {
+      const integratedParts: MessagePart[] = [];
+      let toolIndex = 0;
+
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+        integratedParts.push(part);
+
+        // After thinking sections, insert tool invocations if available
+        if (part.type === "think" && toolIndex < toolInvocations.length) {
+          integratedParts.push({
+            type: "tool",
+            toolInvocation: toolInvocations[toolIndex],
+          });
+          toolIndex++;
+        }
+      }
+
+      // Add any remaining tool invocations at the end
+      while (toolIndex < toolInvocations.length) {
+        integratedParts.push({
+          type: "tool",
+          toolInvocation: toolInvocations[toolIndex],
+        });
+        toolIndex++;
+      }
+
+      return (
+        <>
+          {integratedParts.map((part, index) => (
+            <div key={index}>
+              {part.type === "think" ? (
+                <div className='mb-3 p-3 border border-purple-200 dark:border-purple-700 rounded-lg bg-purple-50 dark:bg-purple-900/20'>
+                  <div className='text-xs font-medium text-purple-600 dark:text-purple-400 mb-1 uppercase tracking-wide flex items-center gap-2'>
+                    <Brain className='w-4 h-4' />
+                    Thinking
+                  </div>
+                  <div className='text-purple-800 dark:text-purple-200 text-sm'>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      rehypePlugins={[rehypeHighlight]}
+                      components={markdownComponents}
+                    >
+                      {part.text}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+              ) : part.type === "tool" ? (
+                <div className='mb-3 border border-blue-200 dark:border-blue-700 rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20'>
+                  <div className='text-xs font-medium text-blue-600 dark:text-blue-400 mb-1 uppercase tracking-wide'>
+                    🔧 Tool: {part.toolInvocation.toolName}
+                  </div>
+                  {part.toolInvocation.args &&
+                    Object.keys(part.toolInvocation.args).length > 0 && (
+                      <div className='text-xs text-blue-700 dark:text-blue-300 mb-2'>
+                        <strong>Arguments:</strong>{" "}
+                        {JSON.stringify(part.toolInvocation.args, null, 2)}
+                      </div>
+                    )}
+                  {part.toolInvocation.state === "result" &&
+                    "result" in part.toolInvocation && (
+                      <div className='text-sm text-blue-800 dark:text-blue-200'>
+                        <strong>Result:</strong>{" "}
+                        {String(part.toolInvocation.result)}
+                      </div>
+                    )}
+                  {part.toolInvocation.state === "call" && (
+                    <div className='text-xs text-blue-600 dark:text-blue-400'>
+                      <em>Calling tool...</em>
+                    </div>
+                  )}
+                  {part.toolInvocation.state === "partial-call" && (
+                    <div className='text-xs text-blue-600 dark:text-blue-400'>
+                      <em>Preparing tool call...</em>
+                    </div>
+                  )}
+                </div>
+              ) : (
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeHighlight]}
@@ -225,73 +328,104 @@ const AssistantMessage = React.memo(({ content }: { content: string }) => {
                 >
                   {part.text}
                 </ReactMarkdown>
-              </div>
+              )}
             </div>
-          ) : (
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeHighlight]}
-              components={markdownComponents}
-            >
-              {part.text}
-            </ReactMarkdown>
-          )}
-        </div>
-      ))}
-    </>
-  );
-});
+          ))}
+        </>
+      );
+    }
+
+    // Fallback to original behavior if no tool invocations
+    return (
+      <>
+        {parts.map((part, index) => (
+          <div key={index}>
+            {part.type === "think" ? (
+              <div className='mb-3 p-3 border border-purple-200 dark:border-purple-700 rounded-lg bg-purple-50 dark:bg-purple-900/20'>
+                <div className='text-xs font-medium text-purple-600 dark:text-purple-400 mb-1 uppercase tracking-wide flex items-center gap-2'>
+                  <Brain className='w-4 h-4' />
+                  Thinking
+                </div>
+                <div className='text-purple-800 dark:text-purple-200 text-sm'>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeHighlight]}
+                    components={markdownComponents}
+                  >
+                    {part.text}
+                  </ReactMarkdown>
+                </div>
+              </div>
+            ) : (
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeHighlight]}
+                components={markdownComponents}
+              >
+                {part.text}
+              </ReactMarkdown>
+            )}
+          </div>
+        ))}
+      </>
+    );
+  }
+);
 
 AssistantMessage.displayName = "AssistantMessage";
 
 // Simplified message item component
-const MessageItem = React.memo(
-  ({ message }: { message: { id: string; role: string; content: string } }) => (
-    <div
-      className={`flex gap-4 ${
-        message.role === "user" ? "justify-end" : "justify-start"
-      }`}
-    >
-      {message.role === "assistant" && (
-        <div className='flex-shrink-0'>
-          <div className='w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center'>
-            <Bot className='w-4 h-4 text-white' />
-          </div>
-        </div>
-      )}
-
-      <div
-        className={`max-w-3xl px-4 py-3 rounded-2xl ${
-          message.role === "user"
-            ? "bg-blue-500 text-white ml-12"
-            : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700"
-        }`}
-      >
-        <div className='prose prose-sm max-w-none dark:prose-invert'>
-          {message.role === "assistant" ? (
-            <AssistantMessage content={message.content} />
-          ) : (
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeHighlight]}
-              components={markdownComponents}
-            >
-              {message.content}
-            </ReactMarkdown>
-          )}
+const MessageItem = React.memo(({ message }: { message: Message }) => (
+  <div
+    className={`flex gap-4 ${
+      message.role === "user" ? "justify-end" : "justify-start"
+    }`}
+  >
+    {message.role === "assistant" && (
+      <div className='flex-shrink-0'>
+        <div className='w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center'>
+          <Bot className='w-4 h-4 text-white' />
         </div>
       </div>
+    )}
 
-      {message.role === "user" && (
-        <div className='flex-shrink-0'>
-          <div className='w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center'>
-            <User className='w-4 h-4 text-white' />
-          </div>
-        </div>
-      )}
+    <div
+      className={`max-w-3xl px-4 py-3 rounded-2xl ${
+        message.role === "user"
+          ? "bg-blue-500 text-white ml-12"
+          : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700"
+      }`}
+    >
+      <div className='prose prose-sm max-w-none dark:prose-invert'>
+        {message.role === "assistant" ? (
+          <>
+            {/* Render content with integrated tool invocations and thinking */}
+            <AssistantMessage
+              content={message.content}
+              toolInvocations={message.toolInvocations}
+            />
+          </>
+        ) : (
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeHighlight]}
+            components={markdownComponents}
+          >
+            {message.content}
+          </ReactMarkdown>
+        )}
+      </div>
     </div>
-  )
-);
+
+    {message.role === "user" && (
+      <div className='flex-shrink-0'>
+        <div className='w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center'>
+          <User className='w-4 h-4 text-white' />
+        </div>
+      </div>
+    )}
+  </div>
+));
 
 MessageItem.displayName = "MessageItem";
 
@@ -316,13 +450,14 @@ export default function Chat() {
     setMessages,
   } = useChat({
     api: "/api/chat",
+    maxSteps: 5, // Allow for tool calls and follow-up responses
     body: {
       model: preferences.selectedModel,
       systemPrompt: preferences.systemPrompt,
       modelOptions: preferences.modelOptions,
     },
     onError: (err) => {
-      console.error("Chat error:", err);
+      console.error("💥Chat error:", err);
       connectionStatus.checkConnection();
     },
     onFinish: () => {

@@ -2,6 +2,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { streamText } from "ai";
 import { AILogger, generateRequestId } from "@/lib/ai-middleware";
 import { aiConfig, validateConfig } from "@/lib/ai-config";
+import { tools } from "@/lib/tools";
 import { z } from "zod";
 import { OllamaModelOptions } from "@/types/ollama";
 
@@ -127,8 +128,11 @@ export async function POST(req: Request) {
     }
 
     // Default system prompt if none provided
-    const defaultSystemPrompt =
-      "You are a helpful AI assistant. Provide clear, accurate, and helpful responses.";
+    const defaultSystemPrompt = `You are a helpful AI assistant. Provide clear, accurate, and helpful responses.
+
+When you need to get current date/time information, use the getCurrentTime tool. After calling the tool and receiving the result, provide a direct answer to the user using the information returned by the tool. Do not call the tool multiple times for the same information.
+
+Important: After receiving a tool result, provide your final answer immediately. Do not continue thinking or call tools again unless the user asks a new question.`;
     const finalSystemPrompt =
       systemPrompt && systemPrompt.trim() ? systemPrompt : defaultSystemPrompt;
 
@@ -277,8 +281,25 @@ export async function POST(req: Request) {
 
     const result = streamText({
       ...finalStreamParams,
+      maxSteps: 3, // Increase steps to allow for proper tool flow
+      toolChoice: "auto", // Let the model choose when to use tools
+      tools,
       onFinish: (event) => {
         // Log completion with actual token usage
+        console.log("🏁 Request finished:", {
+          finishReason: event.finishReason,
+          totalSteps: event.steps?.length,
+          toolCalls: event.toolCalls?.map((tc) => ({
+            toolName: tc.toolName,
+            args: tc.args,
+          })),
+          toolResults: event.toolResults?.map((tr) => ({
+            toolName: tr.toolName,
+            result: tr.result,
+          })),
+          hasText: !!event.text,
+          textLength: event.text?.length,
+        });
         AILogger.finishRequest(requestId, {
           promptTokens: event.usage?.promptTokens,
           completionTokens: event.usage?.completionTokens,

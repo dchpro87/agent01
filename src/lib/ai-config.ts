@@ -5,7 +5,6 @@ export interface AIConfig {
     baseURL: string;
     model: string;
     temperature: number;
-    maxTokens: number;
     maxRetries: number;
     defaultOptions: OllamaModelOptions;
   };
@@ -24,14 +23,13 @@ export const aiConfig: AIConfig = {
     baseURL: process.env.OLLAMA_BASE_URL || "http://localhost:11434",
     model: process.env.OLLAMA_MODEL || "llama3.2:3b",
     temperature: parseFloat(process.env.OLLAMA_TEMPERATURE || "0.7"),
-    maxTokens: parseInt(process.env.OLLAMA_MAX_TOKENS || "2048"),
     maxRetries: parseInt(process.env.OLLAMA_MAX_RETRIES || "2"),
     defaultOptions: {
       temperature: parseFloat(process.env.OLLAMA_TEMPERATURE || "0.7"),
       top_k: parseInt(process.env.OLLAMA_TOP_K || "40"),
       top_p: parseFloat(process.env.OLLAMA_TOP_P || "0"), // Default to 0 (disabled, use temperature)
       repeat_penalty: parseFloat(process.env.OLLAMA_REPEAT_PENALTY || "1.1"),
-      num_ctx: parseInt(process.env.OLLAMA_NUM_CTX || "2048"),
+      num_ctx: parseInt(process.env.OLLAMA_NUM_CTX || "4096"),
       num_predict: parseInt(process.env.OLLAMA_NUM_PREDICT || "512"),
     },
   },
@@ -64,8 +62,12 @@ export function validateConfig(): { isValid: boolean; errors: string[] } {
     errors.push("Temperature must be between 0 and 2");
   }
 
-  if (aiConfig.ollama.maxTokens < 1 || aiConfig.ollama.maxTokens > 8192) {
-    errors.push("Max tokens must be between 1 and 8192");
+  if (
+    aiConfig.ollama.defaultOptions.num_predict &&
+    (aiConfig.ollama.defaultOptions.num_predict < 1 ||
+      aiConfig.ollama.defaultOptions.num_predict > 8192)
+  ) {
+    errors.push("num_predict must be between 1 and 8192");
   }
 
   return {

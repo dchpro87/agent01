@@ -27,8 +27,8 @@ const DEFAULT_OPTIONS: OllamaModelOptions = {
   top_k: 40,
   top_p: 0, // Set to 0 by default (disabled), temperature takes precedence
   repeat_penalty: 1.1,
-  num_ctx: 2048,
-  num_predict: 512,
+  num_ctx: 4096,
+  num_predict: 1024,
 };
 
 const PRESET_INFO = {
@@ -180,9 +180,9 @@ export default function ModelConfigSelector({
 
       {isOpen && (
         <div className='absolute top-full right-0 mt-2 w-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50'>
-          <div className='p-4'>
+          <div className='p-6'>
             {/* Header */}
-            <div className='flex items-center justify-between mb-4'>
+            <div className='flex items-center justify-between mb-6'>
               <h3 className='text-lg font-medium text-gray-900 dark:text-white'>
                 Model Configuration
               </h3>
@@ -204,10 +204,10 @@ export default function ModelConfigSelector({
             </div>
 
             {/* Tabs */}
-            <div className='flex border-b border-gray-200 dark:border-gray-600 mb-4'>
+            <div className='flex border-b border-gray-200 dark:border-gray-600 mb-6'>
               <button
                 onClick={() => setActiveTab("presets")}
-                className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === "presets"
                     ? "border-blue-500 text-blue-600 dark:text-blue-400"
                     : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
@@ -217,7 +217,7 @@ export default function ModelConfigSelector({
               </button>
               <button
                 onClick={() => setActiveTab("advanced")}
-                className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === "advanced"
                     ? "border-blue-500 text-blue-600 dark:text-blue-400"
                     : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
@@ -229,7 +229,7 @@ export default function ModelConfigSelector({
 
             {/* Presets Tab */}
             {activeTab === "presets" && (
-              <div className='space-y-3'>
+              <div className='space-y-4'>
                 {Object.entries(PRESET_INFO).map(([preset, info]) => {
                   const Icon = info.icon;
                   const isSelected = currentPreset === preset;
@@ -246,7 +246,7 @@ export default function ModelConfigSelector({
                         });
                       }}
                       onMouseLeave={() => setHoveredPreset(null)}
-                      className={`w-full p-3 text-left border rounded-lg transition-colors ${
+                      className={`w-full p-4 text-left border rounded-lg transition-colors ${
                         isSelected
                           ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                           : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
@@ -258,7 +258,7 @@ export default function ModelConfigSelector({
                           <div className='font-medium text-gray-900 dark:text-white capitalize'>
                             {preset}
                           </div>
-                          <div className='text-sm text-gray-500 dark:text-gray-400'>
+                          <div className='text-sm text-gray-500 dark:text-gray-400 mt-1'>
                             {info.description}
                           </div>
                         </div>
@@ -271,16 +271,16 @@ export default function ModelConfigSelector({
 
             {/* Advanced Tab */}
             {activeTab === "advanced" && (
-              <div className='space-y-4 max-h-96 overflow-y-auto'>
+              <div className='space-y-6 max-h-96 overflow-y-auto pr-4'>
                 {/* Core Parameters */}
                 <div>
-                  <h4 className='text-sm font-medium text-gray-900 dark:text-white mb-3'>
+                  <h4 className='text-sm font-medium text-gray-900 dark:text-white mb-4'>
                     Core Parameters
                   </h4>
-                  <div className='space-y-3'>
+                  <div className='space-y-4'>
                     {/* Temperature */}
-                    <div>
-                      <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-1'>
+                    <div className='py-1'>
+                      <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-2'>
                         Temperature
                         <span className='text-xs text-gray-500'>
                           {currentOptions.temperature?.toFixed(2)}
@@ -300,14 +300,14 @@ export default function ModelConfigSelector({
                         }
                         className='w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer'
                       />
-                      <div className='text-xs text-gray-500 mt-1'>
+                      <div className='text-xs text-gray-500 mt-2'>
                         Controls randomness (0 = deterministic, 2 = very random)
                       </div>
                     </div>
 
                     {/* Top K */}
-                    <div>
-                      <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-1'>
+                    <div className='py-1'>
+                      <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-2'>
                         Top K
                         <span className='text-xs text-gray-500'>
                           {currentOptions.top_k}
@@ -324,14 +324,14 @@ export default function ModelConfigSelector({
                         }
                         className='w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer'
                       />
-                      <div className='text-xs text-gray-500 mt-1'>
+                      <div className='text-xs text-gray-500 mt-2'>
                         Limits vocabulary to top K tokens
                       </div>
                     </div>
 
                     {/* Top P */}
-                    <div>
-                      <div className='flex items-center justify-between mb-2'>
+                    <div className='py-1'>
+                      <div className='flex items-center justify-between mb-3'>
                         <label className='text-sm text-gray-700 dark:text-gray-300'>
                           Top P (Nucleus Sampling)
                         </label>
@@ -376,7 +376,7 @@ export default function ModelConfigSelector({
                           currentOptions.top_p === 0 ? "opacity-50" : ""
                         }`}
                       />
-                      <div className='text-xs text-gray-500 mt-1'>
+                      <div className='text-xs text-gray-500 mt-2'>
                         Controls the diversity of the model&apos;s output by
                         filtering the probability distribution of possible next
                         tokens.
@@ -389,8 +389,8 @@ export default function ModelConfigSelector({
                     </div>
 
                     {/* Repeat Penalty */}
-                    <div>
-                      <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-1'>
+                    <div className='py-1'>
+                      <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-2'>
                         Repeat Penalty
                         <span className='text-xs text-gray-500'>
                           {currentOptions.repeat_penalty?.toFixed(2)}
@@ -410,7 +410,7 @@ export default function ModelConfigSelector({
                         }
                         className='w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer'
                       />
-                      <div className='text-xs text-gray-500 mt-1'>
+                      <div className='text-xs text-gray-500 mt-2'>
                         Penalizes repetition (1.0 = no penalty)
                       </div>
                     </div>
@@ -419,14 +419,14 @@ export default function ModelConfigSelector({
 
                 {/* Token Control */}
                 <div>
-                  <h4 className='text-sm font-medium text-gray-900 dark:text-white mb-3'>
+                  <h4 className='text-sm font-medium text-gray-900 dark:text-white mb-4'>
                     Token Control
                   </h4>
-                  <div className='space-y-3'>
+                  <div className='space-y-4'>
                     {/* Context Length */}
-                    <div>
-                      <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-1'>
-                        Context Length
+                    <div className='py-1'>
+                      <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-2'>
+                        Context Length (Tokens)
                         <span className='text-xs text-gray-500'>
                           {currentOptions.num_ctx}
                         </span>
@@ -434,9 +434,9 @@ export default function ModelConfigSelector({
                       <input
                         type='range'
                         min='512'
-                        max='8192'
+                        max='128000'
                         step='128'
-                        value={currentOptions.num_ctx || 2048}
+                        value={currentOptions.num_ctx || 4096}
                         onChange={(e) =>
                           handleOptionChange(
                             "num_ctx",
@@ -445,15 +445,15 @@ export default function ModelConfigSelector({
                         }
                         className='w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer'
                       />
-                      <div className='text-xs text-gray-500 mt-1'>
+                      <div className='text-xs text-gray-500 mt-2'>
                         Maximum context window size
                       </div>
                     </div>
 
-                    {/* Max Tokens */}
-                    <div>
-                      <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-1'>
-                        Max Tokens
+                    {/* Tokens to Generate */}
+                    <div className='py-1'>
+                      <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-2'>
+                        Tokens to Generate
                         <span className='text-xs text-gray-500'>
                           {currentOptions.num_predict}
                         </span>
@@ -461,9 +461,9 @@ export default function ModelConfigSelector({
                       <input
                         type='range'
                         min='50'
-                        max='2048'
+                        max='128000'
                         step='10'
-                        value={currentOptions.num_predict || 512}
+                        value={currentOptions.num_predict || 4096}
                         onChange={(e) =>
                           handleOptionChange(
                             "num_predict",
@@ -472,7 +472,7 @@ export default function ModelConfigSelector({
                         }
                         className='w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer'
                       />
-                      <div className='text-xs text-gray-500 mt-1'>
+                      <div className='text-xs text-gray-500 mt-2'>
                         Maximum tokens to generate
                       </div>
                     </div>
@@ -481,13 +481,13 @@ export default function ModelConfigSelector({
 
                 {/* Advanced Sampling */}
                 <div>
-                  <h4 className='text-sm font-medium text-gray-900 dark:text-white mb-3'>
+                  <h4 className='text-sm font-medium text-gray-900 dark:text-white mb-4'>
                     Advanced Sampling
                   </h4>
-                  <div className='space-y-3'>
+                  <div className='space-y-4'>
                     {/* Min P */}
-                    <div>
-                      <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-1'>
+                    <div className='py-1'>
+                      <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-2'>
                         Min P
                         <span className='text-xs text-gray-500'>
                           {currentOptions.min_p?.toFixed(3) || "0.000"}
@@ -507,14 +507,14 @@ export default function ModelConfigSelector({
                         }
                         className='w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer'
                       />
-                      <div className='text-xs text-gray-500 mt-1'>
+                      <div className='text-xs text-gray-500 mt-2'>
                         Minimum probability threshold
                       </div>
                     </div>
 
                     {/* Seed */}
-                    <div>
-                      <label className='text-sm text-gray-700 dark:text-gray-300 mb-1 block'>
+                    <div className='py-1'>
+                      <label className='text-sm text-gray-700 dark:text-gray-300 mb-2 block'>
                         Seed (for reproducibility)
                       </label>
                       <input
@@ -531,7 +531,7 @@ export default function ModelConfigSelector({
                         }
                         className='w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white'
                       />
-                      <div className='text-xs text-gray-500 mt-1'>
+                      <div className='text-xs text-gray-500 mt-2'>
                         Fixed seed for reproducible outputs
                       </div>
                     </div>
@@ -541,7 +541,7 @@ export default function ModelConfigSelector({
             )}
 
             {/* Current Configuration Summary */}
-            <div className='mt-4 pt-4 border-t border-gray-200 dark:border-gray-600'>
+            <div className='mt-6 pt-4 border-t border-gray-200 dark:border-gray-600'>
               <div className='text-xs text-gray-500 dark:text-gray-400'>
                 <div className='flex justify-between items-center'>
                   <span>Configuration:</span>
@@ -553,6 +553,11 @@ export default function ModelConfigSelector({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Overlay to close dropdown */}
+      {isOpen && (
+        <div className='fixed inset-0 z-10' onClick={() => setIsOpen(false)} />
       )}
 
       {/* Tooltip Portal - renders outside the modal to prevent clipping */}

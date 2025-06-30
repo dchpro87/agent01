@@ -146,7 +146,7 @@ export default function ModelSelector({
 
       {/* Overlay to close dropdown when clicking outside */}
       {isOpen && (
-        <div className='fixed inset-0 z-40' onClick={() => setIsOpen(false)} />
+        <div className='fixed inset-0 z-10' onClick={() => setIsOpen(false)} />
       )}
     </div>
   );

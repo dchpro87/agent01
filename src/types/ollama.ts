@@ -129,21 +129,21 @@ export const MODEL_PRESETS = {
     top_k: 40,
     top_p: 0, // Use temperature instead
     repeat_penalty: 1.1,
-    num_ctx: 2048,
+    num_ctx: 4096,
   },
   creative: {
     temperature: 0.8,
     top_k: 40,
     top_p: 0, // Use temperature instead
     repeat_penalty: 1.05,
-    num_ctx: 2048,
+    num_ctx: 4096,
   },
   precise: {
     temperature: 0.3,
     top_k: 20,
     top_p: 0, // Use temperature instead
     repeat_penalty: 1.15,
-    num_ctx: 2048,
+    num_ctx: 4096,
   },
   coding: {
     temperature: 0.2,
@@ -157,7 +157,7 @@ export const MODEL_PRESETS = {
     top_k: 30,
     top_p: 0, // Use temperature instead
     repeat_penalty: 1.2,
-    num_ctx: 2048,
+    num_ctx: 4096,
   },
 } as const;
 

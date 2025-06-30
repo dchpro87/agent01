@@ -425,7 +425,7 @@ export default function SystemPromptSelector({
 
       {/* Overlay to close dropdown */}
       {isOpen && (
-        <div className='fixed inset-0 z-40' onClick={() => setIsOpen(false)} />
+        <div className='fixed inset-0 z-10' onClick={() => setIsOpen(false)} />
       )}
     </div>
   );

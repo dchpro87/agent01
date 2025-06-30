@@ -59,7 +59,7 @@ const result = streamText({
   model: ollama('your-model-name'), // Change this line
   messages,
   temperature: 0.7,
-  maxTokens: 2048,
+  maxTokens: 512, // This maps to num_predict for Ollama
 });
 ```
 

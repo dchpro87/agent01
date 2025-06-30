@@ -176,9 +176,44 @@ export async function POST(req: Request) {
 
     // Prepare model parameters - use either temperature OR topP as recommended by Ollama
     const modelParams = {
-      model: ollama(selectedModel),
+      model: ollama(selectedModel, {
+        // Pass Ollama-specific options directly to the model
+        structuredOutputs: false,
+        ...(finalOptions.num_ctx && { num_ctx: finalOptions.num_ctx }),
+        ...(finalOptions.num_predict && {
+          num_predict: finalOptions.num_predict,
+        }),
+        ...(finalOptions.repeat_penalty && {
+          repeat_penalty: finalOptions.repeat_penalty,
+        }),
+        ...(finalOptions.repeat_last_n && {
+          repeat_last_n: finalOptions.repeat_last_n,
+        }),
+        ...(finalOptions.min_p && { min_p: finalOptions.min_p }),
+        ...(finalOptions.typical_p && { typical_p: finalOptions.typical_p }),
+        ...(finalOptions.num_keep && { num_keep: finalOptions.num_keep }),
+        ...(finalOptions.penalize_newline !== undefined && {
+          penalize_newline: finalOptions.penalize_newline,
+        }),
+        ...(finalOptions.numa !== undefined && { numa: finalOptions.numa }),
+        ...(finalOptions.num_batch && { num_batch: finalOptions.num_batch }),
+        ...(finalOptions.num_gpu && { num_gpu: finalOptions.num_gpu }),
+        ...(finalOptions.main_gpu && { main_gpu: finalOptions.main_gpu }),
+        ...(finalOptions.use_mmap !== undefined && {
+          use_mmap: finalOptions.use_mmap,
+        }),
+        ...(finalOptions.num_thread && { num_thread: finalOptions.num_thread }),
+        ...(finalOptions.tfs_z && { tfs_z: finalOptions.tfs_z }),
+        ...(finalOptions.mirostat && { mirostat: finalOptions.mirostat }),
+        ...(finalOptions.mirostat_tau && {
+          mirostat_tau: finalOptions.mirostat_tau,
+        }),
+        ...(finalOptions.mirostat_eta && {
+          mirostat_eta: finalOptions.mirostat_eta,
+        }),
+        ...(finalOptions.stop && { stop: finalOptions.stop }),
+      }),
       messages: cleanedMessages,
-      maxTokens: finalOptions.num_predict || config.maxTokens,
       topK: finalOptions.top_k,
       frequencyPenalty: finalOptions.frequency_penalty,
       presencePenalty: finalOptions.presence_penalty,

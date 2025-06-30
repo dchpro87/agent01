@@ -1,17 +1,18 @@
-import { createOpenAI } from "@ai-sdk/openai";
-import { streamText } from "ai";
-import { AILogger, generateRequestId } from "@/lib/ai-middleware";
-import { aiConfig, validateConfig } from "@/lib/ai-config";
-import { z } from "zod";
+import { createOpenAI } from '@ai-sdk/openai';
+import { streamText } from 'ai';
+import { AILogger, generateRequestId } from '@/lib/ai-middleware';
+import { aiConfig, validateConfig } from '@/lib/ai-config';
+import { z } from 'zod';
+import { OllamaModelOptions } from '@/types/ollama';
 
 // Define the message schema for validation
 const MessageSchema = z.object({
-  role: z.enum(["user", "assistant", "system"]),
-  content: z.string().min(1, "Message content cannot be empty"),
+  role: z.enum(['user', 'assistant', 'system']),
+  content: z.string().min(1, 'Message content cannot be empty'),
 });
 
 const RequestSchema = z.object({
-  messages: z.array(MessageSchema).min(1, "At least one message is required"),
+  messages: z.array(MessageSchema).min(1, 'At least one message is required'),
   model: z.string().optional(),
   systemPrompt: z.string().optional(),
   modelOptions: z.record(z.any()).optional(),
@@ -25,7 +26,7 @@ export async function POST(req: Request) {
     const abortController = new AbortController();
 
     // Handle client disconnection (when user cancels)
-    req.signal?.addEventListener("abort", () => {
+    req.signal?.addEventListener('abort', () => {
       console.log(`🚫 Request ${requestId} aborted by client`);
       abortController.abort();
     });
@@ -35,12 +36,12 @@ export async function POST(req: Request) {
     if (!configValidation.isValid) {
       return new Response(
         JSON.stringify({
-          error: "Invalid AI configuration",
+          error: 'Invalid AI configuration',
           details: configValidation.errors,
         }),
         {
           status: 500,
-          headers: { "Content-Type": "application/json" },
+          headers: { 'Content-Type': 'application/json' },
         }
       );
     }
@@ -52,14 +53,14 @@ export async function POST(req: Request) {
     if (!validationResult.success) {
       return new Response(
         JSON.stringify({
-          error: "Invalid request format",
+          error: 'Invalid request format',
           details: validationResult.error.issues.map(
-            (issue) => `${issue.path.join(".")}: ${issue.message}`
+            (issue) => `${issue.path.join('.')}: ${issue.message}`
           ),
         }),
         {
           status: 400,
-          headers: { "Content-Type": "application/json" },
+          headers: { 'Content-Type': 'application/json' },
         }
       );
     }
@@ -69,27 +70,40 @@ export async function POST(req: Request) {
 
     // Get configuration from environment variables, allowing model override
     const { ollama: config } = aiConfig;
-    const selectedModel = model || config.model;
-
-    // Merge model options with configuration defaults
+    const selectedModel = model || config.model; // Merge model options with configuration defaults
     const finalOptions = {
       ...config.defaultOptions,
       ...modelOptions,
     };
 
+    // Validate model options
+    const modelOptionsErrors = validateModelOptions(finalOptions);
+    if (modelOptionsErrors.length > 0) {
+      return new Response(
+        JSON.stringify({
+          error: 'Invalid model options',
+          details: modelOptionsErrors,
+        }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     // Default system prompt if none provided
     const defaultSystemPrompt =
-      "You are a helpful AI assistant. Provide clear, accurate, and helpful responses.";
+      'You are a helpful AI assistant. Provide clear, accurate, and helpful responses.';
     const finalSystemPrompt =
       systemPrompt && systemPrompt.trim() ? systemPrompt : defaultSystemPrompt;
 
     // Start logging for this request
     AILogger.startRequest(requestId, selectedModel);
 
-    console.log("Chat API - baseURL:", config.baseURL);
-    console.log("Chat API - model:", selectedModel);
-    console.log("Chat API - options:", JSON.stringify(finalOptions, null, 2));
-    console.log("Chat API - messages:", JSON.stringify(messages, null, 2));
+    console.log('Chat API - baseURL:', config.baseURL);
+    console.log('Chat API - model:', selectedModel);
+    console.log('Chat API - options:', JSON.stringify(finalOptions, null, 2));
+    console.log('Chat API - messages:', JSON.stringify(messages, null, 2));
 
     // Test Ollama connection before proceeding
     try {
@@ -102,20 +116,20 @@ export async function POST(req: Request) {
     } catch (connectionError) {
       if (abortController.signal.aborted) {
         console.log(`🚫 Connection test aborted for request ${requestId}`);
-        return new Response("Request aborted", { status: 499 });
+        return new Response('Request aborted', { status: 499 });
       }
-      console.error("Ollama connection test failed:", connectionError);
+      console.error('Ollama connection test failed:', connectionError);
       return new Response(
         JSON.stringify({
-          error: "Failed to connect to Ollama server",
+          error: 'Failed to connect to Ollama server',
           details:
             connectionError instanceof Error
               ? connectionError.message
-              : "Unknown connection error",
+              : 'Unknown connection error',
         }),
         {
           status: 503,
-          headers: { "Content-Type": "application/json" },
+          headers: { 'Content-Type': 'application/json' },
         }
       );
     }
@@ -123,7 +137,7 @@ export async function POST(req: Request) {
     // Create OpenAI-compatible instance for Ollama
     const ollama = createOpenAI({
       baseURL: `${config.baseURL}/v1`,
-      apiKey: "ollama", // Ollama doesn't require a real API key
+      apiKey: 'ollama', // Ollama doesn't require a real API key
     });
 
     const result = streamText({
@@ -154,47 +168,70 @@ export async function POST(req: Request) {
 
     return result.toDataStreamResponse({
       headers: {
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-        "X-Request-ID": requestId,
-        "X-Model": selectedModel,
-        "X-Provider": "ollama",
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+        'X-Request-ID': requestId,
+        'X-Model': selectedModel,
+        'X-Provider': 'ollama',
       },
     });
   } catch (error) {
     // Handle abort cases
-    if (error instanceof Error && error.name === "AbortError") {
+    if (error instanceof Error && error.name === 'AbortError') {
       console.log(`🚫 Request ${requestId} was aborted`);
       AILogger.finishRequest(
         requestId,
         undefined,
-        new Error("Request aborted")
+        new Error('Request aborted')
       );
-      return new Response("Request aborted", { status: 499 });
+      return new Response('Request aborted', { status: 499 });
     }
 
     // Log the error
     AILogger.finishRequest(
       requestId,
       undefined,
-      error instanceof Error ? error : new Error("Unknown error")
+      error instanceof Error ? error : new Error('Unknown error')
     );
 
-    console.error("Chat API error:", error);
+    console.error('Chat API error:', error);
     console.error(
-      "Error stack:",
-      error instanceof Error ? error.stack : "No stack trace"
+      'Error stack:',
+      error instanceof Error ? error.stack : 'No stack trace'
     );
 
     return new Response(
       JSON.stringify({
-        error: "Failed to process chat request",
-        details: error instanceof Error ? error.message : "Unknown error",
+        error: 'Failed to process chat request',
+        details: error instanceof Error ? error.message : 'Unknown error',
       }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json" },
+        headers: { 'Content-Type': 'application/json' },
       }
     );
   }
 }
+
+const validateModelOptions = (options: OllamaModelOptions) => {
+  const errors: string[] = [];
+
+  if (
+    options.num_predict &&
+    (options.num_predict < 1 || options.num_predict > 8192)
+  ) {
+    errors.push('num_predict must be between 1 and 8192');
+  }
+
+  if (options.num_ctx && (options.num_ctx < 1 || options.num_ctx > 8192)) {
+    errors.push('num_ctx must be between 1 and 8192');
+  }
+
+  if (
+    options.temperature &&
+    (options.temperature < 0 || options.temperature > 2)
+  ) {
+    errors.push('temperature must be between 0 and 2');
+  }
+  return errors;
+};

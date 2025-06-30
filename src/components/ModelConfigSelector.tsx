@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Settings,
   ChevronDown,
@@ -24,7 +25,7 @@ interface ModelConfigSelectorProps {
 const DEFAULT_OPTIONS: OllamaModelOptions = {
   temperature: 0.7,
   top_k: 40,
-  top_p: 0.9,
+  top_p: 0, // Set to 0 by default (disabled), temperature takes precedence
   repeat_penalty: 1.1,
   num_ctx: 2048,
   num_predict: 512,
@@ -58,6 +59,21 @@ const PRESET_INFO = {
   },
 } as const;
 
+// Helper function to format preset parameters for tooltip
+const formatPresetParameters = (preset: ModelPreset): string => {
+  const params = MODEL_PRESETS[preset];
+  return Object.entries(params)
+    .map(([key, value]) => {
+      const formattedKey = key
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (l) => l.toUpperCase());
+      const formattedValue =
+        typeof value === "number" && value % 1 !== 0 ? value.toFixed(2) : value;
+      return `${formattedKey}: ${formattedValue}`;
+    })
+    .join("\n");
+};
+
 export default function ModelConfigSelector({
   selectedOptions,
   onOptionsChange,
@@ -69,6 +85,8 @@ export default function ModelConfigSelector({
     ...DEFAULT_OPTIONS,
     ...selectedOptions,
   });
+  const [hoveredPreset, setHoveredPreset] = useState<ModelPreset | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
   // Update local state when props change
   useEffect(() => {
@@ -79,6 +97,7 @@ export default function ModelConfigSelector({
     const presetOptions = MODEL_PRESETS[preset];
     setCurrentOptions(presetOptions);
     onOptionsChange(presetOptions);
+    setHoveredPreset(null); // Clear the tooltip
     setIsOpen(false); // Close the dropdown when a preset is selected
   };
 
@@ -103,11 +122,33 @@ export default function ModelConfigSelector({
 
   const getCurrentPreset = (): ModelPreset | null => {
     for (const [presetName, presetOptions] of Object.entries(MODEL_PRESETS)) {
-      const matches = Object.entries(presetOptions).every(
+      // Check if all preset parameters match current options
+      const presetMatches = Object.entries(presetOptions).every(
         ([key, value]) =>
           currentOptions[key as keyof OllamaModelOptions] === value
       );
-      if (matches) return presetName as ModelPreset;
+
+      // Check if any non-preset parameters have been modified from defaults
+      const hasOnlyDefaultNonPresetParams = Object.keys(currentOptions).every(
+        (key) => {
+          const presetValue = presetOptions[key as keyof typeof presetOptions];
+          const currentValue = currentOptions[key as keyof OllamaModelOptions];
+          const defaultValue = DEFAULT_OPTIONS[key as keyof OllamaModelOptions];
+
+          // If the parameter is in the preset, it must match exactly (already checked above)
+          if (presetValue !== undefined) {
+            return presetValue === currentValue;
+          }
+
+          // If the parameter is not in the preset, it must match the default value
+          // Any deviation from default means it's a custom configuration
+          return currentValue === defaultValue;
+        }
+      );
+
+      if (presetMatches && hasOnlyDefaultNonPresetParams) {
+        return presetName as ModelPreset;
+      }
     }
     return null;
   };
@@ -196,6 +237,15 @@ export default function ModelConfigSelector({
                     <button
                       key={preset}
                       onClick={() => handlePresetSelect(preset as ModelPreset)}
+                      onMouseEnter={(e) => {
+                        setHoveredPreset(preset as ModelPreset);
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setTooltipPosition({
+                          x: rect.left - 250, // Position tooltip to the left of the button
+                          y: rect.top + rect.height / 2 - 50, // Center vertically relative to button
+                        });
+                      }}
+                      onMouseLeave={() => setHoveredPreset(null)}
                       className={`w-full p-3 text-left border rounded-lg transition-colors ${
                         isSelected
                           ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
@@ -281,28 +331,60 @@ export default function ModelConfigSelector({
 
                     {/* Top P */}
                     <div>
-                      <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-1'>
-                        Top P
-                        <span className='text-xs text-gray-500'>
-                          {currentOptions.top_p?.toFixed(2)}
-                        </span>
-                      </label>
+                      <div className='flex items-center justify-between mb-2'>
+                        <label className='text-sm text-gray-700 dark:text-gray-300'>
+                          Top P (Nucleus Sampling)
+                        </label>
+                        <div className='flex items-center gap-2'>
+                          <button
+                            onClick={() => {
+                              if (currentOptions.top_p === 0) {
+                                // Enable with default value of 0.7
+                                handleOptionChange("top_p", 0.7);
+                              } else {
+                                // Disable by setting to 0
+                                handleOptionChange("top_p", 0);
+                              }
+                            }}
+                            className={`px-2 py-1 text-xs rounded transition-colors ${
+                              currentOptions.top_p === 0
+                                ? "bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400"
+                                : "bg-blue-500 text-white"
+                            }`}
+                          >
+                            {currentOptions.top_p === 0 ? "Enable" : "Disable"}
+                          </button>
+                          <span className='text-xs text-gray-500'>
+                            {currentOptions.top_p?.toFixed(1) || "0.0"}
+                          </span>
+                        </div>
+                      </div>
                       <input
                         type='range'
                         min='0'
                         max='1'
-                        step='0.01'
-                        value={currentOptions.top_p || 0.9}
+                        step='0.1'
+                        value={currentOptions.top_p || 0}
+                        disabled={currentOptions.top_p === 0}
                         onChange={(e) =>
                           handleOptionChange(
                             "top_p",
                             parseFloat(e.target.value)
                           )
                         }
-                        className='w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer'
+                        className={`w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer ${
+                          currentOptions.top_p === 0 ? "opacity-50" : ""
+                        }`}
                       />
                       <div className='text-xs text-gray-500 mt-1'>
-                        Nucleus sampling threshold
+                        Controls the diversity of the model&apos;s output by
+                        filtering the probability distribution of possible next
+                        tokens.
+                      </div>
+                      <div className='text-xs text-gray-500 mt-1'>
+                        {currentOptions.top_p === 0
+                          ? " Disabled - using temperature for randomness control"
+                          : " Enabled - overrides temperature setting (0.1-1.0, default 0.7)"}
                       </div>
                     </div>
 
@@ -472,6 +554,28 @@ export default function ModelConfigSelector({
           </div>
         </div>
       )}
+
+      {/* Tooltip Portal - renders outside the modal to prevent clipping */}
+      {hoveredPreset &&
+        typeof window !== "undefined" &&
+        createPortal(
+          <div
+            className='fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 shadow-lg z-[9999] max-w-xs'
+            style={{
+              left: `${tooltipPosition.x}px`,
+              top: `${tooltipPosition.y}px`,
+              pointerEvents: "none", // Prevent tooltip from interfering with mouse events
+            }}
+          >
+            <div className='text-sm font-medium text-gray-900 dark:text-white mb-2 capitalize'>
+              {hoveredPreset} Parameters
+            </div>
+            <div className='text-xs text-gray-600 dark:text-gray-300 whitespace-pre-line'>
+              {formatPresetParameters(hoveredPreset)}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

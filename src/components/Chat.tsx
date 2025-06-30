@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useChat } from '@ai-sdk/react';
-import { useState, useEffect, useRef } from 'react';
-import React from 'react';
-import ReactMarkdown from 'react-markdown';
-import type { Components } from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeHighlight from 'rehype-highlight';
-import { OllamaModelOptions } from '@/types/ollama';
+import { useChat } from "@ai-sdk/react";
+import { useState, useEffect, useRef } from "react";
+import React from "react";
+import ReactMarkdown from "react-markdown";
+import type { Components } from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
+import { OllamaModelOptions } from "@/types/ollama";
 
 import {
   Send,
@@ -19,21 +19,116 @@ import {
   RotateCcw,
   X,
   Brain,
-} from 'lucide-react';
-import ModelSelector from './ModelSelector';
-import SystemPromptSelector from './SystemPromptSelector';
-import ModelConfigSelector from './ModelConfigSelector';
+} from "lucide-react";
+import ModelSelector from "./ModelSelector";
+import SystemPromptSelector from "./SystemPromptSelector";
+import ModelConfigSelector from "./ModelConfigSelector";
 
-// Shared markdown components for performance
+// Custom hook for connection status
+function useConnectionStatus() {
+  const [status, setStatus] = useState<
+    "checking" | "connected" | "disconnected"
+  >("checking");
+  const [serverInfo, setServerInfo] = useState<string>("");
+
+  const checkConnection = async () => {
+    try {
+      const response = await fetch("/api/health");
+      if (response.ok || response.status === 206) {
+        const data = await response.json();
+        if (data.status === "healthy" || data.status === "partial") {
+          setStatus("connected");
+          if (data.details?.baseURL) {
+            try {
+              const url = new URL(data.details.baseURL);
+              setServerInfo(`${url.hostname}:${url.port || "80"}`);
+            } catch {
+              setServerInfo(data.details.baseURL);
+            }
+          }
+        } else {
+          setStatus("disconnected");
+        }
+      } else {
+        setStatus("disconnected");
+      }
+    } catch {
+      setStatus("disconnected");
+    }
+  };
+
+  useEffect(() => {
+    checkConnection();
+  }, []);
+
+  return { status, serverInfo, checkConnection };
+}
+
+// Custom hook for persisted preferences
+function usePersistedPreferences() {
+  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [systemPrompt, setSystemPrompt] = useState<string>(
+    "You are Sarah, a helpful AI assistant with a warm and nurturing personality. You're naturally organized, detail-oriented, and always ready to lend a helping hand. Provide clear, accurate, and helpful responses with a caring touch. If you need more clarification, say so, or ask for it."
+  );
+  const [modelOptions, setModelOptions] = useState<OllamaModelOptions>({
+    temperature: 0.7,
+    top_k: 40,
+    top_p: 0.9,
+    repeat_penalty: 1.1,
+    num_ctx: 2048,
+    num_predict: 512,
+  });
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    const savedModel = localStorage.getItem("selectedModel");
+    const savedPrompt = localStorage.getItem("selectedSystemPrompt");
+    const savedOptions = localStorage.getItem("modelOptions");
+
+    if (savedModel) setSelectedModel(savedModel);
+    if (savedPrompt) setSystemPrompt(savedPrompt);
+    if (savedOptions) {
+      try {
+        setModelOptions(JSON.parse(savedOptions));
+      } catch (error) {
+        console.error("Failed to parse saved model options:", error);
+      }
+    }
+  }, []);
+
+  // Save to localStorage when values change
+  useEffect(() => {
+    if (selectedModel) localStorage.setItem("selectedModel", selectedModel);
+  }, [selectedModel]);
+
+  useEffect(() => {
+    if (systemPrompt)
+      localStorage.setItem("selectedSystemPrompt", systemPrompt);
+  }, [systemPrompt]);
+
+  useEffect(() => {
+    localStorage.setItem("modelOptions", JSON.stringify(modelOptions));
+  }, [modelOptions]);
+
+  return {
+    selectedModel,
+    setSelectedModel,
+    systemPrompt,
+    setSystemPrompt,
+    modelOptions,
+    setModelOptions,
+  };
+}
+
+// Simplified markdown components
 const markdownComponents: Components = {
-  // Your existing markdown components...
   p: ({ children, ...props }) => (
     <p className='mb-2 last:mb-0' {...props}>
       {children}
     </p>
   ),
   code: ({ children, className, ...props }) => {
-    const isInline = !className?.includes('language-');
+    const isInline = !className?.includes("language-");
     return isInline ? (
       <code
         className='bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded text-sm font-mono'
@@ -55,122 +150,78 @@ const markdownComponents: Components = {
       {children}
     </pre>
   ),
-  // ...rest of your markdown components
 };
 
-// Thinking box components for performance
-const thinkingComponents: Components = {
-  ...markdownComponents,
-  code: ({ children, className, ...props }) => {
-    const isInline = !className?.includes('language-');
-    return isInline ? (
-      <code
-        className='bg-purple-100 dark:bg-purple-800 px-1 py-0.5 rounded text-xs font-mono'
-        {...props}
-      >
-        {children}
-      </code>
-    ) : (
-      <code className={className} {...props}>
-        {children}
-      </code>
-    );
-  },
-  pre: ({ children, ...props }) => (
-    <pre
-      className='bg-purple-100 dark:bg-purple-800 p-2 rounded mt-2 mb-2 overflow-x-auto text-xs'
-      {...props}
-    >
-      {children}
-    </pre>
-  ),
-};
+// Simplified thinking tag parser
+function parseThinkingTags(content: string) {
+  const parts = [];
+  const thinkStartTag = "<think>";
+  const thinkEndTag = "</think>";
+  let currentIndex = 0;
 
-// Optimized component to handle assistant messages with thinking tags
+  while (currentIndex < content.length) {
+    const thinkStart = content.indexOf(thinkStartTag, currentIndex);
+
+    if (thinkStart === -1) {
+      // No more thinking tags, add remaining content
+      const remaining = content.slice(currentIndex).trim();
+      if (remaining) {
+        parts.push({ type: "content", text: remaining });
+      }
+      break;
+    }
+
+    // Add content before thinking tag
+    if (thinkStart > currentIndex) {
+      const beforeText = content.slice(currentIndex, thinkStart).trim();
+      if (beforeText) {
+        parts.push({ type: "content", text: beforeText });
+      }
+    }
+
+    // Find end of thinking tag
+    const thinkContentStart = thinkStart + thinkStartTag.length;
+    const thinkEnd = content.indexOf(thinkEndTag, thinkContentStart);
+
+    if (thinkEnd === -1) {
+      // Incomplete thinking tag (streaming)
+      const thinkContent = content.slice(thinkContentStart);
+      if (thinkContent) {
+        parts.push({ type: "think", text: thinkContent });
+      }
+      break;
+    } else {
+      // Complete thinking tag
+      const thinkContent = content.slice(thinkContentStart, thinkEnd).trim();
+      if (thinkContent) {
+        parts.push({ type: "think", text: thinkContent });
+      }
+      currentIndex = thinkEnd + thinkEndTag.length;
+    }
+  }
+
+  return parts.length > 0 ? parts : [{ type: "content", text: content }];
+}
+
+// Simplified assistant message component
 const AssistantMessage = React.memo(({ content }: { content: string }) => {
-  // Parse thinking tags with useMemo to prevent re-parsing on every render
-  const parts = React.useMemo(() => {
-    const results = [];
-    let currentIndex = 0;
-
-    // Simple split approach for parsing <think> tags
-    const thinkStartTag = '<think>';
-    const thinkEndTag = '</think>';
-
-    while (currentIndex < content.length) {
-      const thinkStart = content.indexOf(thinkStartTag, currentIndex);
-
-      if (thinkStart === -1) {
-        // No more thinking tags, add remaining content
-        const remaining = content.slice(currentIndex).trim();
-        if (remaining) {
-          results.push({ type: 'content', text: remaining });
-        }
-        break;
-      }
-
-      // Add content before thinking tag
-      if (thinkStart > currentIndex) {
-        const beforeText = content.slice(currentIndex, thinkStart).trim();
-        if (beforeText) {
-          results.push({ type: 'content', text: beforeText });
-        }
-      }
-
-      // Find end of thinking tag
-      const thinkContentStart = thinkStart + thinkStartTag.length;
-      const thinkEnd = content.indexOf(thinkEndTag, thinkContentStart);
-
-      if (thinkEnd === -1) {
-        // Incomplete thinking tag (streaming)
-        const thinkContent = content.slice(thinkContentStart);
-        if (thinkContent) {
-          results.push({ type: 'think', text: thinkContent, incomplete: true });
-        }
-        break;
-      } else {
-        // Complete thinking tag
-        const thinkContent = content.slice(thinkContentStart, thinkEnd).trim();
-        if (thinkContent) {
-          results.push({
-            type: 'think',
-            text: thinkContent,
-            incomplete: false,
-          });
-        }
-        currentIndex = thinkEnd + thinkEndTag.length;
-      }
-    }
-
-    // If no parts found, treat as regular content
-    if (results.length === 0) {
-      results.push({ type: 'content', text: content });
-    }
-
-    return results;
-  }, [content]);
+  const parts = parseThinkingTags(content);
 
   return (
     <>
       {parts.map((part, index) => (
         <div key={index}>
-          {part.type === 'think' ? (
+          {part.type === "think" ? (
             <div className='mb-3 p-3 border border-purple-200 dark:border-purple-700 rounded-lg bg-purple-50 dark:bg-purple-900/20'>
               <div className='text-xs font-medium text-purple-600 dark:text-purple-400 mb-1 uppercase tracking-wide flex items-center gap-2'>
-                <Brain className='w-4 h-4 animate-pulse' />
-                {part.incomplete && (
-                  <div className='flex space-x-1'>
-                    <div className='w-1 h-1 bg-purple-400 rounded-full animate-bounce [animation-delay:-0.3s]'></div>
-                    <div className='w-1 h-1 bg-purple-400 rounded-full animate-bounce [animation-delay:-0.15s]'></div>
-                    <div className='w-1 h-1 bg-purple-400 rounded-full animate-bounce'></div>
-                  </div>
-                )}
+                <Brain className='w-4 h-4' />
+                Thinking
               </div>
-              <div className='text-purple-800 dark:text-purple-200 text-sm prose prose-sm max-w-none dark:prose-invert'>
+              <div className='text-purple-800 dark:text-purple-200 text-sm'>
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeHighlight]}
-                  components={thinkingComponents}
+                  components={markdownComponents}
                 >
                   {part.text}
                 </ReactMarkdown>
@@ -191,17 +242,17 @@ const AssistantMessage = React.memo(({ content }: { content: string }) => {
   );
 });
 
-AssistantMessage.displayName = 'AssistantMessage';
+AssistantMessage.displayName = "AssistantMessage";
 
-// Memoized message component to prevent unnecessary re-renders
+// Simplified message item component
 const MessageItem = React.memo(
   ({ message }: { message: { id: string; role: string; content: string } }) => (
     <div
       className={`flex gap-4 ${
-        message.role === 'user' ? 'justify-end' : 'justify-start'
+        message.role === "user" ? "justify-end" : "justify-start"
       }`}
     >
-      {message.role === 'assistant' && (
+      {message.role === "assistant" && (
         <div className='flex-shrink-0'>
           <div className='w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center'>
             <Bot className='w-4 h-4 text-white' />
@@ -211,13 +262,13 @@ const MessageItem = React.memo(
 
       <div
         className={`max-w-3xl px-4 py-3 rounded-2xl ${
-          message.role === 'user'
-            ? 'bg-blue-500 text-white ml-12'
-            : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700'
+          message.role === "user"
+            ? "bg-blue-500 text-white ml-12"
+            : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700"
         }`}
       >
         <div className='prose prose-sm max-w-none dark:prose-invert'>
-          {message.role === 'assistant' ? (
+          {message.role === "assistant" ? (
             <AssistantMessage content={message.content} />
           ) : (
             <ReactMarkdown
@@ -231,7 +282,7 @@ const MessageItem = React.memo(
         </div>
       </div>
 
-      {message.role === 'user' && (
+      {message.role === "user" && (
         <div className='flex-shrink-0'>
           <div className='w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center'>
             <User className='w-4 h-4 text-white' />
@@ -242,101 +293,18 @@ const MessageItem = React.memo(
   )
 );
 
-MessageItem.displayName = 'MessageItem';
+MessageItem.displayName = "MessageItem";
 
-// The main Chat component with state update optimizations
+// Main Chat component - significantly simplified
 export default function Chat() {
-  const [connectionStatus, setConnectionStatus] = useState<
-    'checking' | 'connected' | 'disconnected'
-  >('checking');
-  const [serverInfo, setServerInfo] = useState<string>('');
-
-  // Initialize state with default values
-  const [selectedModel, setSelectedModel] = useState<string>('');
-  const [systemPrompt, setSystemPrompt] = useState<string>(
-    "You are Sarah, a helpful AI assistant with a warm and nurturing personality. You're naturally organized, detail-oriented, and always ready to lend a helping hand. Provide clear, accurate, and helpful responses with a caring touch. If you need more clarification, say so, or ask for it."
-  );
-  const [modelOptions, setModelOptions] = useState<OllamaModelOptions>({
-    temperature: 0.7,
-    top_k: 40,
-    top_p: 0.9,
-    repeat_penalty: 1.1,
-    num_ctx: 2048,
-    num_predict: 512,
-  });
-  // Reference to ensure updates don't cause infinite loops
-  const isUpdatingRef = useRef(false);
-  const previousMessagesRef = useRef<
-    Array<{ id: string; role: string; content: string }>
-  >([]);
-  const originalContentRef = useRef<Map<string, string>>(new Map());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Helper function to update messages in a way that avoids React update loops
-  const safeSetMessages = (
-    newMessages: Array<{ id: string; role: string; content: string }>
-  ) => {
-    if (isUpdatingRef.current) return;
-    isUpdatingRef.current = true;
-    window.requestAnimationFrame(() => {
-      setDisplayMessages(newMessages);
-      setTimeout(() => {
-        isUpdatingRef.current = false;
-      }, 0);
-    });
-  };
+  // Use custom hooks for cleaner state management
+  const connectionStatus = useConnectionStatus();
+  const preferences = usePersistedPreferences();
 
-  // Use this state for UI display with thinking tags
-  const [displayMessages, setDisplayMessages] = useState<
-    Array<{ id: string; role: string; content: string }>
-  >([]);
-
-  // Load values from localStorage after component mounts
-  useEffect(() => {
-    const savedModel = localStorage.getItem('selectedModel');
-    if (savedModel) {
-      setSelectedModel(savedModel);
-    }
-
-    const savedPrompt = localStorage.getItem('selectedSystemPrompt');
-    if (savedPrompt) {
-      setSystemPrompt(savedPrompt);
-    }
-
-    const savedOptions = localStorage.getItem('modelOptions');
-    if (savedOptions) {
-      try {
-        setModelOptions(JSON.parse(savedOptions));
-      } catch (error) {
-        console.error('Failed to parse saved model options:', error);
-      }
-    }
-  }, []);
-
-  // Save preferences to localStorage when they change
-  useEffect(() => {
-    if (selectedModel) {
-      localStorage.setItem('selectedModel', selectedModel);
-    }
-  }, [selectedModel]);
-
-  useEffect(() => {
-    if (systemPrompt) {
-      localStorage.setItem('selectedSystemPrompt', systemPrompt);
-    }
-  }, [systemPrompt]);
-
-  useEffect(() => {
-    localStorage.setItem('modelOptions', JSON.stringify(modelOptions));
-  }, [modelOptions]);
-
-  // Scroll to bottom when messages update
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  // Use the AI SDK's chat hook
+  // Simplified chat hook usage
   const {
     messages,
     input,
@@ -347,206 +315,62 @@ export default function Chat() {
     stop,
     setMessages,
   } = useChat({
-    api: '/api/chat',
+    api: "/api/chat",
     body: {
-      model: selectedModel,
-      systemPrompt: systemPrompt,
-      modelOptions: modelOptions,
+      model: preferences.selectedModel,
+      systemPrompt: preferences.systemPrompt,
+      modelOptions: preferences.modelOptions,
     },
     onError: (err) => {
-      // Safely handle errors
-      setTimeout(() => {
-        console.error('Chat error:', err);
-        setConnectionStatus('disconnected');
-      }, 0);
+      console.error("Chat error:", err);
+      connectionStatus.checkConnection();
     },
-    onFinish: (message) => {
-      // Avoid state updates inside React's render cycle
-      setTimeout(() => {
-        setConnectionStatus('connected');
-
-        // Store original content with thinking parts for assistant messages
-        if (message.role === 'assistant') {
-          originalContentRef.current.set(message.id, message.content);
-        }
-      }, 0);
-    },
-    headers: {
-      'Content-Type': 'application/json',
+    onFinish: () => {
+      connectionStatus.checkConnection();
     },
     onResponse: async (response) => {
-      // Clone response state to avoid closures with stale values
-      const responseStatus = response.status;
-      const responseOk = response.ok;
-
-      // Handle response outside of React's rendering cycle
-      setTimeout(async () => {
-        if (responseStatus === 503) {
-          setConnectionStatus('disconnected');
-          setServerInfo('');
-        } else if (responseStatus === 500) {
-          console.warn('Server error occurred');
-        } else if (responseOk) {
-          setConnectionStatus('connected');
-
-          // Get server info if needed
-          if (!serverInfo) {
-            try {
-              const healthResponse = await fetch('/api/health');
-              if (healthResponse.ok) {
-                const data = await healthResponse.json();
-                if (data.details?.baseURL) {
-                  const url = new URL(data.details.baseURL);
-                  setServerInfo(`${url.hostname}:${url.port || '80'}`);
-                }
-              }
-            } catch {
-              // Ignore fetch errors
-            }
-          }
-        }
-      }, 0);
+      if (response.status === 503) {
+        connectionStatus.checkConnection();
+      } else if (response.ok) {
+        connectionStatus.checkConnection();
+      }
     },
   });
 
-  // THIS IS THE KEY CHANGE: Process messages to display with thinking tags
-  useEffect(() => {
-    // Skip if already updating or no changes
-    if (isUpdatingRef.current) return;
-    if (
-      messages.length === previousMessagesRef.current.length &&
-      messages.every(
-        (msg, i) =>
-          msg.id === previousMessagesRef.current[i]?.id &&
-          msg.content === previousMessagesRef.current[i]?.content
-      )
-    ) {
-      return;
-    }
-
-    // Update reference for comparison in next cycle
-    previousMessagesRef.current = messages;
-
-    // Map messages for display, showing original content with thinking tags
-    const updatedDisplayMessages = messages.map((message) => {
-      if (
-        message.role === 'assistant' &&
-        originalContentRef.current.has(message.id)
-      ) {
-        const originalContent = originalContentRef.current.get(message.id);
-        if (originalContent && originalContent.includes('<think>')) {
-          return { ...message, content: originalContent };
-        }
-      }
-      return message;
-    });
-
-    // Use our safe update function to avoid React update depth issues
-    safeSetMessages(updatedDisplayMessages);
-  }, [messages]);
-
   // Auto-scroll to bottom when messages change
   useEffect(() => {
-    scrollToBottom();
-  }, [displayMessages, status]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, status]);
 
-  // Focus input field after streaming completes
+  // Focus input after streaming completes
   useEffect(() => {
-    if (status === 'ready' && displayMessages.length > 0) {
-      const timer = setTimeout(() => {
-        inputRef.current?.focus();
-      }, 100);
-      return () => clearTimeout(timer);
+    if (status === "ready" && messages.length > 0) {
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [status, displayMessages.length]);
+  }, [status, messages.length]);
 
-  // Check connection on mount
-  useEffect(() => {
-    const checkConnection = async () => {
-      try {
-        const response = await fetch('/api/health');
-        if (response.ok || response.status === 206) {
-          const data = await response.json();
-          if (data.status === 'healthy' || data.status === 'partial') {
-            setConnectionStatus('connected');
-            if (data.details?.baseURL) {
-              try {
-                const url = new URL(data.details.baseURL);
-                setServerInfo(`${url.hostname}:${url.port || '80'}`);
-              } catch {
-                setServerInfo(data.details.baseURL);
-              }
-            }
-          } else {
-            setConnectionStatus('disconnected');
-            setServerInfo('');
-          }
-        } else {
-          setConnectionStatus('disconnected');
-          setServerInfo('');
-        }
-      } catch {
-        setConnectionStatus('disconnected');
-        setServerInfo('');
-      }
-    };
-    checkConnection();
-  }, []);
-
-  // Handle form submission
   const handleFormSubmit = (e: React.FormEvent) => {
-    setConnectionStatus('checking');
+    connectionStatus.checkConnection();
     handleSubmit(e);
   };
 
-  // Reset conversation
   const handleReset = () => {
-    if (status === 'streaming' || status === 'submitted') {
+    if (status === "streaming" || status === "submitted") {
       stop();
     }
-
-    // Clear messages
     setMessages([]);
-    safeSetMessages([]);
-    originalContentRef.current.clear();
-
-    // Re-check connection
-    setConnectionStatus('checking');
-    setTimeout(async () => {
-      try {
-        const response = await fetch('/api/health');
-        if (response.ok || response.status === 206) {
-          const data = await response.json();
-          if (data.status === 'healthy' || data.status === 'partial') {
-            setConnectionStatus('connected');
-            if (data.details?.baseURL) {
-              try {
-                const url = new URL(data.details.baseURL);
-                setServerInfo(`${url.hostname}:${url.port || '80'}`);
-              } catch {
-                setServerInfo(data.details.baseURL);
-              }
-            }
-          } else {
-            setConnectionStatus('disconnected');
-            setServerInfo('');
-          }
-        } else {
-          setConnectionStatus('disconnected');
-          setServerInfo('');
-        }
-      } catch {
-        setConnectionStatus('disconnected');
-        setServerInfo('');
-      }
-    }, 100);
+    connectionStatus.checkConnection();
   };
 
-  // Cancel streaming
   const handleCancel = () => {
     stop();
-    setConnectionStatus('connected');
   };
+
+  const isDisabled =
+    status === "streaming" ||
+    status === "submitted" ||
+    connectionStatus.status === "disconnected";
+  const isStreaming = status === "streaming" || status === "submitted";
 
   return (
     <div className='flex flex-col h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800'>
@@ -568,10 +392,10 @@ export default function Chat() {
               </div>
 
               {/* Reset Button */}
-              {displayMessages.length > 0 && (
+              {messages.length > 0 && (
                 <button
                   onClick={handleReset}
-                  disabled={status === 'streaming' || status === 'submitted'}
+                  disabled={isStreaming}
                   className='ml-4 px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors duration-200 flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed'
                   title='Reset conversation'
                 >
@@ -580,39 +404,29 @@ export default function Chat() {
                 </button>
               )}
             </div>
-            {/* Model Selector, System Prompt, and Configuration */}
+
+            {/* Model Configuration */}
             <div className='flex-1 flex justify-center items-center gap-4'>
               <ModelSelector
-                selectedModel={selectedModel}
-                onModelChange={setSelectedModel}
-                disabled={
-                  status === 'streaming' ||
-                  status === 'submitted' ||
-                  connectionStatus === 'disconnected'
-                }
+                selectedModel={preferences.selectedModel}
+                onModelChange={preferences.setSelectedModel}
+                disabled={isDisabled}
               />
               <SystemPromptSelector
-                selectedPrompt={systemPrompt}
-                onPromptChange={setSystemPrompt}
-                disabled={
-                  status === 'streaming' ||
-                  status === 'submitted' ||
-                  connectionStatus === 'disconnected'
-                }
+                selectedPrompt={preferences.systemPrompt}
+                onPromptChange={preferences.setSystemPrompt}
+                disabled={isDisabled}
               />
               <ModelConfigSelector
-                selectedOptions={modelOptions}
-                onOptionsChange={setModelOptions}
-                disabled={
-                  status === 'streaming' ||
-                  status === 'submitted' ||
-                  connectionStatus === 'disconnected'
-                }
+                selectedOptions={preferences.modelOptions}
+                onOptionsChange={preferences.setModelOptions}
+                disabled={isDisabled}
               />
             </div>
+
             {/* Connection Status */}
             <div className='flex items-start gap-2'>
-              {connectionStatus === 'checking' && (
+              {connectionStatus.status === "checking" && (
                 <div className='flex items-center gap-2'>
                   <Loader2 className='w-4 h-4 animate-spin text-yellow-500' />
                   <span className='text-sm text-yellow-600 dark:text-yellow-400'>
@@ -620,7 +434,7 @@ export default function Chat() {
                   </span>
                 </div>
               )}
-              {connectionStatus === 'connected' && (
+              {connectionStatus.status === "connected" && (
                 <div className='flex flex-col items-start'>
                   <div className='flex items-center gap-2'>
                     <CheckCircle className='w-4 h-4 text-green-500' />
@@ -628,14 +442,14 @@ export default function Chat() {
                       Connected
                     </span>
                   </div>
-                  {serverInfo && (
+                  {connectionStatus.serverInfo && (
                     <span className='text-[8px] text-gray-500 dark:text-gray-400 ml-6'>
-                      {serverInfo}
+                      {connectionStatus.serverInfo}
                     </span>
                   )}
                 </div>
               )}
-              {connectionStatus === 'disconnected' && (
+              {connectionStatus.status === "disconnected" && (
                 <div className='flex items-center gap-2'>
                   <AlertCircle className='w-4 h-4 text-red-500' />
                   <span className='text-sm text-red-600 dark:text-red-400'>
@@ -651,7 +465,7 @@ export default function Chat() {
       {/* Messages */}
       <div className='flex-1 overflow-y-auto'>
         <div className='max-w-4xl mx-auto px-4 py-6'>
-          {displayMessages.length === 0 ? (
+          {messages.length === 0 ? (
             <div className='text-center py-12'>
               <Bot className='w-12 h-12 text-gray-400 mx-auto mb-4' />
               <h2 className='text-xl font-medium text-gray-900 dark:text-white mb-2'>
@@ -661,7 +475,7 @@ export default function Chat() {
                 Start a conversation by typing a message below.
               </p>
 
-              {connectionStatus === 'disconnected' && (
+              {connectionStatus.status === "disconnected" && (
                 <div className='max-w-md mx-auto p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg'>
                   <h3 className='text-sm font-medium text-amber-800 dark:text-amber-200 mb-2'>
                     Ollama Connection Required
@@ -671,7 +485,7 @@ export default function Chat() {
                   </p>
                   <div className='text-xs text-amber-600 dark:text-amber-400 space-y-1'>
                     <div>
-                      1. Install Ollama from{' '}
+                      1. Install Ollama from{" "}
                       <a
                         href='https://ollama.ai'
                         target='_blank'
@@ -682,13 +496,13 @@ export default function Chat() {
                       </a>
                     </div>
                     <div>
-                      2. Run:{' '}
+                      2. Run:{" "}
                       <code className='bg-amber-100 dark:bg-amber-800 px-1 rounded'>
                         ollama pull llama3.2:3b
                       </code>
                     </div>
                     <div>
-                      3. Start:{' '}
+                      3. Start:{" "}
                       <code className='bg-amber-100 dark:bg-amber-800 px-1 rounded'>
                         ollama serve
                       </code>
@@ -699,33 +513,31 @@ export default function Chat() {
             </div>
           ) : (
             <div className='space-y-6'>
-              {displayMessages.map((message) => (
+              {messages.map((message) => (
                 <MessageItem key={message.id} message={message} />
               ))}
 
-              {/* Loading indicator for assistant response */}
-              {(status === 'submitted' ||
-                (status === 'streaming' &&
-                  displayMessages.length > 0 &&
-                  displayMessages[displayMessages.length - 1]?.role ===
-                    'user')) && (
-                <div className='flex gap-4 justify-start'>
-                  <div className='flex-shrink-0'>
-                    <div className='w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center'>
-                      <Bot className='w-4 h-4 text-white' />
+              {/* Loading indicator - only show when waiting for response, not when streaming */}
+              {isStreaming &&
+                messages.length > 0 &&
+                messages[messages.length - 1].role === "user" && (
+                  <div className='flex gap-4 justify-start'>
+                    <div className='flex-shrink-0'>
+                      <div className='w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center'>
+                        <Bot className='w-4 h-4 text-white' />
+                      </div>
                     </div>
-                  </div>
-                  <div className='max-w-3xl px-4 py-3 rounded-2xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700'>
-                    <div className='flex items-center gap-2'>
-                      <div className='flex space-x-1'>
-                        <div className='w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]'></div>
-                        <div className='w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]'></div>
-                        <div className='w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce'></div>
+                    <div className='max-w-3xl px-4 py-3 rounded-2xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700'>
+                      <div className='flex items-center gap-2'>
+                        <div className='flex space-x-1'>
+                          <div className='w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]'></div>
+                          <div className='w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]'></div>
+                          <div className='w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce'></div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
               <div ref={messagesEndRef} />
             </div>
@@ -754,59 +566,37 @@ export default function Chat() {
                 value={input}
                 onChange={handleInputChange}
                 placeholder={
-                  connectionStatus === 'disconnected'
-                    ? 'Please check Ollama connection...'
-                    : 'Type your message...'
+                  connectionStatus.status === "disconnected"
+                    ? "Please check Ollama connection..."
+                    : "Type your message..."
                 }
                 className='w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none min-h-[52px] max-h-32 disabled:opacity-50'
                 rows={1}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
+                  if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
                     handleFormSubmit(e);
                   }
                 }}
-                disabled={
-                  status === 'streaming' ||
-                  status === 'submitted' ||
-                  connectionStatus === 'disconnected'
-                }
+                disabled={isDisabled}
               />
             </div>
             <button
-              type={
-                status === 'streaming' || status === 'submitted'
-                  ? 'button'
-                  : 'submit'
-              }
-              onClick={
-                status === 'streaming' || status === 'submitted'
-                  ? handleCancel
-                  : undefined
-              }
+              type={isStreaming ? "button" : "submit"}
+              onClick={isStreaming ? handleCancel : undefined}
               disabled={
-                status !== 'streaming' &&
-                status !== 'submitted' &&
-                (!input.trim() || connectionStatus === 'disconnected')
+                !isStreaming &&
+                (!input.trim() || connectionStatus.status === "disconnected")
               }
               className={`px-4 py-3 rounded-xl transition-colors duration-200 flex items-center justify-center min-w-[52px] ${
-                status === 'streaming' || status === 'submitted'
-                  ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse shadow-lg shadow-red-500/50 ring-2 ring-red-500/20 ring-offset-2 ring-offset-white dark:ring-offset-gray-900'
-                  : 'bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white'
+                isStreaming
+                  ? "bg-red-500 hover:bg-red-600 text-white animate-pulse shadow-lg shadow-red-500/50"
+                  : "bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white"
               }`}
-              title={
-                status === 'streaming' || status === 'submitted'
-                  ? 'Cancel request'
-                  : 'Send message'
-              }
+              title={isStreaming ? "Cancel request" : "Send message"}
             >
-              {status === 'streaming' || status === 'submitted' ? (
-                <div className='relative'>
-                  <X className='w-5 h-5' />
-                  <div className='absolute inset-0 w-5 h-5 animate-ping'>
-                    <X className='w-5 h-5 opacity-30' />
-                  </div>
-                </div>
+              {isStreaming ? (
+                <X className='w-5 h-5' />
               ) : (
                 <Send className='w-5 h-5' />
               )}

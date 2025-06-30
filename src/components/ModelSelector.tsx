@@ -43,9 +43,12 @@ export default function ModelSelector({
         );
         setModels(sortedModels);
 
-        // If no model is selected, use the default
+        // Only set default if no model is selected and none is saved in localStorage
         if (!selectedModel && data.default) {
-          onModelChange(data.default);
+          const savedModel = localStorage.getItem("selectedModel");
+          if (!savedModel) {
+            onModelChange(data.default);
+          }
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");

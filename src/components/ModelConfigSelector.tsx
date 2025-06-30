@@ -28,7 +28,7 @@ const DEFAULT_OPTIONS: OllamaModelOptions = {
   top_p: 0, // Set to 0 by default (disabled), temperature takes precedence
   repeat_penalty: 1.1,
   num_ctx: 4096,
-  num_predict: 1024,
+  maxTokens: 1024, // AI SDK standard (was num_predict)
 };
 
 const PRESET_INFO = {
@@ -450,12 +450,12 @@ export default function ModelConfigSelector({
                       </div>
                     </div>
 
-                    {/* Tokens to Generate */}
+                    {/* Max Tokens */}
                     <div className='py-1'>
                       <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-2'>
-                        Tokens to Generate
+                        Max Tokens
                         <span className='text-xs text-gray-500'>
-                          {currentOptions.num_predict}
+                          {currentOptions.maxTokens}
                         </span>
                       </label>
                       <input
@@ -463,17 +463,17 @@ export default function ModelConfigSelector({
                         min='50'
                         max='128000'
                         step='10'
-                        value={currentOptions.num_predict || 4096}
+                        value={currentOptions.maxTokens || 1024}
                         onChange={(e) =>
                           handleOptionChange(
-                            "num_predict",
+                            "maxTokens",
                             parseInt(e.target.value)
                           )
                         }
                         className='w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer'
                       />
                       <div className='text-xs text-gray-500 mt-2'>
-                        Maximum tokens to generate
+                        Maximum tokens to generate in response
                       </div>
                     </div>
                   </div>

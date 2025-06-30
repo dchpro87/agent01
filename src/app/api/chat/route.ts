@@ -89,8 +89,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const { messages, model, systemPrompt, modelOptions } =
-      validationResult.data;
+    const {
+      messages,
+      model: requestModel,
+      systemPrompt,
+      modelOptions,
+    } = validationResult.data;
 
     // Clean thinking tags from messages to avoid wasting context
     const cleanedMessages = messages.map((msg) => ({
@@ -101,7 +105,7 @@ export async function POST(req: Request) {
 
     // Get configuration from environment variables, allowing model override
     const { ollama: config } = aiConfig;
-    const selectedModel = model || config.model; // Merge model options with configuration defaults
+    const selectedModel = requestModel || config.model; // Merge model options with configuration defaults
     const finalOptions = {
       ...config.defaultOptions,
       ...modelOptions,
@@ -172,58 +176,74 @@ export async function POST(req: Request) {
     const ollama = createOpenAI({
       baseURL: `${config.baseURL}/v1`,
       apiKey: "ollama", // Ollama doesn't require a real API key
+      compatibility: "compatible", // Use compatible mode for third-party providers
+      name: "ollama", // Set provider name for better debugging
     });
 
-    // Prepare model parameters - use either temperature OR topP as recommended by Ollama
-    const modelParams = {
-      model: ollama(selectedModel, {
-        // Pass Ollama-specific options directly to the model
-        structuredOutputs: false,
-        ...(finalOptions.num_ctx && { num_ctx: finalOptions.num_ctx }),
-        ...(finalOptions.num_predict && {
-          num_predict: finalOptions.num_predict,
-        }),
-        ...(finalOptions.repeat_penalty && {
-          repeat_penalty: finalOptions.repeat_penalty,
-        }),
-        ...(finalOptions.repeat_last_n && {
-          repeat_last_n: finalOptions.repeat_last_n,
-        }),
-        ...(finalOptions.min_p && { min_p: finalOptions.min_p }),
-        ...(finalOptions.typical_p && { typical_p: finalOptions.typical_p }),
-        ...(finalOptions.num_keep && { num_keep: finalOptions.num_keep }),
-        ...(finalOptions.penalize_newline !== undefined && {
-          penalize_newline: finalOptions.penalize_newline,
-        }),
-        ...(finalOptions.numa !== undefined && { numa: finalOptions.numa }),
-        ...(finalOptions.num_batch && { num_batch: finalOptions.num_batch }),
-        ...(finalOptions.num_gpu && { num_gpu: finalOptions.num_gpu }),
-        ...(finalOptions.main_gpu && { main_gpu: finalOptions.main_gpu }),
-        ...(finalOptions.use_mmap !== undefined && {
-          use_mmap: finalOptions.use_mmap,
-        }),
-        ...(finalOptions.num_thread && { num_thread: finalOptions.num_thread }),
-        ...(finalOptions.tfs_z && { tfs_z: finalOptions.tfs_z }),
-        ...(finalOptions.mirostat && { mirostat: finalOptions.mirostat }),
-        ...(finalOptions.mirostat_tau && {
-          mirostat_tau: finalOptions.mirostat_tau,
-        }),
-        ...(finalOptions.mirostat_eta && {
-          mirostat_eta: finalOptions.mirostat_eta,
-        }),
-        ...(finalOptions.stop && { stop: finalOptions.stop }),
-      }),
+    // Create the model instance
+    const modelInstance = ollama(selectedModel, {
+      // Ollama-specific options that should be passed to the model
+      structuredOutputs: false,
+    });
+
+    // Prepare standard AI SDK parameters
+    const streamParams = {
+      model: modelInstance,
       messages: cleanedMessages,
-      topK: finalOptions.top_k,
-      frequencyPenalty: finalOptions.frequency_penalty,
-      presencePenalty: finalOptions.presence_penalty,
-      seed: finalOptions.seed,
-      // Use the provided system prompt or default
       system: finalSystemPrompt,
-      // Enable automatic retries for transient failures
       maxRetries: config.maxRetries,
-      // Add abort signal to handle cancellation
       abortSignal: abortController.signal,
+      // Standard AI SDK parameters
+      ...(finalOptions.seed && { seed: finalOptions.seed }),
+      ...(finalOptions.top_k && { topK: finalOptions.top_k }),
+      ...(finalOptions.frequency_penalty && {
+        frequencyPenalty: finalOptions.frequency_penalty,
+      }),
+      ...(finalOptions.presence_penalty && {
+        presencePenalty: finalOptions.presence_penalty,
+      }),
+      // AI SDK standard: maxTokens (replaces Ollama's num_predict)
+      ...(finalOptions.maxTokens && { maxTokens: finalOptions.maxTokens }),
+      // Support legacy num_predict for backward compatibility
+      ...(!finalOptions.maxTokens &&
+        finalOptions.num_predict && { maxTokens: finalOptions.num_predict }),
+      // Pass Ollama-specific options via providerOptions
+      providerOptions: {
+        openai: {
+          ...(finalOptions.num_ctx && { num_ctx: finalOptions.num_ctx }),
+          ...(finalOptions.repeat_penalty && {
+            repeat_penalty: finalOptions.repeat_penalty,
+          }),
+          ...(finalOptions.repeat_last_n && {
+            repeat_last_n: finalOptions.repeat_last_n,
+          }),
+          ...(finalOptions.min_p && { min_p: finalOptions.min_p }),
+          ...(finalOptions.typical_p && { typical_p: finalOptions.typical_p }),
+          ...(finalOptions.num_keep && { num_keep: finalOptions.num_keep }),
+          ...(finalOptions.penalize_newline !== undefined && {
+            penalize_newline: finalOptions.penalize_newline,
+          }),
+          ...(finalOptions.numa !== undefined && { numa: finalOptions.numa }),
+          ...(finalOptions.num_batch && { num_batch: finalOptions.num_batch }),
+          ...(finalOptions.num_gpu && { num_gpu: finalOptions.num_gpu }),
+          ...(finalOptions.main_gpu && { main_gpu: finalOptions.main_gpu }),
+          ...(finalOptions.use_mmap !== undefined && {
+            use_mmap: finalOptions.use_mmap,
+          }),
+          ...(finalOptions.num_thread && {
+            num_thread: finalOptions.num_thread,
+          }),
+          ...(finalOptions.tfs_z && { tfs_z: finalOptions.tfs_z }),
+          ...(finalOptions.mirostat && { mirostat: finalOptions.mirostat }),
+          ...(finalOptions.mirostat_tau && {
+            mirostat_tau: finalOptions.mirostat_tau,
+          }),
+          ...(finalOptions.mirostat_eta && {
+            mirostat_eta: finalOptions.mirostat_eta,
+          }),
+          ...(finalOptions.stop && { stop: finalOptions.stop }),
+        },
+      },
     } as const;
 
     // Set either temperature OR topP, not both (Ollama recommendation)
@@ -239,20 +259,24 @@ export async function POST(req: Request) {
       "finalOptions.temperature": finalOptions.temperature,
     });
 
-    const streamParams = hasCustomTopP
+    // Add temperature or topP to the streamParams
+    const finalStreamParams = hasCustomTopP
       ? {
-          ...modelParams,
+          ...streamParams,
           topP: finalOptions.top_p,
         }
       : {
-          ...modelParams,
+          ...streamParams,
           temperature: finalOptions.temperature || config.temperature,
         };
 
-    console.log("💥streamParams:", JSON.stringify(streamParams, null, 2));
+    console.log(
+      "💥finalStreamParams:",
+      JSON.stringify(finalStreamParams, null, 2)
+    );
 
     const result = streamText({
-      ...streamParams,
+      ...finalStreamParams,
       onFinish: (event) => {
         // Log completion with actual token usage
         AILogger.finishRequest(requestId, {
@@ -313,11 +337,10 @@ export async function POST(req: Request) {
 const validateModelOptions = (options: OllamaModelOptions) => {
   const errors: string[] = [];
 
-  if (
-    options.num_predict &&
-    (options.num_predict < 1 || options.num_predict > 8192)
-  ) {
-    errors.push("num_predict must be between 1 and 8192");
+  // Check maxTokens (AI SDK standard) or num_predict (legacy)
+  const tokenLimit = options.maxTokens || options.num_predict;
+  if (tokenLimit && (tokenLimit < 1 || tokenLimit > 8192)) {
+    errors.push("maxTokens/num_predict must be between 1 and 8192");
   }
 
   if (options.num_ctx && (options.num_ctx < 1 || options.num_ctx > 8192)) {

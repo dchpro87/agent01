@@ -30,7 +30,9 @@ export const aiConfig: AIConfig = {
       top_p: parseFloat(process.env.OLLAMA_TOP_P || "0"), // Default to 0 (disabled, use temperature)
       repeat_penalty: parseFloat(process.env.OLLAMA_REPEAT_PENALTY || "1.1"),
       num_ctx: parseInt(process.env.OLLAMA_NUM_CTX || "4096"),
-      num_predict: parseInt(process.env.OLLAMA_NUM_PREDICT || "512"),
+      maxTokens: parseInt(
+        process.env.OLLAMA_MAX_TOKENS || process.env.OLLAMA_NUM_PREDICT || "512"
+      ), // AI SDK standard
     },
   },
   streaming: {
@@ -63,11 +65,11 @@ export function validateConfig(): { isValid: boolean; errors: string[] } {
   }
 
   if (
-    aiConfig.ollama.defaultOptions.num_predict &&
-    (aiConfig.ollama.defaultOptions.num_predict < 1 ||
-      aiConfig.ollama.defaultOptions.num_predict > 8192)
+    aiConfig.ollama.defaultOptions.maxTokens &&
+    (aiConfig.ollama.defaultOptions.maxTokens < 1 ||
+      aiConfig.ollama.defaultOptions.maxTokens > 8192)
   ) {
-    errors.push("num_predict must be between 1 and 8192");
+    errors.push("maxTokens must be between 1 and 8192");
   }
 
   return {

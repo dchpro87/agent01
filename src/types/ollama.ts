@@ -8,8 +8,9 @@ export interface OllamaModelOptions {
   min_p?: number; // 0.0 to 1.0, minimum probability threshold
   typical_p?: number; // 0.0 to 1.0, typical sampling
 
-  // Token control
-  num_predict?: number; // Maximum tokens to generate
+  // Token control - AI SDK standard
+  maxTokens?: number; // Maximum tokens to generate (AI SDK standard)
+  num_predict?: number; // Ollama native - for backward compatibility
   num_keep?: number; // Tokens to keep from context
   num_ctx?: number; // Context window size
 
@@ -130,6 +131,7 @@ export const MODEL_PRESETS = {
     top_p: 0, // Use temperature instead
     repeat_penalty: 1.1,
     num_ctx: 4096,
+    maxTokens: 1024, // AI SDK standard
   },
   creative: {
     temperature: 0.8,
@@ -137,6 +139,7 @@ export const MODEL_PRESETS = {
     top_p: 0, // Use temperature instead
     repeat_penalty: 1.05,
     num_ctx: 4096,
+    maxTokens: 1024, // AI SDK standard
   },
   precise: {
     temperature: 0.3,
@@ -144,6 +147,7 @@ export const MODEL_PRESETS = {
     top_p: 0, // Use temperature instead
     repeat_penalty: 1.15,
     num_ctx: 4096,
+    maxTokens: 1024, // AI SDK standard
   },
   coding: {
     temperature: 0.2,
@@ -151,6 +155,7 @@ export const MODEL_PRESETS = {
     top_p: 0, // Use temperature instead
     repeat_penalty: 1.1,
     num_ctx: 4096,
+    maxTokens: 2048, // Higher for code generation
   },
   analytical: {
     temperature: 0.4,
@@ -158,6 +163,7 @@ export const MODEL_PRESETS = {
     top_p: 0, // Use temperature instead
     repeat_penalty: 1.2,
     num_ctx: 4096,
+    maxTokens: 1024, // AI SDK standard
   },
 } as const;
 

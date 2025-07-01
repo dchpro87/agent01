@@ -126,7 +126,7 @@ export interface OllamaChatResponse {
 // Preset configurations for different use cases
 export const MODEL_PRESETS = {
   balanced: {
-    temperature: 0.7,
+    temperature: 0.5,
     top_k: 40,
     top_p: 0, // Use temperature instead
     repeat_penalty: 1.1,

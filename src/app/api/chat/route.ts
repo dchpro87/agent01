@@ -138,6 +138,7 @@ const RequestSchema = z.object({
   model: z.string().optional(),
   systemPrompt: z.string().optional(),
   modelOptions: z.record(z.unknown()).optional(),
+  toolsEnabled: z.boolean().optional(),
 });
 
 export async function POST(req: Request) {
@@ -168,7 +169,7 @@ export async function POST(req: Request) {
 
     const requestBody = await req.json();
     console.log(
-      "🔍 Request body received:",
+      "🔍 💥💥💥💥Request body received:",
       JSON.stringify(requestBody, null, 2)
     );
 
@@ -194,6 +195,7 @@ export async function POST(req: Request) {
       model: requestModel,
       systemPrompt,
       modelOptions,
+      toolsEnabled = true,
     } = validationResult.data;
 
     // Clean thinking tags from assistant messages only
@@ -213,6 +215,7 @@ export async function POST(req: Request) {
     const { ollama: config } = aiConfig;
     const selectedModel = requestModel || config.model;
     const supportsTools = checkModelSupportsTools(selectedModel);
+    const shouldUseTools = toolsEnabled && supportsTools;
 
     const finalOptions = {
       ...config.defaultOptions,
@@ -233,9 +236,9 @@ export async function POST(req: Request) {
       );
     }
 
-    const defaultSystemPrompt = supportsTools
+    const defaultSystemPrompt = shouldUseTools
       ? `You are a helpful AI assistant. Provide clear, accurate, and helpful responses.`
-      : `You are a helpful AI assistant. Note: This model (${selectedModel}) does not support tool/function calling.`;
+      : `You are a helpful AI assistant. Note: This model (${selectedModel}) does not support tool/function calling or tools are disabled.`;
 
     const finalSystemPrompt =
       systemPrompt && systemPrompt.trim() ? systemPrompt : defaultSystemPrompt;
@@ -283,8 +286,8 @@ export async function POST(req: Request) {
       maxRetries: config.maxRetries,
       abortSignal: abortController.signal,
       temperature: finalOptions.temperature || config.temperature,
-      maxSteps: supportsTools ? 3 : 1,
-      ...(supportsTools && { tools }),
+      maxSteps: shouldUseTools ? 3 : 1,
+      ...(shouldUseTools && { tools }),
       // AI SDK v5 handles experimental_attachments automatically
       // No need for manual processing
       onFinish: (event) => {

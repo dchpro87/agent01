@@ -28,6 +28,7 @@ import {
 import ModelSelector from "./ModelSelector";
 import SystemPromptSelector from "./SystemPromptSelector";
 import ModelConfigSelector from "./ModelConfigSelector";
+import ToolSwitch from "./ToolSwitch";
 
 // Custom hook for connection status
 function useConnectionStatus() {
@@ -73,7 +74,7 @@ function useConnectionStatus() {
 function usePersistedPreferences() {
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [systemPrompt, setSystemPrompt] = useState<string>(
-    "You are Sarah, a helpful AI assistant with a warm and nurturing personality. You're naturally organized, detail-oriented, and always ready to lend a helping hand. Provide clear, accurate, and helpful responses with a caring touch. If you need more clarification, say so, or ask for it.\n\nWhen you need to get the current date or time, use the getCurrentTime tool. After calling the tool and receiving the result, provide a clear and direct answer to the user using the information returned by the tool."
+    "You are Sarah, a helpful AI assistant with a warm and nurturing personality. You're naturally organized, detail-oriented, and always ready to lend a helping hand. Provide clear, accurate, and helpful responses with a caring touch. If you need more clarification, say so, or ask for it.\n After calling a tool and receiving the result, provide a clear and direct answer to the user using the information returned by the tool."
   );
   const [modelOptions, setModelOptions] = useState<OllamaModelOptions>({
     temperature: 0.7,
@@ -85,6 +86,7 @@ function usePersistedPreferences() {
   });
   const [modelSupportsTools, setModelSupportsTools] = useState<boolean>(true);
   const [isWarningDismissed, setIsWarningDismissed] = useState<boolean>(false);
+  const [toolsEnabled, setToolsEnabled] = useState<boolean>(true);
 
   // Function to check if a model supports tools (copied from API)
   const checkModelSupportsTools = (modelName: string): boolean => {
@@ -139,9 +141,12 @@ function usePersistedPreferences() {
     const savedModel = localStorage.getItem("selectedModel");
     const savedPrompt = localStorage.getItem("selectedSystemPrompt");
     const savedOptions = localStorage.getItem("modelOptions");
+    const savedToolsEnabled = localStorage.getItem("toolsEnabled");
 
     if (savedModel) setSelectedModel(savedModel);
     if (savedPrompt) setSystemPrompt(savedPrompt);
+    if (savedToolsEnabled !== null)
+      setToolsEnabled(savedToolsEnabled === "true");
     if (savedOptions) {
       try {
         setModelOptions(JSON.parse(savedOptions));
@@ -165,6 +170,11 @@ function usePersistedPreferences() {
     localStorage.setItem("modelOptions", JSON.stringify(modelOptions));
   }, [modelOptions]);
 
+  // Save toolsEnabled to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem("toolsEnabled", String(toolsEnabled));
+  }, [toolsEnabled]);
+
   return {
     selectedModel,
     setSelectedModel,
@@ -175,6 +185,8 @@ function usePersistedPreferences() {
     modelSupportsTools,
     isWarningDismissed,
     setIsWarningDismissed,
+    toolsEnabled,
+    setToolsEnabled,
   };
 }
 
@@ -644,11 +656,13 @@ export default function Chat() {
     setMessages,
   } = useChat({
     api: "/api/chat",
-    maxSteps: 5, // Allow for tool calls and follow-up responses
+    maxSteps:
+      preferences.toolsEnabled && preferences.modelSupportsTools ? 5 : 1, // Allow for tool calls and follow-up responses only if tools are enabled
     body: {
       model: preferences.selectedModel,
       systemPrompt: preferences.systemPrompt,
       modelOptions: preferences.modelOptions,
+      toolsEnabled: preferences.toolsEnabled,
     },
     onError: (err) => {
       console.error("💥Chat error:", err);
@@ -763,6 +777,12 @@ export default function Chat() {
                 onOptionsChange={preferences.setModelOptions}
                 disabled={isDisabled}
               />
+              <ToolSwitch
+                enabled={preferences.toolsEnabled}
+                onChange={preferences.setToolsEnabled}
+                disabled={isDisabled}
+                modelSupportsTools={preferences.modelSupportsTools}
+              />
             </div>
 
             {/* Connection Status */}
@@ -805,6 +825,7 @@ export default function Chat() {
 
       {/* Tool Support Warning */}
       {preferences.selectedModel &&
+        preferences.toolsEnabled &&
         !preferences.modelSupportsTools &&
         !preferences.isWarningDismissed && (
           <div className='border-b border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20'>

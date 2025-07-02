@@ -20,6 +20,10 @@ import {
   RotateCcw,
   X,
   Brain,
+  Paperclip,
+  FileText,
+  Image as ImageIcon,
+  File,
 } from "lucide-react";
 import ModelSelector from "./ModelSelector";
 import SystemPromptSelector from "./SystemPromptSelector";
@@ -427,6 +431,133 @@ const AssistantMessage = React.memo(
 
 AssistantMessage.displayName = "AssistantMessage";
 
+// Helper function to get file icon based on mime type
+const getFileIcon = (contentType: string) => {
+  if (contentType.startsWith("image/")) {
+    return <ImageIcon className='w-4 h-4' />;
+  }
+  if (contentType.includes("pdf")) {
+    return <FileText className='w-4 h-4' />;
+  }
+  if (contentType.includes("text/")) {
+    return <FileText className='w-4 h-4' />;
+  }
+  return <File className='w-4 h-4' />;
+};
+
+// Helper function to format file size
+const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+};
+
+// Component to preview attached files before sending
+const AttachmentPreview = React.memo(
+  ({ files, onRemove }: { files: FileList; onRemove: () => void }) => {
+    const fileArray = Array.from(files);
+
+    return (
+      <div className='border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3'>
+        <div className='flex items-center justify-between mb-2'>
+          <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>
+            {fileArray.length} file{fileArray.length !== 1 ? "s" : ""} attached
+          </span>
+          <button
+            onClick={onRemove}
+            className='text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+            title='Remove all attachments'
+          >
+            <X className='w-4 h-4' />
+          </button>
+        </div>
+        <div className='flex flex-wrap gap-2'>
+          {fileArray.map((file, index) => (
+            <div
+              key={index}
+              className='flex items-center gap-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm'
+            >
+              {getFileIcon(file.type)}
+              <span className='text-gray-700 dark:text-gray-300 truncate max-w-32'>
+                {file.name}
+              </span>
+              <span className='text-gray-500 dark:text-gray-400 text-xs'>
+                {formatFileSize(file.size)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+);
+
+AttachmentPreview.displayName = "AttachmentPreview";
+
+// Component to display attachments in messages
+const MessageAttachments = React.memo(
+  ({
+    attachments,
+  }: {
+    attachments?: Array<{
+      name?: string;
+      contentType?: string;
+      url: string;
+    }>;
+  }) => {
+    if (!attachments || attachments.length === 0) return null;
+
+    return (
+      <div className='mt-3 space-y-2'>
+        {attachments.map((attachment, index) => {
+          if (attachment.contentType?.startsWith("image/")) {
+            return (
+              <div
+                key={index}
+                className='border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden'
+              >
+                <div className='relative max-w-full max-h-96'>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={attachment.url}
+                    alt={attachment.name || "Attached image"}
+                    className='max-w-full h-auto max-h-96 object-contain'
+                    style={{ width: "auto", height: "auto" }}
+                  />
+                </div>
+                {attachment.name && (
+                  <div className='px-3 py-2 bg-gray-50 dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-400'>
+                    {attachment.name}
+                  </div>
+                )}
+              </div>
+            );
+          } else {
+            return (
+              <div
+                key={index}
+                className='flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg'
+              >
+                {getFileIcon(attachment.contentType || "")}
+                <span className='text-sm text-gray-700 dark:text-gray-300'>
+                  {attachment.name || "Attached file"}
+                </span>
+                {attachment.contentType && (
+                  <span className='text-xs text-gray-500 dark:text-gray-400'>
+                    ({attachment.contentType})
+                  </span>
+                )}
+              </div>
+            );
+          }
+        })}
+      </div>
+    );
+  }
+);
+
+MessageAttachments.displayName = "MessageAttachments";
+
 // Simplified message item component
 const MessageItem = React.memo(({ message }: { message: Message }) => (
   <div
@@ -459,13 +590,19 @@ const MessageItem = React.memo(({ message }: { message: Message }) => (
             />
           </>
         ) : (
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeHighlight]}
-            components={markdownComponents}
-          >
-            {message.content}
-          </ReactMarkdown>
+          <>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeHighlight]}
+              components={markdownComponents}
+            >
+              {message.content}
+            </ReactMarkdown>
+            {/* Render user attachments */}
+            <MessageAttachments
+              attachments={message.experimental_attachments}
+            />
+          </>
         )}
       </div>
     </div>
@@ -486,6 +623,10 @@ MessageItem.displayName = "MessageItem";
 export default function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // File attachment state
+  const [attachedFiles, setAttachedFiles] = useState<FileList | null>(null);
 
   // Use custom hooks for cleaner state management
   const connectionStatus = useConnectionStatus();
@@ -539,7 +680,15 @@ export default function Chat() {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     connectionStatus.checkConnection();
-    handleSubmit(e);
+    handleSubmit(e, {
+      experimental_attachments: attachedFiles || undefined,
+      allowEmptySubmit: true, // Allow sending files without text
+    });
+    // Clear attachments after sending
+    setAttachedFiles(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const handleReset = () => {
@@ -547,6 +696,10 @@ export default function Chat() {
       stop();
     }
     setMessages([]);
+    setAttachedFiles(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
     connectionStatus.checkConnection();
   };
 
@@ -772,9 +925,36 @@ export default function Chat() {
         </div>
       )}
 
+      {/* Attachment preview */}
+      {attachedFiles && attachedFiles.length > 0 && (
+        <AttachmentPreview
+          files={attachedFiles}
+          onRemove={() => {
+            setAttachedFiles(null);
+            if (fileInputRef.current) {
+              fileInputRef.current.value = "";
+            }
+          }}
+        />
+      )}
+
       {/* Input form */}
       <div className='border-t border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm'>
         <div className='max-w-4xl mx-auto px-4 py-4'>
+          {/* Hidden file input */}
+          <input
+            type='file'
+            ref={fileInputRef}
+            onChange={(e) => {
+              if (e.target.files && e.target.files.length > 0) {
+                setAttachedFiles(e.target.files);
+              }
+            }}
+            multiple
+            accept='image/*,application/pdf,.pdf,.txt,.csv,.json,.docx,.doc'
+            className='hidden'
+          />
+
           <form onSubmit={handleFormSubmit} className='flex gap-3'>
             <div className='flex-1 relative'>
               <textarea
@@ -786,7 +966,7 @@ export default function Chat() {
                     ? "Please check Ollama connection..."
                     : "Type your message..."
                 }
-                className='w-full px-4 py-3 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none min-h-[52px] max-h-32 disabled:opacity-50'
+                className='w-full px-4 py-3 pr-20 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none min-h-[52px] max-h-32 disabled:opacity-50'
                 rows={1}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
@@ -796,13 +976,27 @@ export default function Chat() {
                 }}
                 disabled={isDisabled}
               />
+
+              {/* Attachment button */}
+              <button
+                type='button'
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isDisabled}
+                className='absolute right-12 top-1/2 transform -translate-y-1/2 p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                title='Attach files'
+              >
+                <Paperclip className='w-5 h-5' />
+              </button>
             </div>
+
             <button
               type={isStreaming ? "button" : "submit"}
               onClick={isStreaming ? handleCancel : undefined}
               disabled={
-                !isStreaming &&
-                (!input.trim() || connectionStatus.status === "disconnected")
+                (!isStreaming &&
+                  !input.trim() &&
+                  (!attachedFiles || attachedFiles.length === 0)) ||
+                connectionStatus.status === "disconnected"
               }
               className={`px-4 py-3 rounded-xl transition-colors duration-200 flex items-center justify-center min-w-[52px] ${
                 isStreaming
@@ -819,7 +1013,8 @@ export default function Chat() {
             </button>
           </form>
           <p className='text-xs text-gray-500 dark:text-gray-400 mt-2 text-center'>
-            Press Enter to send, Shift+Enter for new line
+            Press Enter to send, Shift+Enter for new line • Supports images,
+            PDFs, and text files
           </p>
         </div>
       </div>

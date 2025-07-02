@@ -1,6 +1,6 @@
 # Agent01 - Advanced AI Chat Application
 
-A sophisticated, feature-rich AI chat application built with Next.js 15, Vercel AI SDK, and Ollama. Experience intelligent conversations with advanced streaming, tool integration, customizable personalities, and enterprise-grade monitoring.
+A sophisticated, feature-rich AI chat application built with Next.js 15, Vercel AI SDK v4, and Ollama. Experience intelligent conversations with advanced streaming, tool integration, customizable personalities, and enterprise-grade monitoring.
 
 ## ✨ Key Features
 
@@ -11,22 +11,41 @@ A sophisticated, feature-rich AI chat application built with Next.js 15, Vercel 
 - **Advanced Model Configuration** - Fine-tune temperature, context window, token limits, and more
 
 ### 💬 **Chat Experience**
-- **Real-time Streaming** - Smooth, fast responses with the Vercel AI SDK
+- **Real-time Streaming** - Smooth, fast responses with the Vercel AI SDK v4
+- **File Attachments** - Send images, PDFs, and text files to the AI (multimodal support)
 - **Thinking Process Visualization** - See the AI's reasoning with `<think>` tag parsing
 - **Tool Execution Display** - Visual feedback for function calls and results
 - **Markdown Support** - Rich text rendering with syntax highlighting
 - **Message History** - Persistent conversation with reset capability
 
+### 📎 **File Attachments & Multimodal Support**
+- **Visual File Upload** - Click the 📎 paperclip icon next to the input field
+- **Multiple File Types** - Images (PNG, JPEG, GIF, WebP, BMP), Documents (PDF, TXT, CSV, JSON, DOCX, DOC)
+- **File Preview** - Preview attached files before sending with visual indicators
+- **Vision-Capable Models** - Automatic image processing for compatible models
+- **Drag & Drop** - Easy file attachment with drag and drop support
+- **File Management** - Remove files individually or clear all attachments
+
 ### 🎭 **Personality System**
-- **Pre-built Personalities** - Sarah (helpful), Marcus (coding), Emily (teacher), Chef Pierre (culinary), Dr. Flip (scientist), and more
+- **Pre-built Personalities** - 8 distinct AI personalities with unique traits:
+  - **Sarah** - Helpful, practical, and reliable general assistant
+  - **Marcus** - Logical, systematic programming expert  
+  - **Emily** - Patient, encouraging educational tutor
+  - **Isabella** - Imaginative, expressive creative writer
+  - **David** - Sharp, decisive analytical data expert
+  - **Dr. Flip** - Brilliant, eccentric scientific inventor
+  - **Chef Pierre** - Passionate French culinary master
+  - **Grace** - Compassionate, understanding counselor
 - **Custom System Prompts** - Create and save your own AI personalities
 - **Dynamic Prompt Management** - Switch personalities mid-conversation
-- **Categorized Prompts** - Organized by General, Technical, Creative, Education, etc.
+- **Categorized Prompts** - Organized by General, Technical, Creative, Education, Culinary, and Support
 
 ### 🔧 **Built-in Tools**
-- **Real-time Clock** - Get current date/time in any timezone
-- **BMI Calculator** - Health calculations with metric/imperial support
-- **Weather Service** - Location-based weather information (demo implementation)
+- **Real-time Clock** - Get current date/time in any timezone with proper formatting
+- **BMI Calculator** - Health calculations with metric/imperial support and category classification
+- **Weather Service** - Location-based weather information with realistic simulation (demo implementation)
+- **Tool Detection** - Automatic model capability detection for tool support
+- **Visual Feedback** - Clear display of tool execution and results
 - **Extensible Architecture** - Easy to add new tools and capabilities
 
 ### �️ **Advanced Configuration**
@@ -106,42 +125,65 @@ AI_LOG_LEVEL=info
 ## 📱 Using the Application
 
 ### Model Selection
-- Click the **bot icon** in the header to select from available Ollama models
-- Models with tool support show a **🔧 wrench icon**
-- Models without tool support show a **⚠️ warning icon**
-- Model information includes size and capabilities
+- Click the **🤖 bot icon** in the header to select from available Ollama models
+- Models with tool support show a **🔧 wrench icon** for function calling capabilities
+- Models without tool support show a **⚠️ warning icon** 
+- Model information includes size, capabilities, and performance indicators
+- Real-time model availability checking and validation
 
 ### Personality Selection
-- Click the **settings icon** to choose AI personalities:
-  - **Sarah** - Helpful and reliable general assistant
-  - **Marcus** - Expert programming assistant
-  - **Emily** - Patient educational tutor
-  - **Chef Pierre** - Passionate French culinary expert
-  - **Dr. Flip** - Brilliant eccentric scientist
-  - **Isabella** - Creative writing companion
-  - **Grace** - Compassionate counselor
-- Create custom personalities with the **+ button**
+- Click the **⚙️ settings icon** to choose from 8 unique AI personalities:
+  - **Sarah** - Helpful and reliable general assistant (default)
+  - **Marcus** - Expert programming assistant with systematic approach
+  - **Emily** - Patient educational tutor with gentle guidance
+  - **Isabella** - Creative writing companion with artistic flair
+  - **David** - Sharp analytical data expert with decisive insights
+  - **Dr. Flip** - Brilliant eccentric scientist with boundless curiosity
+  - **Chef Pierre** - Passionate French culinary master with infectious enthusiasm
+  - **Grace** - Compassionate counselor with deep empathy
+- Create custom personalities with the **+ button** and save them for future use
+- Switch personalities seamlessly during conversations
+
+### File Attachments
+- Click the **📎 paperclip icon** next to the input field to attach files
+- **Supported formats:**
+  - **Images:** PNG, JPEG, GIF, WebP, BMP (for vision-capable models)
+  - **Documents:** PDF, TXT, CSV, JSON, DOCX, DOC
+- **Features:**
+  - Preview attached files before sending with file type icons
+  - Send files with or without accompanying text
+  - Remove individual files or clear all attachments
+  - Drag & drop support for easy file attachment
+  - Files are automatically processed for multimodal AI models
 
 ### Model Configuration
-- Click the **gear icon** to adjust:
-  - **Temperature** - Creativity vs consistency (0.0-2.0)
-  - **Max Tokens** - Response length limit
-  - **Context Window** - Conversation memory size
-  - **Top-P & Top-K** - Response variety controls
+- Click the **⚙️ gear icon** to adjust advanced parameters:
+  - **Temperature** - Creativity vs consistency (0.0-2.0, default: 0.7)
+  - **Max Tokens** - Response length limit (1-32,000, default: 4,096)
+  - **Context Window** - Conversation memory size (1-32,000)
+  - **Top-P** - Response variety control (0.0-1.0, precision to 1 decimal)
+  - **Top-K** - Token selection diversity
   - **Repeat Penalty** - Reduce repetitive responses
+- Real-time validation with helpful error messages
+- Settings persist across sessions
 
 ### Tool Usage
-Ask questions that require real-time data:
-- *"What time is it?"* - Uses getCurrentTime tool
-- *"What's my BMI if I'm 5'9" and weigh 160 lbs?"* - Uses BMI calculator
-- *"What's the weather in Tokyo?"* - Uses weather service (demo)
+Ask questions that require real-time data and watch the AI use tools:
+- *"What time is it?"* or *"What time is it in Tokyo?"* - Uses getCurrentTime tool with timezone support
+- *"What's my BMI if I'm 5'9" and weigh 160 lbs?"* - Uses BMI calculator with unit conversion
+- *"What's the weather in London?"* - Uses weather service with simulated realistic data
+- Tools display execution details and results visually in the chat
+- Only compatible models can use tools (automatically detected)
 
 ### Advanced Features
-- **Reset Conversation** - Clear chat history anytime
-- **Real-time Status** - Connection monitoring in header
-- **Error Recovery** - Automatic reconnection and retry logic
-- **Thinking Visualization** - See AI reasoning process
-- **Markdown Rendering** - Rich text, code blocks, tables
+- **Reset Conversation** - Clear chat history anytime with confirmation dialog
+- **Real-time Status** - Connection monitoring in header with health indicators
+- **Error Recovery** - Automatic reconnection and retry logic with detailed error messages
+- **Thinking Visualization** - See AI reasoning process with `<think>` tag parsing and removal
+- **Markdown Rendering** - Rich text, code blocks, tables, and mathematical expressions
+- **Responsive Design** - Optimized for desktop, tablet, and mobile devices
+- **Accessibility** - Screen reader friendly with proper ARIA labels and keyboard navigation
+- **Performance Monitoring** - Request tracking, token usage, and response time logging
 
 ## 🏗️ Architecture
 
@@ -190,16 +232,17 @@ agent01/
 - **[Lucide React](https://lucide.dev/)** - Beautiful, consistent icons
 
 #### **AI Integration**
-- **[Vercel AI SDK 4](https://sdk.vercel.ai/)** - Streaming AI responses
-- **[Ollama AI Provider](https://ollama.ai/)** - Local LLM inference
-- **[React Markdown](https://github.com/remarkjs/react-markdown)** - Rich text rendering
-- **[Rehype Highlight](https://github.com/rehypejs/rehype-highlight)** - Code syntax highlighting
-- **[Zod](https://zod.dev/)** - Runtime type validation
+- **[Vercel AI SDK v4.3.16](https://sdk.vercel.ai/)** - Streaming AI responses with tool integration
+- **[Ollama AI Provider v1.2.0](https://ollama.ai/)** - Local LLM inference engine
+- **[React Markdown v10.1.0](https://github.com/remarkjs/react-markdown)** - Rich text rendering with GFM support
+- **[Rehype Highlight v7.0.2](https://github.com/rehypejs/rehype-highlight)** - Code syntax highlighting
+- **[Zod v3.25.67](https://zod.dev/)** - Runtime type validation and schema validation
 
 #### **Development Tools**
-- **[ESLint 9](https://eslint.org/)** - Code linting with modern config
-- **[PostCSS](https://postcss.org/)** - CSS processing pipeline
-- **VS Code Integration** - Optimized development experience
+- **[ESLint 9](https://eslint.org/)** - Modern code linting with updated configuration
+- **[PostCSS](https://postcss.org/)** - CSS processing pipeline with Tailwind
+- **[TypeScript 5](https://www.typescriptlang.org/)** - Latest TypeScript with enhanced type safety
+- **VS Code Integration** - Optimized development experience with proper task configuration
 
 ### Core Features Implementation
 
@@ -271,13 +314,21 @@ Add to `PREDEFINED_PROMPTS` in `src/components/SystemPromptSelector.tsx`:
 ```typescript
 {
   id: "unique-id",
-  name: "Personality Name",
-  description: "Brief description",
-  prompt: "Detailed system prompt...",
-  icon: YourIcon, // From lucide-react
-  category: "Category",
+  name: "Personality Name", 
+  description: "Brief description of the personality",
+  prompt: "Detailed system prompt that defines the AI's behavior, tone, and expertise...",
+  icon: YourIcon, // From lucide-react (Bot, User, Code, BookOpen, etc.)
+  category: "Category", // General, Technical, Creative, Education, Culinary, Support
 }
 ```
+
+### Custom Personality Creation
+Users can also create custom personalities through the UI:
+- Click the settings icon in the header
+- Select "Create Custom Prompt"
+- Fill in name, description, and detailed prompt
+- Custom prompts are automatically saved to localStorage
+- Edit or delete custom prompts as needed
 
 ### Environment Variables
 

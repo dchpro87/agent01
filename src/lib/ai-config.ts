@@ -67,9 +67,9 @@ export function validateConfig(): { isValid: boolean; errors: string[] } {
   if (
     aiConfig.ollama.defaultOptions.maxTokens &&
     (aiConfig.ollama.defaultOptions.maxTokens < 1 ||
-      aiConfig.ollama.defaultOptions.maxTokens > 8192)
+      aiConfig.ollama.defaultOptions.maxTokens > 32000)
   ) {
-    errors.push("maxTokens must be between 1 and 8192");
+    errors.push("maxTokens must be between 1 and 32000");
   }
 
   return {

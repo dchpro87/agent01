@@ -79,6 +79,56 @@ function usePersistedPreferences() {
     num_ctx: 4096,
     num_predict: 512,
   });
+  const [modelSupportsTools, setModelSupportsTools] = useState<boolean>(true);
+  const [isWarningDismissed, setIsWarningDismissed] = useState<boolean>(false);
+
+  // Function to check if a model supports tools (copied from API)
+  const checkModelSupportsTools = (modelName: string): boolean => {
+    const toolSupportedModels = [
+      "llama3.2",
+      "llama3.1",
+      "llama3",
+      "llama2",
+      "qwen2.5",
+      "qwen2",
+      "qwen",
+      "mistral",
+      "mixtral",
+      "codellama",
+      "phi3",
+      "gemma2",
+    ];
+
+    const lowerModelName = modelName.toLowerCase();
+    const noToolSupport = [
+      "gemma:1b",
+      "gemma2:1b",
+      "gemma3:1b",
+      "tinyllama",
+      "orca-mini",
+    ];
+
+    if (
+      noToolSupport.some((model) =>
+        lowerModelName.includes(model.toLowerCase())
+      )
+    ) {
+      return false;
+    }
+
+    return toolSupportedModels.some((model) =>
+      lowerModelName.includes(model.toLowerCase())
+    );
+  };
+
+  // Update tool support when model changes
+  useEffect(() => {
+    if (selectedModel) {
+      setModelSupportsTools(checkModelSupportsTools(selectedModel));
+      // Reset warning dismissal when model changes
+      setIsWarningDismissed(false);
+    }
+  }, [selectedModel]);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -118,6 +168,9 @@ function usePersistedPreferences() {
     setSystemPrompt,
     modelOptions,
     setModelOptions,
+    modelSupportsTools,
+    isWarningDismissed,
+    setIsWarningDismissed,
   };
 }
 
@@ -596,6 +649,34 @@ export default function Chat() {
           </div>
         </div>
       </div>
+
+      {/* Tool Support Warning */}
+      {preferences.selectedModel &&
+        !preferences.modelSupportsTools &&
+        !preferences.isWarningDismissed && (
+          <div className='border-b border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20'>
+            <div className='max-w-4xl mx-auto px-4 py-3'>
+              <div className='flex items-center justify-between text-amber-800 dark:text-amber-200'>
+                <div className='flex items-center gap-2'>
+                  <AlertCircle className='w-4 h-4' />
+                  <span className='text-sm'>
+                    <strong>{preferences.selectedModel}</strong> doesn&apos;t
+                    support tools/function calling. Features like getting
+                    current time won&apos;t be available. Consider using models
+                    like llama3.2, qwen2.5, or mistral for full functionality.
+                  </span>
+                </div>
+                <button
+                  onClick={() => preferences.setIsWarningDismissed(true)}
+                  className='ml-4 p-1 hover:bg-amber-200 dark:hover:bg-amber-800 rounded-full transition-colors'
+                  aria-label='Close warning'
+                >
+                  <X className='w-4 h-4' />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       {/* Messages */}
       <div className='flex-1 overflow-y-auto'>

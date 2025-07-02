@@ -30,6 +30,54 @@ function cleanThinkingTags(content: string): string {
   return result.trim();
 }
 
+// Function to check if a model supports tools/function calling
+function checkModelSupportsTools(modelName: string): boolean {
+  // List of models known to support tools/function calling
+  const toolSupportedModels = [
+    // Llama models that support tools
+    "llama3.2",
+    "llama3.1",
+    "llama3",
+    "llama2",
+    // Qwen models
+    "qwen2.5",
+    "qwen2",
+    "qwen",
+    // Mistral models
+    "mistral",
+    "mixtral",
+    // Other models that support tools
+    "codellama",
+    "phi3",
+    "gemma2",
+    // Add more models as needed
+  ];
+
+  // Check if the model name contains any of the supported model patterns
+  const lowerModelName = modelName.toLowerCase();
+
+  // Models that are known NOT to support tools
+  const noToolSupport = [
+    "gemma:1b",
+    "gemma2:1b",
+    "gemma3:1b", // Small Gemma models
+    "tinyllama",
+    "orca-mini", // Very small models
+  ];
+
+  // First check if it's explicitly in the no-support list
+  if (
+    noToolSupport.some((model) => lowerModelName.includes(model.toLowerCase()))
+  ) {
+    return false;
+  }
+
+  // Then check if it's in the supported list
+  return toolSupportedModels.some((model) =>
+    lowerModelName.includes(model.toLowerCase())
+  );
+}
+
 // Define the message schema for validation
 const MessageSchema = z.object({
   role: z.enum(["user", "assistant", "system"]),
@@ -106,7 +154,12 @@ export async function POST(req: Request) {
 
     // Get configuration from environment variables, allowing model override
     const { ollama: config } = aiConfig;
-    const selectedModel = requestModel || config.model; // Merge model options with configuration defaults
+    const selectedModel = requestModel || config.model;
+
+    // Check if the model supports tools/function calling early
+    const supportsTools = checkModelSupportsTools(selectedModel);
+
+    // Merge model options with configuration defaults
     const finalOptions = {
       ...config.defaultOptions,
       ...modelOptions,
@@ -128,11 +181,16 @@ export async function POST(req: Request) {
     }
 
     // Default system prompt if none provided
-    const defaultSystemPrompt = `You are a helpful AI assistant. Provide clear, accurate, and helpful responses.
+    const defaultSystemPrompt = supportsTools
+      ? `You are a helpful AI assistant. Provide clear, accurate, and helpful responses.
 
 When you need to get current date/time information, use the getCurrentTime tool. After calling the tool and receiving the result, provide a direct answer to the user using the information returned by the tool. Do not call the tool multiple times for the same information.
 
-Important: After receiving a tool result, provide your final answer immediately. Do not continue thinking or call tools again unless the user asks a new question.`;
+Important: After receiving a tool result, provide your final answer immediately. Do not continue thinking or call tools again unless the user asks a new question.`
+      : `You are a helpful AI assistant. Provide clear, accurate, and helpful responses.
+
+Note: This model (${selectedModel}) does not support tool/function calling, so I cannot access real-time information like current date/time or perform external actions. I'll do my best to help you with general knowledge and assistance.`;
+
     const finalSystemPrompt =
       systemPrompt && systemPrompt.trim() ? systemPrompt : defaultSystemPrompt;
 
@@ -141,6 +199,7 @@ Important: After receiving a tool result, provide your final answer immediately.
 
     console.log("Chat API - baseURL:", config.baseURL);
     console.log("Chat API - model:", selectedModel);
+    console.log("Chat API - supports tools:", supportsTools);
     console.log("Chat API - options:", JSON.stringify(finalOptions, null, 2));
     console.log(
       "Chat API - cleaned messages:",
@@ -211,6 +270,8 @@ Important: After receiving a tool result, provide your final answer immediately.
       // Support legacy num_predict for backward compatibility
       ...(!finalOptions.maxTokens &&
         finalOptions.num_predict && { maxTokens: finalOptions.num_predict }),
+      // Standard stopSequences parameter (mapped from Ollama's stop)
+      ...(finalOptions.stop && { stopSequences: finalOptions.stop }),
       // Pass Ollama-specific options via providerOptions
       providerOptions: {
         openai: {
@@ -245,7 +306,6 @@ Important: After receiving a tool result, provide your final answer immediately.
           ...(finalOptions.mirostat_eta && {
             mirostat_eta: finalOptions.mirostat_eta,
           }),
-          ...(finalOptions.stop && { stop: finalOptions.stop }),
         },
       },
     } as const;
@@ -281,9 +341,10 @@ Important: After receiving a tool result, provide your final answer immediately.
 
     const result = streamText({
       ...finalStreamParams,
-      maxSteps: 3, // Increase steps to allow for proper tool flow
-      toolChoice: "auto", // Let the model choose when to use tools
-      tools,
+      maxSteps: supportsTools ? 3 : 1, // Only allow multiple steps if tools are supported
+      toolChoice: supportsTools ? "auto" : undefined, // Only enable tool choice if supported
+      toolCallStreaming: supportsTools ? true : undefined, // Only enable tool streaming if supported
+      ...(supportsTools && { tools }), // Only include tools if the model supports them
       onFinish: (event) => {
         // Log completion with actual token usage
         console.log("🏁 Request finished:", {
@@ -315,6 +376,45 @@ Important: After receiving a tool result, provide your final answer immediately.
         "X-Request-ID": requestId,
         "X-Model": selectedModel,
         "X-Provider": "ollama",
+      },
+      getErrorMessage: (error) => {
+        // Enhanced error handling for better debugging
+        if (error == null) {
+          return "Unknown error occurred";
+        }
+
+        if (typeof error === "string") {
+          return error;
+        }
+
+        if (error instanceof Error) {
+          // Handle specific tool-related errors
+          if (
+            error.message.includes("tool") ||
+            error.message.includes("function")
+          ) {
+            return `Model "${selectedModel}" doesn't support tools/function calling. Please use a model that supports tools (e.g., llama3.2:3b, qwen2.5, mistral).`;
+          }
+
+          // Handle other common errors
+          if (
+            error.message.includes("connection") ||
+            error.message.includes("ECONNREFUSED")
+          ) {
+            return "Failed to connect to Ollama server. Please ensure Ollama is running.";
+          }
+
+          if (
+            error.message.includes("model") &&
+            error.message.includes("not found")
+          ) {
+            return `Model "${selectedModel}" not found. Please pull the model first using: ollama pull ${selectedModel}`;
+          }
+
+          return error.message;
+        }
+
+        return JSON.stringify(error);
       },
     });
   } catch (error) {
@@ -360,12 +460,12 @@ const validateModelOptions = (options: OllamaModelOptions) => {
 
   // Check maxTokens (AI SDK standard) or num_predict (legacy)
   const tokenLimit = options.maxTokens || options.num_predict;
-  if (tokenLimit && (tokenLimit < 1 || tokenLimit > 8192)) {
-    errors.push("maxTokens/num_predict must be between 1 and 8192");
+  if (tokenLimit && (tokenLimit < 1 || tokenLimit > 32000)) {
+    errors.push("maxTokens/num_predict must be between 1 and 32000");
   }
 
-  if (options.num_ctx && (options.num_ctx < 1 || options.num_ctx > 8192)) {
-    errors.push("num_ctx must be between 1 and 8192");
+  if (options.num_ctx && (options.num_ctx < 1 || options.num_ctx > 32000)) {
+    errors.push("num_ctx must be between 1 and 32000");
   }
 
   if (

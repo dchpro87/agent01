@@ -1,5 +1,53 @@
 import { aiConfig } from "@/lib/ai-config";
 
+// Function to check if a model supports tools/function calling
+function checkModelSupportsTools(modelName: string): boolean {
+  // List of models known to support tools/function calling
+  const toolSupportedModels = [
+    // Llama models that support tools
+    "llama3.2",
+    "llama3.1",
+    "llama3",
+    "llama2",
+    // Qwen models
+    "qwen2.5",
+    "qwen2",
+    "qwen",
+    // Mistral models
+    "mistral",
+    "mixtral",
+    // Other models that support tools
+    "codellama",
+    "phi3",
+    "gemma2",
+    // Add more models as needed
+  ];
+
+  // Check if the model name contains any of the supported model patterns
+  const lowerModelName = modelName.toLowerCase();
+
+  // Models that are known NOT to support tools
+  const noToolSupport = [
+    "gemma:1b",
+    "gemma2:1b",
+    "gemma3:1b", // Small Gemma models
+    "tinyllama",
+    "orca-mini", // Very small models
+  ];
+
+  // First check if it's explicitly in the no-support list
+  if (
+    noToolSupport.some((model) => lowerModelName.includes(model.toLowerCase()))
+  ) {
+    return false;
+  }
+
+  // Then check if it's in the supported list
+  return toolSupportedModels.some((model) =>
+    lowerModelName.includes(model.toLowerCase())
+  );
+}
+
 export async function GET() {
   try {
     const response = await fetch(`${aiConfig.ollama.baseURL}/api/tags`, {
@@ -37,6 +85,7 @@ export async function GET() {
         name: model.name,
         size: model.size,
         modified_at: model.modified_at,
+        supportsTools: checkModelSupportsTools(model.name),
       })) || [];
 
     return new Response(

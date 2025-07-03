@@ -96,6 +96,7 @@ export default function SystemPromptSelector({
     setSelectedPromptId(prompt.id);
     onPromptChange(prompt.prompt);
     setIsOpen(false);
+    setHoveredPrompt(null); // Clear tooltip when closing
   };
 
   // Handle creating custom prompt
@@ -151,7 +152,12 @@ export default function SystemPromptSelector({
     <div className='relative'>
       {/* Trigger Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          setIsOpen(!isOpen);
+          if (isOpen) {
+            setHoveredPrompt(null); // Clear tooltip when closing dropdown
+          }
+        }}
         disabled={disabled}
         className='flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
         title='Select system prompt'
@@ -341,7 +347,13 @@ export default function SystemPromptSelector({
 
       {/* Overlay to close dropdown */}
       {isOpen && (
-        <div className='fixed inset-0 z-40' onClick={() => setIsOpen(false)} />
+        <div
+          className='fixed inset-0 z-40'
+          onClick={() => {
+            setIsOpen(false);
+            setHoveredPrompt(null); // Clear tooltip when closing via overlay
+          }}
+        />
       )}
 
       {/* Tooltip Portal - renders outside the modal to prevent clipping */}

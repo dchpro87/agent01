@@ -2,62 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import {
-  Settings,
-  ChevronDown,
-  RotateCcw,
-  X,
-  Sliders,
-  Brain,
-  Code,
-  Target,
-  BarChart3,
-} from "lucide-react";
+import { Settings, ChevronDown, RotateCcw, X } from "lucide-react";
 import { OllamaModelOptions, MODEL_PRESETS, ModelPreset } from "@/types/ollama";
+import { DEFAULT_OPTIONS, PRESET_INFO } from "@/constants/model-config";
 
 interface ModelConfigSelectorProps {
   selectedOptions: OllamaModelOptions;
   onOptionsChange: (options: OllamaModelOptions) => void;
   disabled?: boolean;
 }
-
-// Default configuration
-const DEFAULT_OPTIONS: OllamaModelOptions = {
-  temperature: 0.7,
-  top_k: 40,
-  top_p: 0, // Set to 0 by default (disabled), temperature takes precedence
-  repeat_penalty: 1.1,
-  num_ctx: 4096,
-  maxTokens: 1024, // AI SDK standard (was num_predict)
-};
-
-const PRESET_INFO = {
-  balanced: {
-    icon: Sliders,
-    description: "Balanced creativity and coherence",
-    color: "blue",
-  },
-  creative: {
-    icon: Brain,
-    description: "High creativity and varied outputs",
-    color: "purple",
-  },
-  precise: {
-    icon: Target,
-    description: "Focused and deterministic responses",
-    color: "green",
-  },
-  coding: {
-    icon: Code,
-    description: "Optimized for code generation",
-    color: "orange",
-  },
-  analytical: {
-    icon: BarChart3,
-    description: "Structured analytical thinking",
-    color: "indigo",
-  },
-} as const;
 
 // Helper function to format preset parameters for tooltip
 const formatPresetParameters = (preset: ModelPreset): string => {
@@ -133,7 +86,8 @@ export default function ModelConfigSelector({
         (key) => {
           const presetValue = presetOptions[key as keyof typeof presetOptions];
           const currentValue = currentOptions[key as keyof OllamaModelOptions];
-          const defaultValue = DEFAULT_OPTIONS[key as keyof OllamaModelOptions];
+          const defaultValue =
+            DEFAULT_OPTIONS[key as keyof typeof DEFAULT_OPTIONS];
 
           // If the parameter is in the preset, it must match exactly (already checked above)
           if (presetValue !== undefined) {

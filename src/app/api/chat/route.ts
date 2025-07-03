@@ -15,29 +15,41 @@ import { aiConfig, validateConfig } from "@/lib/ai-config";
 import { tools } from "@/lib/tools";
 import { z } from "zod";
 import { OllamaModelOptions } from "@/types/ollama";
+import {
+  THINK_START_TAG,
+  THINK_END_TAG,
+  TOOL_SUPPORTED_MODELS,
+  NO_TOOL_SUPPORT_MODELS,
+  ERROR_MESSAGES,
+  VALIDATION_LIMITS,
+  VALIDATION_ERROR_MESSAGES,
+  HTTP_STATUS,
+  HTTP_HEADERS,
+  DEFAULT_SYSTEM_PROMPTS,
+  MAX_CHAT_STEPS,
+  DEFAULT_CHAT_STEPS,
+} from "@/constants/chat-constants";
 
 // Function to clean thinking tags from message content
 function cleanThinkingTags(
   content: string | Array<Record<string, unknown>>
 ): string | Array<Record<string, unknown>> {
   if (typeof content === "string") {
-    const thinkStartTag = "<think>";
-    const thinkEndTag = "</think>";
     let result = content;
 
     while (true) {
-      const thinkStart = result.indexOf(thinkStartTag);
+      const thinkStart = result.indexOf(THINK_START_TAG);
       if (thinkStart === -1) break;
 
       const thinkEnd = result.indexOf(
-        thinkEndTag,
-        thinkStart + thinkStartTag.length
+        THINK_END_TAG,
+        thinkStart + THINK_START_TAG.length
       );
       if (thinkEnd === -1) break;
 
       result =
         result.slice(0, thinkStart) +
-        result.slice(thinkEnd + thinkEndTag.length);
+        result.slice(thinkEnd + THINK_END_TAG.length);
     }
 
     return result.trim();
@@ -60,31 +72,17 @@ function cleanThinkingTags(
 
 // Function to check if a model supports tools/function calling
 function checkModelSupportsTools(modelName: string): boolean {
-  const toolSupportedModels = [
-    "llama3.2",
-    "llama3.1",
-    "llama3",
-    "llama2",
-    "qwen2.5",
-    "qwen2",
-    "qwen",
-    "mistral",
-    "mixtral",
-    "codellama",
-    "phi3",
-    "gemma2",
-  ];
-
   const lowerModelName = modelName.toLowerCase();
-  const noToolSupport = ["gemma:1b", "gemma2:1b", "tinyllama", "orca-mini"];
 
   if (
-    noToolSupport.some((model) => lowerModelName.includes(model.toLowerCase()))
+    NO_TOOL_SUPPORT_MODELS.some((model) =>
+      lowerModelName.includes(model.toLowerCase())
+    )
   ) {
     return false;
   }
 
-  return toolSupportedModels.some((model) =>
+  return TOOL_SUPPORTED_MODELS.some((model) =>
     lowerModelName.includes(model.toLowerCase())
   );
 }
@@ -96,7 +94,7 @@ const RequestSchema = z.object({
       z.object({
         role: z.enum(["user", "assistant", "system", "tool"]),
         content: z.union([
-          z.string().min(1, "Message content cannot be empty"),
+          z.string().min(1, ERROR_MESSAGES.MESSAGE_CONTENT_EMPTY),
           z
             .array(
               z.object({
@@ -120,7 +118,7 @@ const RequestSchema = z.object({
                 filename: z.string().optional(),
               })
             )
-            .min(1, "Content parts array cannot be empty"),
+            .min(1, ERROR_MESSAGES.CONTENT_PARTS_EMPTY),
         ]),
         // AI SDK v5 handles experimental_attachments automatically
         experimental_attachments: z
@@ -134,7 +132,7 @@ const RequestSchema = z.object({
           .optional(),
       })
     )
-    .min(1, "At least one message is required"),
+    .min(1, ERROR_MESSAGES.AT_LEAST_ONE_MESSAGE),
   model: z.string().optional(),
   systemPrompt: z.string().optional(),
   modelOptions: z.record(z.unknown()).optional(),
@@ -157,12 +155,12 @@ export async function POST(req: Request) {
     if (!configValidation.isValid) {
       return new Response(
         JSON.stringify({
-          error: "Invalid AI configuration",
+          error: ERROR_MESSAGES.INVALID_AI_CONFIG,
           details: configValidation.errors,
         }),
         {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
+          status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+          headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
         }
       );
     }
@@ -178,14 +176,14 @@ export async function POST(req: Request) {
     if (!validationResult.success) {
       return new Response(
         JSON.stringify({
-          error: "Invalid request format",
+          error: ERROR_MESSAGES.INVALID_REQUEST_FORMAT,
           details: validationResult.error.issues.map(
             (issue) => `${issue.path.join(".")}: ${issue.message}`
           ),
         }),
         {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
+          status: HTTP_STATUS.BAD_REQUEST,
+          headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
         }
       );
     }
@@ -226,19 +224,19 @@ export async function POST(req: Request) {
     if (modelOptionsErrors.length > 0) {
       return new Response(
         JSON.stringify({
-          error: "Invalid model options",
+          error: ERROR_MESSAGES.INVALID_MODEL_OPTIONS,
           details: modelOptionsErrors,
         }),
         {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
+          status: HTTP_STATUS.BAD_REQUEST,
+          headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
         }
       );
     }
 
     const defaultSystemPrompt = shouldUseTools
-      ? `You are a helpful AI assistant. Provide clear, accurate, and helpful responses.`
-      : `You are a helpful AI assistant. Note: This model (${selectedModel}) does not support tool/function calling or tools are disabled.`;
+      ? DEFAULT_SYSTEM_PROMPTS.WITH_TOOLS
+      : DEFAULT_SYSTEM_PROMPTS.WITHOUT_TOOLS(selectedModel);
 
     const finalSystemPrompt =
       systemPrompt && systemPrompt.trim() ? systemPrompt : defaultSystemPrompt;
@@ -255,19 +253,21 @@ export async function POST(req: Request) {
       }
     } catch (connectionError) {
       if (abortController.signal.aborted) {
-        return new Response("Request aborted", { status: 499 });
+        return new Response(ERROR_MESSAGES.REQUEST_ABORTED, {
+          status: HTTP_STATUS.REQUEST_ABORTED,
+        });
       }
       return new Response(
         JSON.stringify({
-          error: "Failed to connect to Ollama server",
+          error: ERROR_MESSAGES.OLLAMA_CONNECTION_FAILED,
           details:
             connectionError instanceof Error
               ? connectionError.message
               : "Unknown connection error",
         }),
         {
-          status: 503,
-          headers: { "Content-Type": "application/json" },
+          status: HTTP_STATUS.SERVICE_UNAVAILABLE,
+          headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
         }
       );
     }
@@ -286,7 +286,7 @@ export async function POST(req: Request) {
       maxRetries: config.maxRetries,
       abortSignal: abortController.signal,
       temperature: finalOptions.temperature || config.temperature,
-      maxSteps: shouldUseTools ? 3 : 1,
+      maxSteps: shouldUseTools ? MAX_CHAT_STEPS : DEFAULT_CHAT_STEPS,
       ...(shouldUseTools && { tools }),
       // AI SDK v5 handles experimental_attachments automatically
       // No need for manual processing
@@ -310,8 +310,8 @@ export async function POST(req: Request) {
     // Return proper AI SDK streaming response
     return result.toDataStreamResponse({
       headers: {
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
+        "Cache-Control": HTTP_HEADERS.CACHE_CONTROL_NO_CACHE,
+        Connection: HTTP_HEADERS.CONNECTION_KEEP_ALIVE,
         "X-Request-ID": requestId,
         "X-Model": selectedModel,
       },
@@ -321,9 +321,11 @@ export async function POST(req: Request) {
       AILogger.finishRequest(
         requestId,
         undefined,
-        new Error("Request aborted")
+        new Error(ERROR_MESSAGES.REQUEST_ABORTED)
       );
-      return new Response("Request aborted", { status: 499 });
+      return new Response(ERROR_MESSAGES.REQUEST_ABORTED, {
+        status: HTTP_STATUS.REQUEST_ABORTED,
+      });
     }
 
     console.error(`❌ Request ${requestId} failed:`, error);
@@ -335,13 +337,13 @@ export async function POST(req: Request) {
 
     return new Response(
       JSON.stringify({
-        error: "Failed to process chat request",
+        error: ERROR_MESSAGES.CHAT_REQUEST_FAILED,
         details: error instanceof Error ? error.message : "Unknown error",
         requestId,
       }),
       {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
+        status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+        headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
       }
     );
   }
@@ -351,28 +353,40 @@ const validateModelOptions = (options: OllamaModelOptions) => {
   const errors: string[] = [];
 
   const tokenLimit = options.maxTokens || options.num_predict;
-  if (tokenLimit && (tokenLimit < 1 || tokenLimit > 32000)) {
-    errors.push("maxTokens/num_predict must be between 1 and 32000");
+  if (
+    tokenLimit &&
+    (tokenLimit < VALIDATION_LIMITS.MAX_TOKENS_MIN ||
+      tokenLimit > VALIDATION_LIMITS.MAX_TOKENS_MAX)
+  ) {
+    errors.push(VALIDATION_ERROR_MESSAGES.MAX_TOKENS_RANGE);
   }
 
-  if (options.num_ctx && (options.num_ctx < 1 || options.num_ctx > 32000)) {
-    errors.push("num_ctx must be between 1 and 32000");
+  if (
+    options.num_ctx &&
+    (options.num_ctx < VALIDATION_LIMITS.NUM_CTX_MIN ||
+      options.num_ctx > VALIDATION_LIMITS.NUM_CTX_MAX)
+  ) {
+    errors.push(VALIDATION_ERROR_MESSAGES.NUM_CTX_RANGE);
   }
 
   if (
     options.temperature &&
-    (options.temperature < 0 || options.temperature > 2)
+    (options.temperature < VALIDATION_LIMITS.TEMPERATURE_MIN ||
+      options.temperature > VALIDATION_LIMITS.TEMPERATURE_MAX)
   ) {
-    errors.push("temperature must be between 0 and 2");
+    errors.push(VALIDATION_ERROR_MESSAGES.TEMPERATURE_RANGE);
   }
 
   if (options.top_p !== undefined) {
-    if (options.top_p < 0 || options.top_p > 1) {
-      errors.push("top_p must be between 0 and 1");
+    if (
+      options.top_p < VALIDATION_LIMITS.TOP_P_MIN ||
+      options.top_p > VALIDATION_LIMITS.TOP_P_MAX
+    ) {
+      errors.push(VALIDATION_ERROR_MESSAGES.TOP_P_RANGE);
     }
     const decimalPlaces = (options.top_p.toString().split(".")[1] || "").length;
-    if (decimalPlaces > 1) {
-      errors.push("top_p can only have 1 decimal place");
+    if (decimalPlaces > VALIDATION_LIMITS.TOP_P_MAX_DECIMALS) {
+      errors.push(VALIDATION_ERROR_MESSAGES.TOP_P_DECIMALS);
     }
   }
 

@@ -9,14 +9,22 @@ import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { OllamaModelOptions } from "@/types/ollama";
+import {
+  DEFAULT_SYSTEM_PROMPT,
+  TOOL_SUPPORTED_MODELS,
+  NO_TOOL_SUPPORT_MODELS,
+  THINK_START_TAG,
+  THINK_END_TAG,
+  SUPPORTED_FILE_TYPES,
+  MAX_CHAT_STEPS,
+  DEFAULT_CHAT_STEPS,
+} from "@/constants/chat-constants";
+import { DEFAULT_OPTIONS } from "@/constants/model-config";
 
 import {
   Send,
-  Bot,
   User,
-  Loader2,
   AlertCircle,
-  CheckCircle,
   RotateCcw,
   X,
   Brain,
@@ -74,55 +82,27 @@ function useConnectionStatus() {
 function usePersistedPreferences() {
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [systemPrompt, setSystemPrompt] = useState<string>(
-    "You are Sarah, a helpful AI assistant with a warm and nurturing personality. You're naturally organized, detail-oriented, and always ready to lend a helping hand. Provide clear, accurate, and helpful responses with a caring touch. If you need more clarification, say so, or ask for it.\n After calling a tool and receiving the result, provide a clear and direct answer to the user using the information returned by the tool."
+    DEFAULT_SYSTEM_PROMPT
   );
-  const [modelOptions, setModelOptions] = useState<OllamaModelOptions>({
-    temperature: 0.7,
-    top_k: 40,
-    top_p: 0.9,
-    repeat_penalty: 1.1,
-    num_ctx: 4096,
-    num_predict: 512,
-  });
+  const [modelOptions, setModelOptions] =
+    useState<OllamaModelOptions>(DEFAULT_OPTIONS); // Default to "balanced" preset
   const [modelSupportsTools, setModelSupportsTools] = useState<boolean>(true);
   const [isWarningDismissed, setIsWarningDismissed] = useState<boolean>(false);
   const [toolsEnabled, setToolsEnabled] = useState<boolean>(true);
 
   // Function to check if a model supports tools (copied from API)
   const checkModelSupportsTools = (modelName: string): boolean => {
-    const toolSupportedModels = [
-      "llama3.2",
-      "llama3.1",
-      "llama3",
-      "llama2",
-      "qwen2.5",
-      "qwen2",
-      "qwen",
-      "mistral",
-      "mixtral",
-      "codellama",
-      "phi3",
-      "gemma2",
-    ];
-
     const lowerModelName = modelName.toLowerCase();
-    const noToolSupport = [
-      "gemma:1b",
-      "gemma2:1b",
-      "gemma3:1b",
-      "tinyllama",
-      "orca-mini",
-    ];
 
     if (
-      noToolSupport.some((model) =>
+      NO_TOOL_SUPPORT_MODELS.some((model) =>
         lowerModelName.includes(model.toLowerCase())
       )
     ) {
       return false;
     }
 
-    return toolSupportedModels.some((model) =>
+    return TOOL_SUPPORTED_MODELS.some((model) =>
       lowerModelName.includes(model.toLowerCase())
     );
   };
@@ -225,12 +205,10 @@ const markdownComponents: Components = {
 // Simplified thinking tag parser
 function parseThinkingTags(content: string): (ContentPart | ThinkPart)[] {
   const parts: (ContentPart | ThinkPart)[] = [];
-  const thinkStartTag = "<think>";
-  const thinkEndTag = "</think>";
   let currentIndex = 0;
 
   while (currentIndex < content.length) {
-    const thinkStart = content.indexOf(thinkStartTag, currentIndex);
+    const thinkStart = content.indexOf(THINK_START_TAG, currentIndex);
 
     if (thinkStart === -1) {
       // No more thinking tags, add remaining content
@@ -250,8 +228,8 @@ function parseThinkingTags(content: string): (ContentPart | ThinkPart)[] {
     }
 
     // Find end of thinking tag
-    const thinkContentStart = thinkStart + thinkStartTag.length;
-    const thinkEnd = content.indexOf(thinkEndTag, thinkContentStart);
+    const thinkContentStart = thinkStart + THINK_START_TAG.length;
+    const thinkEnd = content.indexOf(THINK_END_TAG, thinkContentStart);
 
     if (thinkEnd === -1) {
       // Incomplete thinking tag (streaming)
@@ -266,7 +244,7 @@ function parseThinkingTags(content: string): (ContentPart | ThinkPart)[] {
       if (thinkContent) {
         parts.push({ type: "think", text: thinkContent });
       }
-      currentIndex = thinkEnd + thinkEndTag.length;
+      currentIndex = thinkEnd + THINK_END_TAG.length;
     }
   }
 
@@ -571,63 +549,83 @@ const MessageAttachments = React.memo(
 MessageAttachments.displayName = "MessageAttachments";
 
 // Simplified message item component
-const MessageItem = React.memo(({ message }: { message: Message }) => (
-  <div
-    className={`flex gap-4 ${
-      message.role === "user" ? "justify-end" : "justify-start"
-    }`}
-  >
-    {message.role === "assistant" && (
-      <div className='flex-shrink-0'>
-        <div className='w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center'>
-          <Bot className='w-4 h-4 text-white' />
-        </div>
-      </div>
-    )}
-
+const MessageItem = React.memo(
+  ({
+    message,
+    connectionStatus,
+  }: {
+    message: Message;
+    connectionStatus: { status: string };
+  }) => (
     <div
-      className={`max-w-3xl px-4 py-3 rounded-2xl ${
-        message.role === "user"
-          ? "bg-blue-500 text-white ml-12"
-          : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700"
+      className={`flex gap-4 ${
+        message.role === "user" ? "justify-end" : "justify-start"
       }`}
     >
-      <div className='prose prose-sm max-w-none dark:prose-invert'>
-        {message.role === "assistant" ? (
-          <>
-            {/* Render content with integrated tool invocations and thinking */}
-            <AssistantMessage
-              content={message.content}
-              toolInvocations={message.toolInvocations}
+      {message.role === "assistant" && (
+        <div className='flex-shrink-0'>
+          <div
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 ${
+              connectionStatus.status === "connected"
+                ? "bg-green-500"
+                : "bg-gray-500"
+            }`}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src='/ollama.svg'
+              alt='Ollama'
+              className='w-4 h-4 text-white'
+              style={{ filter: "invert(1)" }}
             />
-          </>
-        ) : (
-          <>
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeHighlight]}
-              components={markdownComponents}
-            >
-              {message.content}
-            </ReactMarkdown>
-            {/* Render user attachments */}
-            <MessageAttachments
-              attachments={message.experimental_attachments}
-            />
-          </>
-        )}
-      </div>
-    </div>
+          </div>
+        </div>
+      )}
 
-    {message.role === "user" && (
-      <div className='flex-shrink-0'>
-        <div className='w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center'>
-          <User className='w-4 h-4 text-white' />
+      <div
+        className={`max-w-3xl px-4 py-3 rounded-2xl ${
+          message.role === "user"
+            ? "bg-blue-500 text-white ml-12"
+            : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700"
+        }`}
+      >
+        <div className='prose prose-sm max-w-none dark:prose-invert'>
+          {message.role === "assistant" ? (
+            <>
+              {/* Render content with integrated tool invocations and thinking */}
+              <AssistantMessage
+                content={message.content}
+                toolInvocations={message.toolInvocations}
+              />
+            </>
+          ) : (
+            <>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeHighlight]}
+                components={markdownComponents}
+              >
+                {message.content}
+              </ReactMarkdown>
+              {/* Render user attachments */}
+              <MessageAttachments
+                attachments={message.experimental_attachments}
+              />
+            </>
+          )}
         </div>
       </div>
-    )}
-  </div>
-));
+
+      {message.role === "user" && (
+        <div className='flex-shrink-0'>
+          <div className='w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center'>
+            <User className='w-4 h-4 text-white' />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+);
 
 MessageItem.displayName = "MessageItem";
 
@@ -657,7 +655,9 @@ export default function Chat() {
   } = useChat({
     api: "/api/chat",
     maxSteps:
-      preferences.toolsEnabled && preferences.modelSupportsTools ? 5 : 1, // Allow for tool calls and follow-up responses only if tools are enabled
+      preferences.toolsEnabled && preferences.modelSupportsTools
+        ? MAX_CHAT_STEPS
+        : DEFAULT_CHAT_STEPS, // Allow for tool calls and follow-up responses only if tools are enabled
     body: {
       model: preferences.selectedModel,
       systemPrompt: preferences.systemPrompt,
@@ -734,15 +734,26 @@ export default function Chat() {
         <div className='max-w-4xl mx-auto px-4 py-4'>
           <div className='flex items-center justify-between'>
             <div className='flex items-center gap-3'>
-              <div className='p-2 bg-blue-500 rounded-lg'>
-                <Bot className='w-6 h-6 text-white' />
+              <div className='p-2 rounded-lg transition-colors duration-200 bg-transparent'>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src='/ollama.svg'
+                  alt='Ollama'
+                  className='w-8 h-8 transition-colors duration-200'
+                  style={{
+                    filter:
+                      connectionStatus.status === "connected"
+                        ? "invert(42%) sepia(93%) saturate(1352%) hue-rotate(87deg) brightness(119%) contrast(119%)" // Green filter
+                        : "invert(50%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(100%) contrast(100%)", // Gray filter
+                  }}
+                />
               </div>
               <div>
                 <h1 className='text-xl font-semibold text-gray-900 dark:text-white'>
                   AI Assistant
                 </h1>
-                <p className='text-sm text-gray-500 dark:text-gray-400'>
-                  Powered by Ollama
+                <p className='text-xs text-gray-500 dark:text-gray-400'>
+                  {connectionStatus.serverInfo || "Ollama Disconnected"}
                 </p>
               </div>
 
@@ -784,41 +795,6 @@ export default function Chat() {
                 modelSupportsTools={preferences.modelSupportsTools}
               />
             </div>
-
-            {/* Connection Status */}
-            <div className='flex items-start gap-2'>
-              {connectionStatus.status === "checking" && (
-                <div className='flex items-center gap-2'>
-                  <Loader2 className='w-4 h-4 animate-spin text-yellow-500' />
-                  <span className='text-sm text-yellow-600 dark:text-yellow-400'>
-                    Connecting...
-                  </span>
-                </div>
-              )}
-              {connectionStatus.status === "connected" && (
-                <div className='flex flex-col items-start'>
-                  <div className='flex items-center gap-2'>
-                    <CheckCircle className='w-4 h-4 text-green-500' />
-                    <span className='text-sm text-green-600 dark:text-green-400'>
-                      Connected
-                    </span>
-                  </div>
-                  {connectionStatus.serverInfo && (
-                    <span className='text-[8px] text-gray-500 dark:text-gray-400 ml-6'>
-                      {connectionStatus.serverInfo}
-                    </span>
-                  )}
-                </div>
-              )}
-              {connectionStatus.status === "disconnected" && (
-                <div className='flex items-center gap-2'>
-                  <AlertCircle className='w-4 h-4 text-red-500' />
-                  <span className='text-sm text-red-600 dark:text-red-400'>
-                    Disconnected
-                  </span>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>
@@ -857,7 +833,6 @@ export default function Chat() {
         <div className='max-w-4xl mx-auto px-4 py-6'>
           {messages.length === 0 ? (
             <div className='text-center py-12'>
-              <Bot className='w-12 h-12 text-gray-400 mx-auto mb-4' />
               <h2 className='text-xl font-medium text-gray-900 dark:text-white mb-2'>
                 Welcome to your AI Assistant
               </h2>
@@ -904,7 +879,11 @@ export default function Chat() {
           ) : (
             <div className='space-y-6'>
               {messages.map((message) => (
-                <MessageItem key={message.id} message={message} />
+                <MessageItem
+                  key={message.id}
+                  message={message}
+                  connectionStatus={connectionStatus}
+                />
               ))}
 
               {/* Loading indicator - only show when waiting for response, not when streaming */}
@@ -913,8 +892,20 @@ export default function Chat() {
                 messages[messages.length - 1].role === "user" && (
                   <div className='flex gap-4 justify-start'>
                     <div className='flex-shrink-0'>
-                      <div className='w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center'>
-                        <Bot className='w-4 h-4 text-white' />
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 ${
+                          connectionStatus.status === "connected"
+                            ? "bg-green-500"
+                            : "bg-gray-500"
+                        }`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src='/ollama.svg'
+                          alt='Ollama'
+                          className='w-4 h-4 text-white'
+                          style={{ filter: "invert(1)" }}
+                        />
                       </div>
                     </div>
                     <div className='max-w-3xl px-4 py-3 rounded-2xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700'>
@@ -972,7 +963,7 @@ export default function Chat() {
               }
             }}
             multiple
-            accept='image/*,application/pdf,.pdf,.txt,.csv,.json,.docx,.doc'
+            accept={SUPPORTED_FILE_TYPES}
             className='hidden'
           />
 

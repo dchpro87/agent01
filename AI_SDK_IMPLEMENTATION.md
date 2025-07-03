@@ -9,31 +9,43 @@ This document details the comprehensive AI SDK v4 implementation in this advance
 - **Request Tracking**: Unique request IDs for comprehensive logging and debugging
 - **Token Usage Monitoring**: Real-time tracking of prompt, completion, and total tokens
 - **Abort Signal Support**: Proper request cancellation and cleanup
+- **Multi-step Processing**: Support for MAX_CHAT_STEPS (5) with tool call sequences
 
 ### 2. **Multimodal Content Support**  
 - **File Attachments**: Support for images, documents, and various file types
 - **experimental_attachments**: Proper handling of multimodal content with AI SDK v4
-- **Content Validation**: Robust validation of multimodal message content
+- **Content Validation**: Robust validation of multimodal message content with Zod schemas
 - **Vision Model Support**: Automatic detection and handling of vision-capable models
+- **File Preview**: Visual preview of attached files before sending
 
 ### 3. **Tool Integration & Function Calling**
 - **Smart Tool Detection**: Automatic model capability detection for tool support
-- **Built-in Tools**: Real-time clock, BMI calculator, weather service with proper validation
-- **Tool Execution Feedback**: Visual display of tool calls and results
-- **Parameter Validation**: Zod schema validation for all tool parameters
+- **Built-in Tools**: Real-time clock, BMI calculator, weather service with comprehensive validation
+- **Tool Execution Feedback**: Visual display of tool calls and results with step-by-step progress
+- **Parameter Validation**: Comprehensive Zod schema validation for all tool parameters
 - **Error Handling**: Graceful tool failure handling with detailed error messages
+- **Tool Toggle**: Enable/disable tools per conversation with user preference persistence
 
 ### 4. **Configuration Management**
-- **Centralized Config**: Environment-based configuration with validation (`src/lib/ai-config.ts`)
+- **Centralized Config**: Static configuration in `src/constants/app-config.ts` with full type safety
+- **Model Presets**: 5 built-in configuration presets (balanced, creative, precise, coding, analytical)
 - **Runtime Validation**: Comprehensive parameter validation with user-friendly error messages  
-- **Model Options**: Support for temperature, max tokens, context window, top-p, top-k
-- **Configuration Persistence**: Settings saved across sessions
+- **Model Options**: Support for temperature, max tokens, context window, top-p, top-k, repeat penalty
+- **Configuration Persistence**: All settings saved to localStorage with automatic restoration
 
 ### 5. **Health Monitoring & Diagnostics**
-- **Connection Health**: Real-time Ollama server connectivity monitoring
-- **Model Availability**: Automatic model detection and validation
+- **Connection Health**: Real-time Ollama server connectivity monitoring with visual indicators
+- **Model Availability**: Automatic model detection and validation with capability assessment
 - **Diagnostic Information**: Detailed system status with actionable suggestions
 - **Proactive Monitoring**: Early detection of configuration and connection issues
+- **Health Endpoints**: Comprehensive `/api/health` endpoint with detailed diagnostics
+
+### 6. **Personality System**
+- **8 Pre-built Personalities**: Comprehensive personality system with distinct character traits
+- **Custom Personality Creation**: Full UI for creating and managing custom system prompts
+- **Personality Categorization**: Organized by General, Technical, Creative, Education, Culinary, Support
+- **Dynamic Switching**: Change personalities mid-conversation with full state persistence
+- **Personality Persistence**: All personality preferences saved to localStorage
 
 ## 📁 Project Architecture
 
@@ -51,16 +63,22 @@ src/
 │   ├── Chat.tsx                   # Advanced chat UI with streaming, attachments & tools
 │   ├── ModelSelector.tsx          # Model selection with capability indicators
 │   ├── SystemPromptSelector.tsx   # Personality system with 8 pre-built prompts
-│   └── ModelConfigSelector.tsx    # Advanced parameter configuration interface
+│   ├── ModelConfigSelector.tsx    # Advanced parameter configuration interface
+│   └── ToolSwitch.tsx             # Tool enable/disable toggle component
+├── constants/
+│   ├── app-config.ts              # Static application configuration with validation
+│   ├── chat-constants.ts          # Chat-specific constants and configurations
+│   ├── model-config.ts            # Model configuration presets and defaults
+│   └── predefined-system-prompts.ts # Built-in personality definitions
 ├── lib/
-│   ├── ai-config.ts              # Centralized AI configuration with validation
-│   ├── ai-health.ts              # Health monitoring utilities and diagnostics
-│   ├── ai-middleware.ts          # Request logging, tracking & performance monitoring
-│   └── tools.ts                  # Tool definitions (time, BMI, weather) with Zod validation
+│   ├── ai-config.ts               # AI configuration utilities and helpers
+│   ├── ai-health.ts               # Health monitoring utilities and diagnostics
+│   ├── ai-middleware.ts           # Request logging, tracking & performance monitoring
+│   └── tools.ts                   # Tool definitions (time, BMI, weather) with Zod validation
 ├── types/
-│   ├── index.ts                  # General application type definitions
-│   └── ollama.ts                 # Ollama-specific types and model configurations
-└── utils/                        # Utility functions and helper methods
+│   ├── index.ts                   # General application type definitions
+│   └── ollama.ts                  # Ollama-specific types and model configurations
+└── utils/                         # Utility functions and helper methods
 ```
 
 ## 🔧 Technology Stack
@@ -82,6 +100,34 @@ src/
 ```
 
 ## 🔧 Environment Configuration
+
+The application uses static configuration in `src/constants/app-config.ts` for better type safety:
+
+```typescript
+// Static configuration with full type safety
+export const APP_CONFIG: AppConfig = {
+  ollama: {
+    baseURL: "http://localhost:11434",    # Ollama server endpoint
+    model: "llama3.2:3b",                 # Default model selection
+    temperature: 0.7,                     # Creativity vs consistency (0.0-2.0)
+    maxRetries: 2,                        # Retry attempts for failed requests
+    defaultOptions: {
+      maxTokens: 4096,                    # Response length limit (1-32,000)
+      // Additional model parameters...
+    },
+  },
+  streaming: {
+    timeout: 30000,                       # Request timeout (30 seconds)
+    keepAlive: true,                      # Keep connections alive
+  },
+  logging: {
+    enabled: true,                        # Enable comprehensive request logging
+    logLevel: "info",                     # Logging verbosity (debug, info, warn, error)
+  },
+};
+```
+
+Environment variables are also supported for deployment flexibility:
 
 ```bash
 # Core Ollama Settings
@@ -116,7 +162,7 @@ const result = streamText({
   maxRetries: config.maxRetries,          // Configurable retry logic
   abortSignal: abortController.signal,    // Proper cancellation support
   temperature: finalOptions.temperature,   // Runtime temperature control
-  maxSteps: supportsTools ? 3 : 1,        // Tool execution steps
+  maxSteps: supportsTools ? MAX_CHAT_STEPS : DEFAULT_CHAT_STEPS, // Multi-step tool calls (5 steps)
   ...(supportsTools && { tools }),        // Conditional tool integration
   onFinish: (event) => {                  // Token usage tracking
     AILogger.finishRequest(requestId, {
@@ -138,6 +184,7 @@ return result.toDataStreamResponse({
     'Connection': 'keep-alive',
     'X-Request-ID': requestId,
     'X-Model': selectedModel,
+    'X-Tools-Enabled': String(shouldUseTools),
   }
 });
 ```
@@ -221,10 +268,12 @@ function checkModelSupportsTools(modelName: string): boolean {
 
 // Conditional tool integration based on model capabilities
 const supportsTools = checkModelSupportsTools(selectedModel);
+const shouldUseTools = toolsEnabled && supportsTools;
+
 const result = streamText({
   // ... other configuration
-  maxSteps: supportsTools ? 3 : 1,           // Multi-step for tool use
-  ...(supportsTools && { tools }),           // Tools only for capable models
+  maxSteps: shouldUseTools ? MAX_CHAT_STEPS : DEFAULT_CHAT_STEPS, // 5 steps for tools, 1 for regular
+  ...(shouldUseTools && { tools }),           // Tools only for capable models
 });
 ```
 
@@ -483,6 +532,14 @@ The implementation includes comprehensive testing capabilities across multiple l
 
 ## 📝 Future Enhancements & Roadmap
 
+### **Recently Completed Features**
+- ✅ **Enhanced Personality System** - 8 distinct personalities with custom creation support
+- ✅ **Configuration Presets** - 5 built-in presets for different use cases
+- ✅ **Advanced Tool Toggle** - Per-conversation tool enable/disable
+- ✅ **Multi-step Conversations** - Extended tool call sequences (MAX_CHAT_STEPS: 5)
+- ✅ **Improved File Management** - Better file preview and validation
+- ✅ **Static Configuration** - Type-safe configuration with validation
+
 ### **Immediate Improvements (Next Release)**
 1. **Enhanced Tool Ecosystem**
    - File processing tools (PDF parsing, image analysis)
@@ -558,6 +615,7 @@ The implementation includes comprehensive testing capabilities across multiple l
 
 ---
 
-**Last Updated:** January 2025  
+**Last Updated:** July 2025  
 **AI SDK Version:** v4.3.16  
-**Implementation Status:** Production Ready ✅
+**Implementation Status:** Production Ready ✅  
+**Current Features:** 8 Personalities, 5 Config Presets, 3 Built-in Tools, Multi-step Conversations

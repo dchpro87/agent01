@@ -10,7 +10,6 @@ import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { OllamaModelOptions } from "@/types/ollama";
 import {
-  DEFAULT_SYSTEM_PROMPT,
   TOOL_SUPPORTED_MODELS,
   NO_TOOL_SUPPORT_MODELS,
   THINK_START_TAG,
@@ -20,6 +19,7 @@ import {
   DEFAULT_CHAT_STEPS,
 } from "@/constants/chat-constants";
 import { DEFAULT_OPTIONS } from "@/constants/model-config";
+import { PREDEFINED_PROMPTS } from "@/constants/predefined-system-prompts";
 
 import {
   Send,
@@ -82,7 +82,7 @@ function useConnectionStatus() {
 function usePersistedPreferences() {
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [systemPrompt, setSystemPrompt] = useState<string>(
-    DEFAULT_SYSTEM_PROMPT
+    PREDEFINED_PROMPTS[0].prompt
   );
   const [modelOptions, setModelOptions] =
     useState<OllamaModelOptions>(DEFAULT_OPTIONS); // Default to "balanced" preset

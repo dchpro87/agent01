@@ -1,6 +1,13 @@
 # Agent01 - Advanced AI Chat Application
 
-A sophisticated, feature-rich AI chat application built with Next.js 15, Vercel AI SDK v4, and Ollama. Experience intelligent conversations with advanced streaming, tool integration, customizable personalities, and enterprise-grade monitoring.
+A sophisticated### ⚙️ **Advanced Configuration**
+- **Model Parameters** - Adjust temperature, top-p, top-k, context window, token limits
+- **Configuration Presets** - 5 built-in presets (balanced, creative, precise, coding, analytical)
+- **Real-time Health Monitoring** - Connection status and diagnostic information
+- **Request Logging** - Comprehensive logging with request tracking
+- **Error Handling** - Graceful degradation and detailed error messages
+- **Tool Toggle** - Enable/disable tools per conversation
+- **Validation & Limits** - Real-time parameter validation with helpful error messagesture-rich AI chat application built with Next.js 15, Vercel AI SDK v4, and Ollama. Experience intelligent conversations with advanced streaming, tool integration, customizable personalities, and enterprise-grade monitoring.
 
 ## ✨ Key Features
 
@@ -9,14 +16,18 @@ A sophisticated, feature-rich AI chat application built with Next.js 15, Vercel 
 - **Tool/Function Calling** - Built-in tools for real-time data (weather, time, calculations)
 - **Smart Model Detection** - Automatic tool support detection for each model
 - **Advanced Model Configuration** - Fine-tune temperature, context window, token limits, and more
+- **Model Presets** - Pre-configured settings for balanced, creative, precise, coding, and analytical tasks
+- **Real-time Model Validation** - Continuous checking of model availability and capabilities
 
 ### 💬 **Chat Experience**
 - **Real-time Streaming** - Smooth, fast responses with the Vercel AI SDK v4
 - **File Attachments** - Send images, PDFs, and text files to the AI (multimodal support)
 - **Thinking Process Visualization** - See the AI's reasoning with `<think>` tag parsing
 - **Tool Execution Display** - Visual feedback for function calls and results
-- **Markdown Support** - Rich text rendering with syntax highlighting
+- **Markdown Support** - Rich text rendering with syntax highlighting and code blocks
 - **Message History** - Persistent conversation with reset capability
+- **Multi-step Conversations** - Tool calls with follow-up responses (MAX_CHAT_STEPS: 5)
+- **Request Cancellation** - Stop generation at any time with visual feedback
 
 ### 📎 **File Attachments & Multimodal Support**
 - **Visual File Upload** - Click the 📎 paperclip icon next to the input field
@@ -25,28 +36,31 @@ A sophisticated, feature-rich AI chat application built with Next.js 15, Vercel 
 - **Vision-Capable Models** - Automatic image processing for compatible models
 - **Drag & Drop** - Easy file attachment with drag and drop support
 - **File Management** - Remove files individually or clear all attachments
+- **File Size Validation** - Automatic file size formatting and validation
 
 ### 🎭 **Personality System**
-- **Pre-built Personalities** - 8 distinct AI personalities with unique traits:
-  - **Sarah** - Helpful, practical, and reliable general assistant
+- **8 Pre-built Personalities** - Distinct AI personalities with unique traits:
+  - **Sarah** - Helpful, practical, and reliable general assistant (default)
   - **Marcus** - Logical, systematic programming expert  
   - **Emily** - Patient, encouraging educational tutor
   - **Isabella** - Imaginative, expressive creative writer
-  - **David** - Sharp, decisive analytical data expert
+  - **Rogger** - Sharp, decisive analytical data expert
   - **Dr. Flip** - Brilliant, eccentric scientific inventor
   - **Chef Pierre** - Passionate French culinary master
   - **Grace** - Compassionate, understanding counselor
 - **Custom System Prompts** - Create and save your own AI personalities
 - **Dynamic Prompt Management** - Switch personalities mid-conversation
 - **Categorized Prompts** - Organized by General, Technical, Creative, Education, Culinary, and Support
+- **Persistent Preferences** - All personality settings saved to localStorage
 
 ### 🔧 **Built-in Tools**
 - **Real-time Clock** - Get current date/time in any timezone with proper formatting
 - **BMI Calculator** - Health calculations with metric/imperial support and category classification
 - **Weather Service** - Location-based weather information with realistic simulation (demo implementation)
 - **Tool Detection** - Automatic model capability detection for tool support
-- **Visual Feedback** - Clear display of tool execution and results
+- **Visual Feedback** - Clear display of tool execution and results with step-by-step progress
 - **Extensible Architecture** - Easy to add new tools and capabilities
+- **Parameter Validation** - Comprehensive input validation with Zod schemas
 
 ### �️ **Advanced Configuration**
 - **Model Parameters** - Adjust temperature, top-p, top-k, context window, token limits
@@ -60,6 +74,27 @@ A sophisticated, feature-rich AI chat application built with Next.js 15, Vercel 
 - **Responsive Design** - Perfect experience on desktop, tablet, and mobile
 - **Accessibility** - Screen reader friendly with proper ARIA labels
 - **Keyboard Shortcuts** - Enter to send, Shift+Enter for new line
+- **Connection Status** - Visual indicators for Ollama server connectivity
+- **Loading States** - Smooth loading animations and progress indicators
+- **Error Recovery** - Automatic retry logic and detailed error messages
+
+## 🆕 Latest Features & Updates (July 2025)
+
+### **Recent Enhancements**
+- **🎭 Enhanced Personality System** - Added "Rogger" the analytical expert, replacing David
+- **⚙️ Configuration Presets** - 5 built-in presets: balanced, creative, precise, coding, analytical
+- **🔧 Tool Toggle Control** - Enable/disable tools per conversation with visual indicators
+- **📊 Multi-step Conversations** - Extended tool sequences (MAX_CHAT_STEPS: 5) for complex tasks
+- **🔒 Static Configuration** - Type-safe configuration in `app-config.ts` with validation
+- **📁 File Management** - Improved file size validation and preview functionality
+- **🏗️ Architecture Improvements** - Better organization with dedicated constants folder
+
+### **Performance & Reliability**
+- **⚡ Optimized Streaming** - Enhanced request headers and performance monitoring
+- **🛡️ Error Handling** - Comprehensive error recovery with actionable suggestions
+- **📈 Request Tracking** - Detailed logging with unique request IDs
+- **🔄 Connection Monitoring** - Real-time Ollama server health checking
+- **✅ Validation** - Runtime parameter validation with user-friendly messages
 
 ## 🚀 Quick Start
 
@@ -105,7 +140,33 @@ A sophisticated, feature-rich AI chat application built with Next.js 15, Vercel 
 
 ### Environment Configuration (Optional)
 
-Create a `.env.local` file to customize settings:
+The application uses static configuration in `src/constants/app-config.ts`. You can customize settings by editing this file:
+
+```typescript
+// Example configuration
+export const APP_CONFIG: AppConfig = {
+  ollama: {
+    baseURL: "http://localhost:11434",     // Change to your Ollama server
+    model: "llama3.2:3b",                  // Default model
+    temperature: 0.7,                      // Default creativity
+    maxRetries: 2,                         // Retry attempts
+    defaultOptions: {
+      maxTokens: 4096,                     // Default response length
+      // ... other model parameters
+    },
+  },
+  streaming: {
+    timeout: 30000,                        // 30 second timeout
+    keepAlive: true,                       // Keep connections alive
+  },
+  logging: {
+    enabled: true,                         // Enable request logging
+    logLevel: "info",                      // Log level
+  },
+};
+```
+
+Alternatively, create a `.env.local` file for environment-based configuration:
 
 ```bash
 # Ollama Configuration
@@ -137,7 +198,7 @@ AI_LOG_LEVEL=info
   - **Marcus** - Expert programming assistant with systematic approach
   - **Emily** - Patient educational tutor with gentle guidance
   - **Isabella** - Creative writing companion with artistic flair
-  - **David** - Sharp analytical data expert with decisive insights
+  - **Rogger** - Sharp analytical data expert with decisive insights
   - **Dr. Flip** - Brilliant eccentric scientist with boundless curiosity
   - **Chef Pierre** - Passionate French culinary master with infectious enthusiasm
   - **Grace** - Compassionate counselor with deep empathy
@@ -164,6 +225,12 @@ AI_LOG_LEVEL=info
   - **Top-P** - Response variety control (0.0-1.0, precision to 1 decimal)
   - **Top-K** - Token selection diversity
   - **Repeat Penalty** - Reduce repetitive responses
+- **Configuration Presets** - 5 built-in presets for different use cases:
+  - **Balanced** - Optimal balance of creativity and coherence
+  - **Creative** - High creativity and varied outputs
+  - **Precise** - Focused and deterministic responses
+  - **Coding** - Optimized for code generation
+  - **Analytical** - Structured analytical thinking
 - Real-time validation with helpful error messages
 - Settings persist across sessions
 
@@ -203,23 +270,29 @@ agent01/
 │   │   ├── Chat.tsx                   # Main chat interface with streaming
 │   │   ├── ModelSelector.tsx          # Model selection dropdown
 │   │   ├── SystemPromptSelector.tsx   # Personality management
-│   │   └── ModelConfigSelector.tsx    # Parameter configuration
+│   │   ├── ModelConfigSelector.tsx    # Parameter configuration
+│   │   └── ToolSwitch.tsx             # Tool enable/disable toggle
+│   ├── constants/
+│   │   ├── app-config.ts              # Application configuration
+│   │   ├── chat-constants.ts          # Chat-specific constants
+│   │   ├── model-config.ts            # Model configuration presets
+│   │   └── predefined-system-prompts.ts # Built-in personalities
 │   ├── lib/
-│   │   ├── ai-config.ts              # Centralized AI configuration
-│   │   ├── ai-health.ts              # Health monitoring utilities
-│   │   ├── ai-middleware.ts          # Logging & request tracking
-│   │   └── tools.ts                  # Built-in tool definitions
+│   │   ├── ai-config.ts               # AI configuration utilities
+│   │   ├── ai-health.ts               # Health monitoring utilities
+│   │   ├── ai-middleware.ts           # Request logging & tracking
+│   │   └── tools.ts                   # Built-in tool definitions
 │   ├── types/
-│   │   ├── index.ts                  # General type definitions
-│   │   └── ollama.ts                 # Ollama-specific types
-│   └── utils/                        # Utility functions
-├── public/                           # Static assets
+│   │   ├── index.ts                   # General type definitions
+│   │   └── ollama.ts                  # Ollama-specific types
+│   └── utils/                         # Utility functions
+├── public/                            # Static assets
 ├── docs/
-│   └── AI_SDK_IMPLEMENTATION.md      # Technical implementation details
-├── package.json                      # Dependencies & scripts
-├── next.config.ts                    # Next.js configuration
-├── tailwind.config.ts               # Tailwind CSS configuration
-└── tsconfig.json                    # TypeScript configuration
+│   └── AI_SDK_IMPLEMENTATION.md       # Technical implementation details
+├── package.json                       # Dependencies & scripts
+├── next.config.ts                     # Next.js configuration
+├── tailwind.config.ts                 # Tailwind CSS configuration
+└── tsconfig.json                      # TypeScript configuration
 ```
 
 ### Key Technologies
@@ -332,14 +405,19 @@ Users can also create custom personalities through the UI:
 
 ### Environment Variables
 
+Configuration is managed through `src/constants/app-config.ts`. For environment-based configuration, you can use these variables:
+
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |
 | `OLLAMA_MODEL` | `llama3.2:3b` | Default model |
 | `OLLAMA_TEMPERATURE` | `0.7` | Default creativity setting |
 | `OLLAMA_MAX_TOKENS` | `4096` | Default response length |
+| `OLLAMA_MAX_RETRIES` | `2` | Number of retry attempts |
 | `AI_LOGGING` | `true` | Enable request logging |
 | `AI_LOG_LEVEL` | `info` | Logging verbosity |
+
+**Note:** The application primarily uses static configuration in `app-config.ts` for better type safety and validation.
 
 ### Troubleshooting
 

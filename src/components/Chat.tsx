@@ -730,7 +730,7 @@ export default function Chat() {
   return (
     <div className='flex flex-col h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800'>
       {/* Header */}
-      <div className='border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm'>
+      <div className='fixed top-0 left-0 right-0 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-40'>
         <div className='max-w-4xl mx-auto px-4 py-4'>
           <div className='flex items-center justify-between'>
             <div className='flex items-center gap-3'>
@@ -804,7 +804,7 @@ export default function Chat() {
         preferences.toolsEnabled &&
         !preferences.modelSupportsTools &&
         !preferences.isWarningDismissed && (
-          <div className='border-b border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20'>
+          <div className='fixed top-[73px] left-0 right-0 border-b border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 z-30'>
             <div className='max-w-4xl mx-auto px-4 py-3'>
               <div className='flex items-center justify-between text-amber-800 dark:text-amber-200'>
                 <div className='flex items-center gap-2'>
@@ -829,7 +829,20 @@ export default function Chat() {
         )}
 
       {/* Messages */}
-      <div className='flex-1 overflow-y-auto'>
+      <div
+        className={`flex-1 overflow-y-auto ${
+          preferences.selectedModel &&
+          preferences.toolsEnabled &&
+          !preferences.modelSupportsTools &&
+          !preferences.isWarningDismissed
+            ? "pt-[130px]" // Extra padding when warning is shown
+            : "pt-[73px]" // Normal padding when no warning
+        } ${
+          (attachedFiles && attachedFiles.length > 0) || error
+            ? "pb-[200px]" // Extra bottom padding when attachment preview or error is shown
+            : "pb-[140px]" // Normal bottom padding
+        }`}
+      >
         <div className='max-w-4xl mx-auto px-4 py-6'>
           {messages.length === 0 ? (
             <div className='text-center py-12'>
@@ -928,30 +941,34 @@ export default function Chat() {
 
       {/* Error message */}
       {error && (
-        <div className='max-w-4xl mx-auto px-4 py-2'>
-          <div className='bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3'>
-            <p className='text-red-600 dark:text-red-400 text-sm'>
-              Error: {error.message}
-            </p>
+        <div className='fixed bottom-[100px] left-0 right-0 z-20'>
+          <div className='max-w-4xl mx-auto px-4 py-2'>
+            <div className='bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3'>
+              <p className='text-red-600 dark:text-red-400 text-sm'>
+                Error: {error.message}
+              </p>
+            </div>
           </div>
         </div>
       )}
 
       {/* Attachment preview */}
       {attachedFiles && attachedFiles.length > 0 && (
-        <AttachmentPreview
-          files={attachedFiles}
-          onRemove={() => {
-            setAttachedFiles(null);
-            if (fileInputRef.current) {
-              fileInputRef.current.value = "";
-            }
-          }}
-        />
+        <div className='fixed bottom-[100px] left-0 right-0 z-20'>
+          <AttachmentPreview
+            files={attachedFiles}
+            onRemove={() => {
+              setAttachedFiles(null);
+              if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+              }
+            }}
+          />
+        </div>
       )}
 
       {/* Input form */}
-      <div className='border-t border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm'>
+      <div className='fixed bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-30'>
         <div className='max-w-4xl mx-auto px-4 py-4'>
           {/* Hidden file input */}
           <input

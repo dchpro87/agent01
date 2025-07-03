@@ -511,7 +511,7 @@ export default function ModelConfigSelector({
 
       {/* Overlay to close dropdown */}
       {isOpen && (
-        <div className='fixed inset-0 z-10' onClick={() => setIsOpen(false)} />
+        <div className='fixed inset-0 z-40' onClick={() => setIsOpen(false)} />
       )}
 
       {/* Tooltip Portal - renders outside the modal to prevent clipping */}

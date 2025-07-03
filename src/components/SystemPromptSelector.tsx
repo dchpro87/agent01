@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Settings,
   ChevronDown,
@@ -34,6 +35,8 @@ export default function SystemPromptSelector({
   const [newPromptContent, setNewPromptContent] = useState("");
   const [selectedPromptId, setSelectedPromptId] = useState("default");
   const [isHydrated, setIsHydrated] = useState(false);
+  const [hoveredPrompt, setHoveredPrompt] = useState<SystemPrompt | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
   // Load custom prompts from localStorage on mount
   useEffect(() => {
@@ -77,6 +80,16 @@ export default function SystemPromptSelector({
     ? allPrompts.find((p) => p.prompt === selectedPrompt) ||
       PREDEFINED_PROMPTS[0]
     : PREDEFINED_PROMPTS[0];
+
+  // Handle prompt hover
+  const handlePromptHover = (prompt: SystemPrompt, event: React.MouseEvent) => {
+    setHoveredPrompt(prompt);
+    const rect = event.currentTarget.getBoundingClientRect();
+    setTooltipPosition({
+      x: rect.left - 320, // Position tooltip to the left of the button
+      y: rect.top + rect.height / 2 - 50, // Center vertically relative to button
+    });
+  };
 
   // Handle prompt selection
   const handlePromptSelect = (prompt: SystemPrompt) => {
@@ -249,6 +262,8 @@ export default function SystemPromptSelector({
                           : "border-transparent"
                       }`}
                       onClick={() => handlePromptSelect(prompt)}
+                      onMouseEnter={(e) => handlePromptHover(prompt, e)}
+                      onMouseLeave={() => setHoveredPrompt(null)}
                     >
                       <div className='flex items-start gap-3'>
                         <div
@@ -321,23 +336,35 @@ export default function SystemPromptSelector({
               </div>
             ))}
           </div>
-
-          {/* Current Prompt Preview */}
-          <div className='p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900'>
-            <h4 className='text-xs font-medium text-gray-600 dark:text-gray-400 mb-2'>
-              Current Prompt:
-            </h4>
-            <p className='text-xs text-gray-700 dark:text-gray-300 max-h-50 overflow-y-auto'>
-              {currentPrompt.prompt}
-            </p>
-          </div>
         </div>
       )}
 
       {/* Overlay to close dropdown */}
       {isOpen && (
-        <div className='fixed inset-0 z-10' onClick={() => setIsOpen(false)} />
+        <div className='fixed inset-0 z-40' onClick={() => setIsOpen(false)} />
       )}
+
+      {/* Tooltip Portal - renders outside the modal to prevent clipping */}
+      {hoveredPrompt &&
+        typeof window !== "undefined" &&
+        createPortal(
+          <div
+            className='fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-xl z-[9999] max-w-xs'
+            style={{
+              left: `${tooltipPosition.x}px`,
+              top: `${tooltipPosition.y}px`,
+              pointerEvents: "none", // Prevent tooltip from interfering with mouse events
+            }}
+          >
+            <h4 className='text-sm font-medium text-gray-900 dark:text-white mb-2'>
+              {hoveredPrompt.name}
+            </h4>
+            <p className='text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap'>
+              {hoveredPrompt.prompt}
+            </p>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

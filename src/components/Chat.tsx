@@ -32,11 +32,13 @@ import {
   FileText,
   Image as ImageIcon,
   File,
+  Database,
 } from "lucide-react";
 import ModelSelector from "./ModelSelector";
 import SystemPromptSelector from "./SystemPromptSelector";
 import ModelConfigSelector from "./ModelConfigSelector";
 import ToolSwitch from "./ToolSwitch";
+import ContextWindowManager from "./ContextWindowManager";
 
 // Custom hook for connection status
 function useConnectionStatus() {
@@ -638,6 +640,10 @@ export default function Chat() {
   // File attachment state
   const [attachedFiles, setAttachedFiles] = useState<FileList | null>(null);
 
+  // Context window dialog state
+  const [isContextDialogOpen, setIsContextDialogOpen] =
+    useState<boolean>(false);
+
   // Use custom hooks for cleaner state management
   const connectionStatus = useConnectionStatus();
   const preferences = usePersistedPreferences();
@@ -794,6 +800,15 @@ export default function Chat() {
                 disabled={isDisabled}
                 modelSupportsTools={preferences.modelSupportsTools}
               />
+              {/* Context Window Icon */}
+              <button
+                onClick={() => setIsContextDialogOpen(true)}
+                disabled={isDisabled}
+                className='p-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
+                title='Context Window Management'
+              >
+                <Database className='w-5 h-5' />
+              </button>
             </div>
           </div>
         </div>
@@ -1047,6 +1062,12 @@ export default function Chat() {
           </p>
         </div>
       </div>
+
+      {/* Context Window Management Dialog */}
+      <ContextWindowManager
+        isOpen={isContextDialogOpen}
+        onClose={() => setIsContextDialogOpen(false)}
+      />
     </div>
   );
 }

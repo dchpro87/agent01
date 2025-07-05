@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ChromaClient } from "chromadb";
 import { createOllamaEmbeddingFunction } from "@/lib/ollama-embedding";
+import {
+  CHROMADB_BASE_URL,
+  CHROMADB_API_ENDPOINTS,
+  CHROMADB_DEFAULTS,
+  CHROMADB_ACTIONS,
+} from "@/constants/chromadb-constants";
 
 let client: ChromaClient | null = null;
-const baseUrl = "http://localhost:8000";
 
 async function getClient(): Promise<ChromaClient> {
   if (!client) {
     client = new ChromaClient({
-      path: baseUrl,
+      path: CHROMADB_BASE_URL,
     });
   }
   return client;
@@ -20,7 +25,7 @@ export async function GET(request: NextRequest) {
 
   try {
     switch (action) {
-      case "connect":
+      case CHROMADB_ACTIONS.CONNECT:
         const chromaClient = await getClient();
         const version = await chromaClient.version();
         return NextResponse.json({
@@ -30,9 +35,11 @@ export async function GET(request: NextRequest) {
           message: "Connected to ChromaDB",
         });
 
-      case "health":
+      case CHROMADB_ACTIONS.HEALTH:
         try {
-          const response = await fetch(`${baseUrl}/api/v1/version`);
+          const response = await fetch(
+            `${CHROMADB_BASE_URL}${CHROMADB_API_ENDPOINTS.VERSION_V1}`
+          );
           if (response.ok) {
             const data = await response.json();
             return NextResponse.json({
@@ -42,7 +49,9 @@ export async function GET(request: NextRequest) {
             });
           } else {
             // Try v2 API since v1 might be deprecated
-            const responseV2 = await fetch(`${baseUrl}/api/v2/version`);
+            const responseV2 = await fetch(
+              `${CHROMADB_BASE_URL}${CHROMADB_API_ENDPOINTS.VERSION_V2}`
+            );
             if (responseV2.ok) {
               const dataV2 = await responseV2.json();
               return NextResponse.json({
@@ -66,7 +75,7 @@ export async function GET(request: NextRequest) {
           });
         }
 
-      case "collections":
+      case CHROMADB_ACTIONS.COLLECTIONS:
         const chromaClientForCollections = await getClient();
         const collections = await chromaClientForCollections.listCollections();
 
@@ -82,7 +91,7 @@ export async function GET(request: NextRequest) {
           collections: collectionsData,
         });
 
-      case "get_documents":
+      case CHROMADB_ACTIONS.GET_DOCUMENTS:
         const collectionName = searchParams.get("collection");
         const limitStr = searchParams.get("limit");
         const limit = limitStr ? parseInt(limitStr, 10) : undefined;
@@ -132,7 +141,7 @@ export async function GET(request: NextRequest) {
           );
         }
 
-      case "disconnect":
+      case CHROMADB_ACTIONS.DISCONNECT:
         client = null;
         return NextResponse.json({
           success: true,
@@ -140,7 +149,7 @@ export async function GET(request: NextRequest) {
           message: "Disconnected from ChromaDB",
         });
 
-      case "create_collection":
+      case CHROMADB_ACTIONS.CREATE_COLLECTION:
         const newCollectionName = searchParams.get("name");
         const useOllamaEmbedding =
           searchParams.get("ollama_embedding") === "true";
@@ -204,8 +213,9 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            error:
-              "Invalid action. Use: connect, health, collections, get_documents, create_collection, or disconnect",
+            error: `Invalid action. Use: ${Object.values(CHROMADB_ACTIONS)
+              .slice(0, 6)
+              .join(", ")}`,
           },
           { status: 400 }
         );
@@ -241,7 +251,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     switch (action) {
-      case "test":
+      case CHROMADB_ACTIONS.TEST:
         if (!client) {
           return NextResponse.json({
             success: false,
@@ -257,7 +267,7 @@ export async function POST(request: NextRequest) {
           message: "Connection test successful",
         });
 
-      case "add_documents":
+      case CHROMADB_ACTIONS.ADD_DOCUMENTS:
         if (!collection || !documents || !ids) {
           return NextResponse.json(
             {
@@ -317,7 +327,7 @@ export async function POST(request: NextRequest) {
           );
         }
 
-      case "query_collection":
+      case CHROMADB_ACTIONS.QUERY_COLLECTION:
         if (!collection || !query_texts) {
           return NextResponse.json(
             {
@@ -353,7 +363,7 @@ export async function POST(request: NextRequest) {
           const queryResults = await chromaCollection.query({
             queryTexts: generateQueryEmbeddings ? undefined : query_texts, // Use queryTexts only if not using embeddings
             queryEmbeddings, // Use generated embeddings if available
-            nResults: n_results || 10,
+            nResults: n_results || CHROMADB_DEFAULTS.QUERY_RESULTS_LIMIT,
             where: where,
           });
 
@@ -393,8 +403,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            error:
-              "Invalid action. Use: test, add_documents, or query_collection",
+            error: `Invalid action. Use: ${Object.values(CHROMADB_ACTIONS)
+              .slice(6)
+              .join(", ")}`,
             note: "For add_documents and query_collection, set 'generate_ollama_embeddings: true' to use Ollama nomic-embed-text model",
           },
           { status: 400 }

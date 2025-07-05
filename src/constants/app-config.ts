@@ -1,26 +1,8 @@
-import { OllamaModelOptions } from "@/types/ollama";
+import { AppConfig } from "@/types/app-config";
 import { DEFAULT_OPTIONS } from "./model-config";
 
 // Application Configuration
 // This file replaces all environment variables with static configuration
-
-export interface AppConfig {
-  ollama: {
-    baseURL: string;
-    model: string;
-    temperature: number;
-    maxRetries: number;
-    defaultOptions: OllamaModelOptions;
-  };
-  streaming: {
-    timeout: number;
-    keepAlive: boolean;
-  };
-  logging: {
-    enabled: boolean;
-    logLevel: "debug" | "info" | "warn" | "error";
-  };
-}
 
 // Main application configuration
 export const APP_CONFIG: AppConfig = {

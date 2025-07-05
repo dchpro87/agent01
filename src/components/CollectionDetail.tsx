@@ -7,6 +7,7 @@ import {
   chromaDBManager,
   CollectionDocument,
 } from "@/lib/chromadb";
+import DocumentUpload from "./DocumentUpload";
 
 interface CollectionDetailProps {
   collection: Collection;
@@ -44,6 +45,31 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
 
     loadDocuments();
   }, [collection.id, collection.name]);
+
+  const handleDocumentsAdded = () => {
+    // Refresh the documents list
+    const loadDocuments = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const docs = await chromaDBManager.getCollectionDocuments(
+          collection.name,
+          50
+        );
+        setDocuments(docs);
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to fetch documents";
+        console.error("Failed to fetch documents:", err);
+        setError(errorMessage);
+        setDocuments([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDocuments();
+  };
 
   const getDocumentContent = (doc: CollectionDocument): string => {
     const content = doc.document || `Document ID: ${doc.id}`;
@@ -116,6 +142,13 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
           </div>
         )}
       </div>
+
+      {/* Document Upload Section */}
+      <DocumentUpload
+        collectionName={collection.name}
+        onDocumentsAdded={handleDocumentsAdded}
+        useOllamaEmbedding={true}
+      />
 
       {/* Documents Section */}
       <div>

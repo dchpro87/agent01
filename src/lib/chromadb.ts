@@ -195,6 +195,78 @@ export class ChromaDBManager {
     }
   }
 
+  async createCollection(
+    name: string,
+    useOllamaEmbedding: boolean = false
+  ): Promise<Collection> {
+    if (!this.isConnectedState) {
+      throw new Error("ChromaDB client not connected");
+    }
+
+    try {
+      const params = new URLSearchParams({
+        action: "create_collection",
+        name: name,
+        ollama_embedding: useOllamaEmbedding.toString(),
+      });
+
+      const response = await fetch(`${this.baseApiUrl}?${params}`);
+      const data = await response.json();
+
+      if (data.success) {
+        return data.collection;
+      } else {
+        throw new Error(data.error || "Failed to create collection");
+      }
+    } catch (error) {
+      console.error("Failed to create collection:", error);
+      throw error;
+    }
+  }
+
+  async addDocuments(
+    collectionName: string,
+    documents: string[],
+    ids: string[],
+    metadatas?: Record<string, unknown>[],
+    useOllamaEmbedding: boolean = false
+  ): Promise<{ success: boolean; message?: string; error?: string }> {
+    if (!this.isConnectedState) {
+      throw new Error("ChromaDB client not connected");
+    }
+
+    try {
+      const response = await fetch(this.baseApiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "add_documents",
+          collection: collectionName,
+          documents,
+          ids,
+          metadatas,
+          generate_ollama_embeddings: useOllamaEmbedding,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        return {
+          success: true,
+          message: data.message,
+        };
+      } else {
+        throw new Error(data.error || "Failed to add documents");
+      }
+    } catch (error) {
+      console.error("Failed to add documents:", error);
+      throw error;
+    }
+  }
+
   async getHealth(): Promise<HealthStatus> {
     try {
       const response = await fetch(`${this.baseApiUrl}?action=health`);

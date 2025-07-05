@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Database, AlertCircle } from "lucide-react";
+import { X, Database, AlertCircle, Plus } from "lucide-react";
 import {
   chromaDBManager,
   ChromaDBConnection,
@@ -29,6 +29,10 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
   const [internalActiveCollections, setInternalActiveCollections] = useState<
     Set<string>
   >(new Set());
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState("");
+  const [useOllamaEmbedding, setUseOllamaEmbedding] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   // Use external active collections if provided, otherwise use internal state
   const activeCollections =
@@ -91,6 +95,38 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
 
   const handleBackToCollections = () => {
     setSelectedCollection(null);
+  };
+
+  const handleCreateCollection = async () => {
+    if (!newCollectionName.trim()) return;
+
+    setIsCreating(true);
+    try {
+      await chromaDBManager.createCollection(
+        newCollectionName.trim(),
+        useOllamaEmbedding
+      );
+
+      // Refresh collections list
+      const cols = await chromaDBManager.getCollections();
+      setCollections(cols);
+
+      // Reset modal state
+      setShowCreateModal(false);
+      setNewCollectionName("");
+      setUseOllamaEmbedding(false);
+    } catch (error) {
+      console.error("Failed to create collection:", error);
+      // You might want to add error handling/display here
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleCancelCreate = () => {
+    setShowCreateModal(false);
+    setNewCollectionName("");
+    setUseOllamaEmbedding(false);
   };
   if (!isOpen) return null;
 
@@ -196,12 +232,22 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
                       <h3 className='text-lg font-medium text-gray-900 dark:text-white'>
                         Collections
                       </h3>
-                      <span className='text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full'>
-                        {collections.length}{" "}
-                        {collections.length === 1
-                          ? "collection"
-                          : "collections"}
-                      </span>
+                      <div className='flex items-center gap-3'>
+                        <span className='text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full'>
+                          {collections.length}{" "}
+                          {collections.length === 1
+                            ? "collection"
+                            : "collections"}
+                        </span>
+                        <button
+                          onClick={() => setShowCreateModal(true)}
+                          className='flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors'
+                          title='Create new collection'
+                        >
+                          <Plus className='w-4 h-4' />
+                          Create Collection
+                        </button>
+                      </div>
                     </div>
 
                     {collections.length > 0 ? (
@@ -295,6 +341,79 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
             )}
           </div>
         </div>
+
+        {/* Create Collection Modal */}
+        {showCreateModal && (
+          <div className='absolute inset-0 bg-black/50 flex items-center justify-center p-4'>
+            <div className='bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full'>
+              <div className='p-6'>
+                <div className='flex items-center justify-between mb-4'>
+                  <h3 className='text-lg font-semibold text-gray-900 dark:text-white'>
+                    Create New Collection
+                  </h3>
+                  <button
+                    onClick={handleCancelCreate}
+                    className='p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded'
+                    disabled={isCreating}
+                  >
+                    <X className='w-5 h-5 text-gray-500' />
+                  </button>
+                </div>
+
+                <div className='space-y-4'>
+                  <div>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                      Collection Name
+                    </label>
+                    <input
+                      type='text'
+                      value={newCollectionName}
+                      onChange={(e) => setNewCollectionName(e.target.value)}
+                      placeholder='Enter collection name'
+                      className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+                      disabled={isCreating}
+                      autoFocus
+                    />
+                  </div>
+
+                  <div className='flex items-center'>
+                    <input
+                      type='checkbox'
+                      id='useOllamaEmbedding'
+                      checked={useOllamaEmbedding}
+                      onChange={(e) => setUseOllamaEmbedding(e.target.checked)}
+                      className='w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600'
+                      disabled={isCreating}
+                    />
+                    <label
+                      htmlFor='useOllamaEmbedding'
+                      className='ml-2 text-sm text-gray-700 dark:text-gray-300'
+                    >
+                      Use Ollama embedding (nomic-embed-text)
+                    </label>
+                  </div>
+
+                  <div className='flex justify-end gap-3 pt-4'>
+                    <button
+                      onClick={handleCancelCreate}
+                      className='px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors'
+                      disabled={isCreating}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleCreateCollection}
+                      className='px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed rounded-lg transition-colors'
+                      disabled={isCreating || !newCollectionName.trim()}
+                    >
+                      {isCreating ? "Creating..." : "Create Collection"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Dialog Footer */}
         <div className='flex justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700'>

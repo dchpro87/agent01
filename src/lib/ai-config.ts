@@ -1,4 +1,5 @@
-import { APP_CONFIG, AppConfig } from "@/constants/app-config";
+import { APP_CONFIG } from "@/constants/app-config";
+import { AppConfig } from "@/types/app-config";
 
 export interface AIConfig {
   ollama: {

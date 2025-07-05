@@ -864,18 +864,14 @@ export default function Chat() {
 
       {/* Messages */}
       <div
-        className={`flex-1 overflow-y-auto ${(() => {
-          let topPadding = 73; // Base padding
-          if (
-            preferences.selectedModel &&
-            preferences.toolsEnabled &&
-            !preferences.modelSupportsTools &&
-            !preferences.isWarningDismissed
-          ) {
-            topPadding += 57; // Add tool warning height
-          }
-          return `pt-[${topPadding}px]`;
-        })()} ${
+        className={`flex-1 overflow-y-auto ${
+          preferences.selectedModel &&
+          preferences.toolsEnabled &&
+          !preferences.modelSupportsTools &&
+          !preferences.isWarningDismissed
+            ? "pt-[130px]" // Header + warning
+            : "pt-[73px]" // Just header
+        } ${
           (attachedFiles && attachedFiles.length > 0) || error
             ? "pb-[200px]" // Extra bottom padding when attachment preview or error is shown
             : "pb-[140px]" // Normal bottom padding
@@ -883,7 +879,7 @@ export default function Chat() {
       >
         <div className='max-w-4xl mx-auto px-4 py-6'>
           {messages.length === 0 ? (
-            <div className='text-center py-12'>
+            <div className='text-center pt-24 pb-32'>
               <h2 className='text-xl font-medium text-gray-900 dark:text-white mb-2'>
                 Welcome to your AI Assistant
               </h2>

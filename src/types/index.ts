@@ -41,3 +41,6 @@ export interface RequestMetrics {
 
 export type ConnectionStatus = "checking" | "connected" | "disconnected";
 export type ChatStatus = "idle" | "submitted" | "streaming";
+
+// Re-export app config types
+export * from "./app-config";

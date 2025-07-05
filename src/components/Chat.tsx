@@ -644,6 +644,11 @@ export default function Chat() {
   const [isContextDialogOpen, setIsContextDialogOpen] =
     useState<boolean>(false);
 
+  // Active collections for context augmentation
+  const [activeCollections, setActiveCollections] = useState<Set<string>>(
+    new Set()
+  );
+
   // Use custom hooks for cleaner state management
   const connectionStatus = useConnectionStatus();
   const preferences = usePersistedPreferences();
@@ -669,6 +674,7 @@ export default function Chat() {
       systemPrompt: preferences.systemPrompt,
       modelOptions: preferences.modelOptions,
       toolsEnabled: preferences.toolsEnabled,
+      activeCollections: Array.from(activeCollections),
     },
     onError: (err) => {
       console.error("💥Chat error:", err);
@@ -756,7 +762,7 @@ export default function Chat() {
               </div>
               <div>
                 <h1 className='text-xl font-semibold text-gray-900 dark:text-white'>
-                  AI Assistant
+                  AI Monkey
                 </h1>
                 <p className='text-xs text-gray-500 dark:text-gray-400'>
                   {connectionStatus.serverInfo || "Ollama Disconnected"}
@@ -804,10 +810,23 @@ export default function Chat() {
               <button
                 onClick={() => setIsContextDialogOpen(true)}
                 disabled={isDisabled}
-                className='p-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
-                title='Context Window Management'
+                className={`relative p-2 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  activeCollections.size > 0
+                    ? "text-green-600 dark:text-green-400"
+                    : "text-gray-600 dark:text-gray-400"
+                }`}
+                title={`Context Window Management${
+                  activeCollections.size > 0
+                    ? ` (${activeCollections.size} active)`
+                    : ""
+                }`}
               >
                 <Database className='w-5 h-5' />
+                {activeCollections.size > 0 && (
+                  <span className='absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium'>
+                    {activeCollections.size}
+                  </span>
+                )}
               </button>
             </div>
           </div>
@@ -845,14 +864,18 @@ export default function Chat() {
 
       {/* Messages */}
       <div
-        className={`flex-1 overflow-y-auto ${
-          preferences.selectedModel &&
-          preferences.toolsEnabled &&
-          !preferences.modelSupportsTools &&
-          !preferences.isWarningDismissed
-            ? "pt-[130px]" // Extra padding when warning is shown
-            : "pt-[73px]" // Normal padding when no warning
-        } ${
+        className={`flex-1 overflow-y-auto ${(() => {
+          let topPadding = 73; // Base padding
+          if (
+            preferences.selectedModel &&
+            preferences.toolsEnabled &&
+            !preferences.modelSupportsTools &&
+            !preferences.isWarningDismissed
+          ) {
+            topPadding += 57; // Add tool warning height
+          }
+          return `pt-[${topPadding}px]`;
+        })()} ${
           (attachedFiles && attachedFiles.length > 0) || error
             ? "pb-[200px]" // Extra bottom padding when attachment preview or error is shown
             : "pb-[140px]" // Normal bottom padding
@@ -1067,6 +1090,8 @@ export default function Chat() {
       <ContextWindowManager
         isOpen={isContextDialogOpen}
         onClose={() => setIsContextDialogOpen(false)}
+        activeCollections={activeCollections}
+        onActiveCollectionsChange={setActiveCollections}
       />
     </div>
   );

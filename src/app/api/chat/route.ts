@@ -70,6 +70,57 @@ function cleanThinkingTags(
   return content;
 }
 
+// Function to query active ChromaDB collections
+async function queryActiveCollections(
+  collections: string[],
+  query: string
+): Promise<
+  Array<{ id: string; document?: string; metadata?: Record<string, unknown> }>
+> {
+  const allResults: Array<{
+    id: string;
+    document?: string;
+    metadata?: Record<string, unknown>;
+  }> = [];
+
+  try {
+    // Use the same base URL as the ChromaDB API route
+    for (const collectionName of collections) {
+      try {
+        const response = await fetch("http://localhost:3000/api/chromadb", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            action: "query_collection",
+            collection: collectionName,
+            query_texts: [query],
+            n_results: 3, // Limit to top 3 results per collection
+            generate_ollama_embeddings: true, // Use our custom embedding function
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.results) {
+            allResults.push(...data.results);
+          }
+        }
+      } catch (error) {
+        console.error(`Failed to query collection ${collectionName}:`, error);
+        // Continue with other collections
+      }
+    }
+
+    // Sort by relevance if available, otherwise just return all results
+    return allResults.slice(0, 5); // Limit total results to 5
+  } catch (error) {
+    console.error("Error querying ChromaDB collections:", error);
+    return [];
+  }
+}
+
 // Function to check if a model supports tools/function calling
 function checkModelSupportsTools(modelName: string): boolean {
   const lowerModelName = modelName.toLowerCase();
@@ -137,6 +188,7 @@ const RequestSchema = z.object({
   systemPrompt: z.string().optional(),
   modelOptions: z.record(z.unknown()).optional(),
   toolsEnabled: z.boolean().optional(),
+  activeCollections: z.array(z.string()).optional(),
 });
 
 export async function POST(req: Request) {
@@ -194,6 +246,7 @@ export async function POST(req: Request) {
       systemPrompt,
       modelOptions,
       toolsEnabled = true,
+      activeCollections = [],
     } = validationResult.data;
 
     // Clean thinking tags from assistant messages only
@@ -241,6 +294,39 @@ export async function POST(req: Request) {
     const finalSystemPrompt =
       systemPrompt && systemPrompt.trim() ? systemPrompt : defaultSystemPrompt;
 
+    // Augment context with ChromaDB if active collections exist
+    let finalSystemPromptWithContext = finalSystemPrompt;
+
+    if (activeCollections.length > 0 && cleanedMessages.length > 0) {
+      const lastUserMessage = cleanedMessages[cleanedMessages.length - 1];
+      if (lastUserMessage.role === "user") {
+        try {
+          const relevantDocs = await queryActiveCollections(
+            activeCollections,
+            typeof lastUserMessage.content === "string"
+              ? lastUserMessage.content
+              : "search query"
+          );
+
+          if (relevantDocs.length > 0) {
+            const contextPrompt = `\n\nRelevant context from knowledge base:\n${relevantDocs
+              .map(
+                (doc: { id: string; document?: string }, i: number) =>
+                  `[${i + 1}] ${doc.document || doc.id}`
+              )
+              .join(
+                "\n\n"
+              )}\n\nPlease use this context to provide a more informed response.`;
+
+            finalSystemPromptWithContext = finalSystemPrompt + contextPrompt;
+          }
+        } catch (error) {
+          console.error("Failed to query ChromaDB collections:", error);
+          // Continue without context augmentation if ChromaDB fails
+        }
+      }
+    }
+
     AILogger.startRequest(requestId, selectedModel);
 
     // Test Ollama connection
@@ -282,7 +368,7 @@ export async function POST(req: Request) {
     const result = streamText({
       model: ollama(selectedModel),
       messages: cleanedMessages,
-      system: finalSystemPrompt,
+      system: finalSystemPromptWithContext,
       maxRetries: config.maxRetries,
       abortSignal: abortController.signal,
       temperature: finalOptions.temperature || config.temperature,

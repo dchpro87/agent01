@@ -11,6 +11,20 @@ export interface Collection {
   metadata?: Record<string, unknown>;
 }
 
+export interface CollectionDocument {
+  id: string;
+  document?: string;
+  metadata?: Record<string, unknown>;
+  embedding?: number[];
+}
+
+export interface CollectionData {
+  ids: string[];
+  documents?: string[];
+  metadatas?: Record<string, unknown>[];
+  embeddings?: number[][];
+}
+
 export interface HealthStatus {
   status: string;
   details?: unknown;
@@ -107,6 +121,76 @@ export class ChromaDBManager {
       }
     } catch (error) {
       console.error("Failed to get collections:", error);
+      throw error;
+    }
+  }
+
+  async getCollectionDocuments(
+    collectionName: string,
+    limit?: number
+  ): Promise<CollectionDocument[]> {
+    if (!this.isConnectedState) {
+      throw new Error("ChromaDB client not connected");
+    }
+
+    try {
+      const params = new URLSearchParams({
+        action: "get_documents",
+        collection: collectionName,
+      });
+
+      if (limit) {
+        params.append("limit", limit.toString());
+      }
+
+      const response = await fetch(`${this.baseApiUrl}?${params}`);
+      const data = await response.json();
+
+      if (data.success) {
+        return data.documents || [];
+      } else {
+        throw new Error(data.error || "Failed to fetch collection documents");
+      }
+    } catch (error) {
+      console.error("Failed to get collection documents:", error);
+      throw error;
+    }
+  }
+
+  async queryCollection(
+    collectionName: string,
+    queryTexts: string[],
+    nResults?: number,
+    where?: Record<string, unknown>
+  ): Promise<CollectionDocument[]> {
+    if (!this.isConnectedState) {
+      throw new Error("ChromaDB client not connected");
+    }
+
+    try {
+      const response = await fetch(this.baseApiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "query_collection",
+          collection: collectionName,
+          query_texts: queryTexts,
+          n_results: nResults,
+          where: where,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        return data.results || [];
+      } else {
+        throw new Error(data.error || "Failed to query collection");
+      }
+    } catch (error) {
+      console.error("Failed to query collection:", error);
       throw error;
     }
   }

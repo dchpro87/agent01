@@ -1,13 +1,6 @@
-# Agent01 - Advanced AI Chat Application
+# Agent01 - Advanced AI Chat Application with Vector Database
 
-A sophisticated### ⚙️ **Advanced Configuration**
-- **Model Parameters** - Adjust temperature, top-p, top-k, context window, token limits
-- **Configuration Presets** - 5 built-in presets (balanced, creative, precise, coding, analytical)
-- **Real-time Health Monitoring** - Connection status and diagnostic information
-- **Request Logging** - Comprehensive logging with request tracking
-- **Error Handling** - Graceful degradation and detailed error messages
-- **Tool Toggle** - Enable/disable tools per conversation
-- **Validation & Limits** - Real-time parameter validation with helpful error messagesture-rich AI chat application built with Next.js 15, Vercel AI SDK v4, and Ollama. Experience intelligent conversations with advanced streaming, tool integration, customizable personalities, and enterprise-grade monitoring.
+A sophisticated feature-rich AI chat application built with Next.js 15, Vercel AI SDK v4, Ollama, and ChromaDB. Experience intelligent conversations with advanced streaming, tool integration, customizable personalities, vector database context management, and enterprise-grade monitoring.
 
 ## ✨ Key Features
 
@@ -19,7 +12,16 @@ A sophisticated### ⚙️ **Advanced Configuration**
 - **Model Presets** - Pre-configured settings for balanced, creative, precise, coding, and analytical tasks
 - **Real-time Model Validation** - Continuous checking of model availability and capabilities
 
-### 💬 **Chat Experience**
+### �️ **Vector Database & Context Management**
+- **ChromaDB Integration** - Full vector database support with semantic search capabilities
+- **Context Window Manager** - Visual interface for managing collections and context data
+- **Active Collection System** - Add/remove collections from chat context with real-time indicators
+- **Semantic Search Integration** - Automatic document retrieval based on user queries
+- **Document Detail View** - Browse and examine documents within collections
+- **Custom Embeddings** - Ollama nomic-embed-text integration for high-quality embeddings
+- **Real-time Context Augmentation** - Retrieved documents automatically enhance AI responses
+
+### �💬 **Chat Experience**
 - **Real-time Streaming** - Smooth, fast responses with the Vercel AI SDK v4
 - **File Attachments** - Send images, PDFs, and text files to the AI (multimodal support)
 - **Thinking Process Visualization** - See the AI's reasoning with `<think>` tag parsing
@@ -62,11 +64,14 @@ A sophisticated### ⚙️ **Advanced Configuration**
 - **Extensible Architecture** - Easy to add new tools and capabilities
 - **Parameter Validation** - Comprehensive input validation with Zod schemas
 
-### �️ **Advanced Configuration**
+### ⚙️ **Advanced Configuration**
 - **Model Parameters** - Adjust temperature, top-p, top-k, context window, token limits
+- **Configuration Presets** - 5 built-in presets (balanced, creative, precise, coding, analytical)
 - **Real-time Health Monitoring** - Connection status and diagnostic information
 - **Request Logging** - Comprehensive logging with request tracking
 - **Error Handling** - Graceful degradation and detailed error messages
+- **Tool Toggle** - Enable/disable tools per conversation
+- **Validation & Limits** - Real-time parameter validation with helpful error messages
 
 ### 🎨 **User Experience**
 - **Modern UI/UX** - Clean, intuitive interface with smooth animations
@@ -81,13 +86,15 @@ A sophisticated### ⚙️ **Advanced Configuration**
 ## 🆕 Latest Features & Updates (July 2025)
 
 ### **Recent Enhancements**
-- **🎭 Enhanced Personality System** - Added "Rogger" the analytical expert, replacing David
+- **🗄️ ChromaDB Vector Database Integration** - Full vector database support with semantic search
+- **📊 Context Window Management** - Visual interface for managing collections and document context
+- **🔍 Semantic Search & Retrieval** - Automatic document retrieval and context augmentation
+- **📄 Collection Detail Views** - Browse and examine documents within collections
+- **🎯 Active Collection System** - Add/remove collections from context with visual indicators
+- **🔗 Custom Ollama Embeddings** - nomic-embed-text integration for high-quality embeddings
 - **⚙️ Configuration Presets** - 5 built-in presets: balanced, creative, precise, coding, analytical
 - **🔧 Tool Toggle Control** - Enable/disable tools per conversation with visual indicators
 - **📊 Multi-step Conversations** - Extended tool sequences (MAX_CHAT_STEPS: 5) for complex tasks
-- **🔒 Static Configuration** - Type-safe configuration in `app-config.ts` with validation
-- **📁 File Management** - Improved file size validation and preview functionality
-- **🏗️ Architecture Improvements** - Better organization with dedicated constants folder
 
 ### **Performance & Reliability**
 - **⚡ Optimized Streaming** - Enhanced request headers and performance monitoring
@@ -102,7 +109,8 @@ A sophisticated### ⚙️ **Advanced Configuration**
 
 1. **Node.js 18+** - [Download here](https://nodejs.org/)
 2. **Ollama** - [Install from ollama.ai](https://ollama.ai)
-3. **Git** - For cloning the repository
+3. **ChromaDB (Optional)** - For vector database functionality
+4. **Git** - For cloning the repository
 
 ### Installation
 
@@ -123,19 +131,31 @@ A sophisticated### ⚙️ **Advanced Configuration**
    
    # For coding tasks
    ollama pull qwen2.5-coder:7b
+   
+   # For embeddings (if using ChromaDB)
+   ollama pull nomic-embed-text
    ```
 
-3. **Start Ollama server:**
+3. **Setup ChromaDB (Optional - for vector database features):**
+   ```bash
+   # Install ChromaDB
+   pip install chromadb
+   
+   # Start ChromaDB server
+   chroma run --host localhost --port 8000
+   ```
+
+4. **Start Ollama server:**
    ```bash
    ollama serve
    ```
 
-4. **Launch the application:**
+5. **Launch the application:**
    ```bash
    npm run dev
    ```
 
-5. **Open your browser:**
+6. **Open your browser:**
    Navigate to [http://localhost:3000](http://localhost:3000)
 
 ### Environment Configuration (Optional)
@@ -184,6 +204,16 @@ AI_LOG_LEVEL=info
 ```
 
 ## 📱 Using the Application
+
+### Vector Database & Context Management
+- Click the **🗄️ database icon** in the header to open the Context Window Manager
+- **Connect to ChromaDB**: Automatic connection to localhost:8000 (if ChromaDB is running)
+- **Browse Collections**: View all available vector database collections
+- **Add to Context**: Click the database icon on collection cards to add them to active context
+- **Active Collections**: See which collections are currently active with green highlighting
+- **Document Details**: Click on collection names to view documents and metadata
+- **Semantic Search**: When collections are active, your questions automatically search relevant documents
+- **Context Augmentation**: AI responses include relevant information from your active collections
 
 ### Model Selection
 - Click the **🤖 bot icon** in the header to select from available Ollama models
@@ -261,6 +291,8 @@ agent01/
 │   ├── app/
 │   │   ├── api/
 │   │   │   ├── chat/route.ts          # Streaming chat endpoint with tool support
+│   │   │   ├── chromadb/route.ts      # ChromaDB integration API
+│   │   │   ├── embeddings/route.ts    # Ollama embeddings API
 │   │   │   ├── health/route.ts        # Health monitoring & diagnostics
 │   │   │   └── models/route.ts        # Model discovery & validation
 │   │   ├── layout.tsx                 # Root layout with theme support
@@ -268,6 +300,8 @@ agent01/
 │   │   └── globals.css                # Global styles & Tailwind
 │   ├── components/
 │   │   ├── Chat.tsx                   # Main chat interface with streaming
+│   │   ├── CollectionDetail.tsx       # Vector database collection detail view
+│   │   ├── ContextWindowManager.tsx   # ChromaDB context management interface
 │   │   ├── ModelSelector.tsx          # Model selection dropdown
 │   │   ├── SystemPromptSelector.tsx   # Personality management
 │   │   ├── ModelConfigSelector.tsx    # Parameter configuration
@@ -281,6 +315,9 @@ agent01/
 │   │   ├── ai-config.ts               # AI configuration utilities
 │   │   ├── ai-health.ts               # Health monitoring utilities
 │   │   ├── ai-middleware.ts           # Request logging & tracking
+│   │   ├── chromadb.ts                # ChromaDB client manager
+│   │   ├── ollama-embedding.ts        # Custom Ollama embedding function
+│   │   ├── ollama-embedding-new.ts    # Enhanced embedding implementation
 │   │   └── tools.ts                   # Built-in tool definitions
 │   ├── types/
 │   │   ├── index.ts                   # General type definitions
@@ -288,7 +325,9 @@ agent01/
 │   └── utils/                         # Utility functions
 ├── public/                            # Static assets
 ├── docs/
-│   └── AI_SDK_IMPLEMENTATION.md       # Technical implementation details
+│   ├── AI_SDK_IMPLEMENTATION.md       # Technical implementation details
+│   ├── CHROMADB_SETUP.md             # ChromaDB setup and configuration
+│   └── CHROMADB_CONTEXT_IMPLEMENTATION.md # Context system implementation
 ├── package.json                       # Dependencies & scripts
 ├── next.config.ts                     # Next.js configuration
 ├── tailwind.config.ts                 # Tailwind CSS configuration
@@ -309,7 +348,15 @@ agent01/
 - **[Ollama AI Provider v1.2.0](https://ollama.ai/)** - Local LLM inference engine
 - **[React Markdown v10.1.0](https://github.com/remarkjs/react-markdown)** - Rich text rendering with GFM support
 - **[Rehype Highlight v7.0.2](https://github.com/rehypejs/rehype-highlight)** - Code syntax highlighting
+- **[Remark GFM v4.0.1](https://github.com/remarkjs/remark-gfm)** - GitHub Flavored Markdown support
 - **[Zod v3.25.67](https://zod.dev/)** - Runtime type validation and schema validation
+
+#### **Vector Database & Embeddings**
+- **[ChromaDB v3.0.6](https://docs.trychroma.com/)** - Vector database for semantic search
+- **[@chroma-core/default-embed v0.1.8](https://docs.trychroma.com/embeddings)** - Default embedding functions
+- **Custom Ollama Embeddings** - nomic-embed-text integration for high-quality embeddings
+- **Semantic Search** - Context-aware document retrieval and augmentation
+- **Collection Management** - Full CRUD operations for vector database collections
 
 #### **Development Tools**
 - **[ESLint 9](https://eslint.org/)** - Modern code linting with updated configuration
@@ -330,6 +377,14 @@ agent01/
 - Tool result visualization
 - Model capability detection
 - Extensible tool architecture
+
+#### **Vector Database Integration**
+- ChromaDB client management and connection handling
+- Semantic search and document retrieval
+- Collection browsing and document detail views
+- Context augmentation with relevant documents
+- Custom embedding function with Ollama nomic-embed-text
+- Real-time context indicators and active collection management
 
 #### **State Management**
 - React hooks for local state
@@ -356,6 +411,13 @@ npm run lint         # Run ESLint code analysis
 
 # Utilities
 npm run check-ollama # Check Ollama connection and models
+
+# ChromaDB Testing (if ChromaDB is set up)
+# Test embeddings API
+curl "http://localhost:3000/api/embeddings?action=test"
+
+# Test ChromaDB connection
+curl "http://localhost:3000/api/chromadb?action=health"
 ```
 
 ### Adding New Tools
@@ -416,6 +478,8 @@ Configuration is managed through `src/constants/app-config.ts`. For environment-
 | `OLLAMA_MAX_RETRIES` | `2` | Number of retry attempts |
 | `AI_LOGGING` | `true` | Enable request logging |
 | `AI_LOG_LEVEL` | `info` | Logging verbosity |
+| `CHROMADB_URL` | `http://localhost:8000` | ChromaDB server URL |
+| `EMBEDDING_MODEL` | `nomic-embed-text` | Ollama embedding model |
 
 **Note:** The application primarily uses static configuration in `app-config.ts` for better type safety and validation.
 
@@ -446,6 +510,27 @@ ollama pull model-name
 - Small models (1B parameters) typically don't support tools
 - Use models like `llama3.2:3b`, `qwen2.5:7b`, or `mistral:7b`
 - Check the model info in the UI for tool support indicators
+
+#### **ChromaDB Not Available**
+```bash
+# Check if ChromaDB is running
+curl http://localhost:8000/api/v1/heartbeat
+
+# Start ChromaDB server
+chroma run --host localhost --port 8000
+
+# Install ChromaDB if not available
+pip install chromadb
+```
+
+#### **Embedding Issues**
+```bash
+# Ensure embedding model is available
+ollama pull nomic-embed-text
+
+# Test embedding generation
+curl "http://localhost:3000/api/embeddings?action=test"
+```
 
 #### **Performance Optimization**
 - Use smaller context windows for faster responses
@@ -505,9 +590,9 @@ pm2 start npm --name "agent01" -- start
 - Ensure network connectivity between app and Ollama
 - Consider GPU requirements for larger models
 
-#### **Cloud Ollama Setup**
+#### **Cloud Ollama & ChromaDB Setup**
 ```bash
-# Example: AWS EC2 with GPU
+# Example: AWS EC2 with GPU for Ollama
 # 1. Launch GPU-enabled instance (g4dn.xlarge or better)
 # 2. Install Ollama
 curl -fsSL https://ollama.ai/install.sh | sh
@@ -515,13 +600,19 @@ curl -fsSL https://ollama.ai/install.sh | sh
 # 3. Pull your models
 ollama pull llama3.2:3b
 ollama pull qwen2.5:7b
+ollama pull nomic-embed-text
 
 # 4. Start Ollama service
 systemctl enable ollama
 systemctl start ollama
 
-# 5. Configure firewall
-ufw allow 11434
+# 5. Install and start ChromaDB
+pip install chromadb
+chroma run --host 0.0.0.0 --port 8000
+
+# 6. Configure firewall
+ufw allow 11434  # Ollama
+ufw allow 8000   # ChromaDB
 ```
 
 ### Environment Configuration for Production
@@ -533,6 +624,10 @@ OLLAMA_MODEL=llama3.2:7b
 OLLAMA_TEMPERATURE=0.7
 AI_LOGGING=true
 AI_LOG_LEVEL=warn
+
+# ChromaDB Configuration
+CHROMADB_URL=https://your-chromadb-server.com:8000
+EMBEDDING_MODEL=nomic-embed-text
 ```
 
 ## 📊 Monitoring & Analytics
@@ -576,6 +671,9 @@ AI_LOG_LEVEL=warn
 - **Performance** - Optimize streaming and rendering
 - **Documentation** - Improve guides and examples
 - **Testing** - Add comprehensive test coverage
+- **ChromaDB Features** - Enhance vector database functionality
+- **Embedding Models** - Add support for additional embedding providers
+- **Collection Management** - Improve document and collection operations
 
 ## 📄 License
 

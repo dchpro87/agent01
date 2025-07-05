@@ -26,21 +26,31 @@ This document details the comprehensive AI SDK v4 implementation in this advance
 - **Error Handling**: Graceful tool failure handling with detailed error messages
 - **Tool Toggle**: Enable/disable tools per conversation with user preference persistence
 
-### 4. **Configuration Management**
+### 4. **Vector Database & Context Management**
+- **ChromaDB Integration**: Full vector database support with semantic search capabilities
+- **Context Window Manager**: Visual interface for managing collections and document context
+- **Active Collection System**: Add/remove collections from chat context with real-time indicators
+- **Semantic Search & Retrieval**: Automatic document retrieval based on user queries
+- **Custom Ollama Embeddings**: nomic-embed-text integration for high-quality embeddings
+- **Document Detail Views**: Browse and examine documents within collections
+- **Context Augmentation**: Retrieved documents automatically enhance AI responses
+
+### 5. **Configuration Management**
 - **Centralized Config**: Static configuration in `src/constants/app-config.ts` with full type safety
 - **Model Presets**: 5 built-in configuration presets (balanced, creative, precise, coding, analytical)
 - **Runtime Validation**: Comprehensive parameter validation with user-friendly error messages  
 - **Model Options**: Support for temperature, max tokens, context window, top-p, top-k, repeat penalty
 - **Configuration Persistence**: All settings saved to localStorage with automatic restoration
 
-### 5. **Health Monitoring & Diagnostics**
+### 6. **Health Monitoring & Diagnostics**
 - **Connection Health**: Real-time Ollama server connectivity monitoring with visual indicators
 - **Model Availability**: Automatic model detection and validation with capability assessment
 - **Diagnostic Information**: Detailed system status with actionable suggestions
 - **Proactive Monitoring**: Early detection of configuration and connection issues
 - **Health Endpoints**: Comprehensive `/api/health` endpoint with detailed diagnostics
+- **ChromaDB Health**: Vector database connection monitoring and status checking
 
-### 6. **Personality System**
+### 7. **Personality System**
 - **8 Pre-built Personalities**: Comprehensive personality system with distinct character traits
 - **Custom Personality Creation**: Full UI for creating and managing custom system prompts
 - **Personality Categorization**: Organized by General, Technical, Creative, Education, Culinary, Support
@@ -54,6 +64,8 @@ src/
 ├── app/
 │   ├── api/
 │   │   ├── chat/route.ts          # AI SDK v4 streaming endpoint with multimodal support
+│   │   ├── chromadb/route.ts      # ChromaDB integration API with collection management
+│   │   ├── embeddings/route.ts    # Ollama embeddings API for vector generation
 │   │   ├── health/route.ts        # Comprehensive health monitoring & diagnostics  
 │   │   └── models/route.ts        # Model discovery, validation & capability detection
 │   ├── layout.tsx                 # Root layout with theme support and global styles
@@ -61,6 +73,8 @@ src/
 │   └── globals.css                # Global styles with Tailwind v4 configuration
 ├── components/
 │   ├── Chat.tsx                   # Advanced chat UI with streaming, attachments & tools
+│   ├── CollectionDetail.tsx       # Vector database collection detail view with document browsing
+│   ├── ContextWindowManager.tsx   # ChromaDB context management interface
 │   ├── ModelSelector.tsx          # Model selection with capability indicators
 │   ├── SystemPromptSelector.tsx   # Personality system with 8 pre-built prompts
 │   ├── ModelConfigSelector.tsx    # Advanced parameter configuration interface
@@ -74,6 +88,9 @@ src/
 │   ├── ai-config.ts               # AI configuration utilities and helpers
 │   ├── ai-health.ts               # Health monitoring utilities and diagnostics
 │   ├── ai-middleware.ts           # Request logging, tracking & performance monitoring
+│   ├── chromadb.ts                # ChromaDB client manager and API interface
+│   ├── ollama-embedding.ts        # Custom Ollama embedding function for ChromaDB
+│   ├── ollama-embedding-new.ts    # Enhanced embedding implementation
 │   └── tools.ts                   # Tool definitions (time, BMI, weather) with Zod validation
 ├── types/
 │   ├── index.ts                   # General application type definitions
@@ -89,12 +106,15 @@ src/
   "@ai-sdk/openai": "^1.3.22",        // OpenAI provider for Ollama compatibility
   "@ai-sdk/react": "^1.2.12",         // React hooks for AI SDK integration  
   "ai": "^4.3.16",                     // Core AI SDK v4 with streaming support
+  "chromadb": "^3.0.6",               // ChromaDB JavaScript client for vector database
+  "@chroma-core/default-embed": "^0.1.8", // Default embedding functions for ChromaDB
   "next": "15.3.4",                    // Next.js with App Router and React 19
   "react": "^19.0.0",                  // Latest React with concurrent features
   "zod": "^3.25.67",                   // Runtime validation and type safety
   "ollama-ai-provider": "^1.2.0",     // Ollama integration provider
   "react-markdown": "^10.1.0",        // Markdown rendering with GFM support
   "rehype-highlight": "^7.0.2",       // Code syntax highlighting
+  "remark-gfm": "^4.0.1",             // GitHub Flavored Markdown support
   "lucide-react": "^0.523.0"          // Modern icon library
 }
 ```
@@ -277,7 +297,84 @@ const result = streamText({
 });
 ```
 
-### **5. Comprehensive Health Monitoring**
+### **6. Vector Database Integration with ChromaDB**
+```typescript
+// ChromaDB client manager for server-side operations
+export class ChromaDBManager {
+  private isConnectedState = false;
+  private baseApiUrl = "/api/chromadb";
+
+  // Connect to ChromaDB server and verify health
+  async connect(): Promise<ChromaDBConnection> {
+    try {
+      const response = await fetch(`${this.baseApiUrl}?action=connect`);
+      const data = await response.json();
+
+      if (data.success) {
+        this.isConnectedState = true;
+        return { isConnected: true, version: data.version };
+      }
+      return { isConnected: false, error: data.error };
+    } catch (error) {
+      return { isConnected: false, error: error.message };
+    }
+  }
+
+  // Query collection for semantic search
+  async queryCollection(
+    collectionName: string,
+    queryTexts: string[],
+    nResults?: number
+  ): Promise<CollectionDocument[]> {
+    const response = await fetch(this.baseApiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "query_collection",
+        collection: collectionName,
+        query_texts: queryTexts,
+        n_results: nResults,
+      }),
+    });
+    
+    const data = await response.json();
+    return data.success ? data.results : [];
+  }
+}
+
+// Custom Ollama embedding function for ChromaDB
+export class OllamaEmbeddingFunction implements EmbeddingFunction {
+  private model: string = "nomic-embed-text";
+  private baseURL: string;
+
+  async generate(texts: string[]): Promise<number[][]> {
+    const embeddings: number[][] = [];
+    
+    // Process in batches to avoid overwhelming the server
+    const batchSize = 10;
+    for (let i = 0; i < texts.length; i += batchSize) {
+      const batch = texts.slice(i, i + batchSize);
+      const batchEmbeddings = await this.generateBatch(batch);
+      embeddings.push(...batchEmbeddings);
+    }
+    
+    return embeddings;
+  }
+}
+
+// Context augmentation in chat API
+if (activeCollections.length > 0) {
+  const relevantDocs = await queryActiveCollections(activeCollections, lastUserMessage.content);
+  if (relevantDocs.length > 0) {
+    const contextPrompt = `\n\nRelevant context from your knowledge base:\n${relevantDocs
+      .map((doc, index) => `${index + 1}. ${doc.document}`)
+      .join('\n')}`;
+    finalSystemPrompt += contextPrompt;
+  }
+}
+```
+
+### **7. Comprehensive Health Monitoring**
 ```typescript
 // Advanced health check with detailed diagnostics
 export async function GET() {
@@ -524,15 +621,30 @@ The implementation includes comprehensive testing capabilities across multiple l
 - Mock data generation for demonstration tools (weather)
 - Tool availability checking based on model capabilities
 
-### **5. Performance & Monitoring**
+### **6. Vector Database & Embedding Testing**
+- ChromaDB connection validation and health monitoring
+- Embedding function testing with nomic-embed-text model
+- Collection query validation with semantic search
+- Document retrieval accuracy and relevance scoring
+- Context augmentation testing with active collections
+### **7. Performance & Monitoring**
 - Request/response time tracking and logging
 - Token usage monitoring and optimization alerts
 - Memory usage tracking for large file processing
 - Stream performance validation and optimization
+- ChromaDB query performance monitoring
+- Embedding generation performance tracking
+- Batch embedding processing and performance optimization
 
 ## 📝 Future Enhancements & Roadmap
 
 ### **Recently Completed Features**
+- ✅ **ChromaDB Vector Database Integration** - Full vector database support with semantic search
+- ✅ **Context Window Management** - Visual interface for managing collections and document context
+- ✅ **Semantic Search & Retrieval** - Automatic document retrieval and context augmentation
+- ✅ **Collection Detail Views** - Browse and examine documents within collections
+- ✅ **Active Collection System** - Add/remove collections from context with visual indicators
+- ✅ **Custom Ollama Embeddings** - nomic-embed-text integration for high-quality embeddings
 - ✅ **Enhanced Personality System** - 8 distinct personalities with custom creation support
 - ✅ **Configuration Presets** - 5 built-in presets for different use cases
 - ✅ **Advanced Tool Toggle** - Per-conversation tool enable/disable

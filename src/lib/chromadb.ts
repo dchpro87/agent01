@@ -307,6 +307,43 @@ export class ChromaDBManager {
     }
   }
 
+  async deleteDocuments(
+    collectionName: string,
+    ids: string[]
+  ): Promise<{ success: boolean; message?: string; error?: string }> {
+    if (!this.isConnectedState) {
+      throw new Error("ChromaDB client not connected");
+    }
+
+    try {
+      const response = await fetch(this.baseApiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "delete_documents",
+          collection: collectionName,
+          ids,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        return {
+          success: true,
+          message: data.message,
+        };
+      } else {
+        throw new Error(data.error || "Failed to delete documents");
+      }
+    } catch (error) {
+      console.error("Failed to delete documents:", error);
+      throw error;
+    }
+  }
+
   async getHealth(): Promise<HealthStatus> {
     try {
       const response = await fetch(`${this.baseApiUrl}?action=health`);

@@ -264,7 +264,7 @@ export async function GET(request: NextRequest) {
           {
             success: false,
             error: `Invalid action. Use: ${Object.values(CHROMADB_ACTIONS)
-              .slice(0, 7)
+              .slice(0, 8)
               .join(", ")}`,
           },
           { status: 400 }
@@ -377,6 +377,46 @@ export async function POST(request: NextRequest) {
           );
         }
 
+      case CHROMADB_ACTIONS.DELETE_DOCUMENTS:
+        if (!collection || !ids) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: "Collection name and document ids are required",
+            },
+            { status: 400 }
+          );
+        }
+
+        try {
+          const chromaClient = await getClient();
+          const chromaCollection = await chromaClient.getCollection({
+            name: collection,
+          });
+
+          await chromaCollection.delete({
+            ids,
+          });
+
+          return NextResponse.json({
+            success: true,
+            message: `Deleted ${ids.length} documents from collection "${collection}"`,
+            collection,
+            deletedCount: ids.length,
+          });
+        } catch (error) {
+          return NextResponse.json(
+            {
+              success: false,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Failed to delete documents",
+            },
+            { status: 500 }
+          );
+        }
+
       case CHROMADB_ACTIONS.QUERY_COLLECTION:
         if (!collection || !query_texts) {
           return NextResponse.json(
@@ -454,7 +494,7 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             error: `Invalid action. Use: ${Object.values(CHROMADB_ACTIONS)
-              .slice(6)
+              .slice(7)
               .join(", ")}`,
             note: "For add_documents and query_collection, set 'generate_ollama_embeddings: true' to use Ollama nomic-embed-text model",
           },

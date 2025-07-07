@@ -24,6 +24,7 @@ export const CHROMADB_ACTIONS = {
   GET_DOCUMENTS: "get_documents",
   CREATE_COLLECTION: "create_collection",
   DELETE_COLLECTION: "delete_collection",
+  DELETE_DOCUMENTS: "delete_documents",
   DISCONNECT: "disconnect",
   TEST: "test",
   ADD_DOCUMENTS: "add_documents",

@@ -148,6 +148,12 @@ const createDefaultTextSplitter = () => {
 };
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  let parseStartTime: number;
+  let chunkingStartTime: number;
+  let embeddingStartTime: number;
+  let storageStartTime: number;
+
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File;
@@ -175,14 +181,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log(
+      `🔄 Starting PDF processing for: ${file.name} (${(
+        file.size /
+        1024 /
+        1024
+      ).toFixed(2)}MB)`
+    );
+
     // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
     // Parse PDF using utility function
+    parseStartTime = Date.now();
     let pdfData;
     try {
+      console.log(`📖 Parsing PDF content...`);
       pdfData = await parsePDF(buffer);
+      console.log(
+        `✅ PDF parsed: ${pdfData.numpages} pages, ${pdfData.text.length} characters`
+      );
     } catch (pdfError) {
       console.error("Error parsing PDF:", pdfError);
       return NextResponse.json(
@@ -193,13 +212,21 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    const parseTime = Date.now() - parseStartTime;
 
     // Clean and normalize text
     const cleanedText = cleanText(pdfData.text);
+    console.log(
+      `🧹 Text cleaned: ${cleanedText.length} characters after normalization`
+    );
 
     // Split into chunks
+    chunkingStartTime = Date.now();
+    console.log(`✂️ Chunking text...`);
     const textSplitter = createDefaultTextSplitter();
     const chunks = textSplitter.splitText(cleanedText);
+    const chunkingTime = Date.now() - chunkingStartTime;
+    console.log(`✅ Created ${chunks.length} chunks in ${chunkingTime}ms`);
 
     // Generate document IDs and metadata
     const baseId = file.name
@@ -217,6 +244,8 @@ export async function POST(request: NextRequest) {
       upload_timestamp: new Date().toISOString(),
       file_size: file.size,
       total_pages: pdfData.numpages,
+      parse_time_ms: parseTime,
+      chunking_time_ms: chunkingTime,
     }));
 
     // Extract chunk content
@@ -231,9 +260,12 @@ export async function POST(request: NextRequest) {
 
       // Generate embeddings if requested
       let embeddings: number[][] | undefined;
+      let embeddingTime = 0;
+
       if (useOllamaEmbedding) {
+        embeddingStartTime = Date.now();
         console.log(
-          `Generating embeddings for ${documents.length} documents using Ollama nomic-embed-text`
+          `🔮 Generating embeddings for ${documents.length} documents using Ollama nomic-embed-text`
         );
 
         // Create embedding function with optimized settings for large documents
@@ -248,16 +280,23 @@ export async function POST(request: NextRequest) {
           }
         );
 
-        const startTime = Date.now();
         embeddings = await embeddingFunction.generate(documents);
-        const endTime = Date.now();
+        embeddingTime = Date.now() - embeddingStartTime;
 
         console.log(
-          `Generated ${embeddings.length} embeddings with ${
+          `✅ Generated ${embeddings.length} embeddings with ${
             embeddings[0]?.length
-          } dimensions each in ${Math.round((endTime - startTime) / 1000)}s`
+          } dimensions each in ${Math.round(embeddingTime / 1000)}s`
         );
+      } else {
+        console.log(`⏭️ Skipping embedding generation as requested`);
       }
+
+      // Store in ChromaDB
+      storageStartTime = Date.now();
+      console.log(
+        `💾 Storing documents in ChromaDB collection: ${collectionName}`
+      );
 
       await collection.add({
         ids: chunkIds,
@@ -265,6 +304,20 @@ export async function POST(request: NextRequest) {
         metadatas: chunkMetadata,
         embeddings,
       });
+
+      const storageTime = Date.now() - storageStartTime;
+      const totalTime = Date.now() - startTime;
+
+      console.log(
+        `✅ Successfully stored ${chunks.length} chunks in ${storageTime}ms`
+      );
+      console.log(`🎉 Total processing time: ${totalTime}ms`);
+
+      // Calculate performance metrics
+      const avgChunkSize =
+        chunks.reduce((sum, chunk) => sum + chunk.content.length, 0) /
+        chunks.length;
+      const processingRate = chunks.length / (totalTime / 1000);
 
       return NextResponse.json({
         success: true,
@@ -276,6 +329,17 @@ export async function POST(request: NextRequest) {
           collectionName,
           embeddingsGenerated: useOllamaEmbedding,
           embeddingDimensions: embeddings?.[0]?.length,
+          processingMetrics: {
+            totalTime,
+            parseTime,
+            chunkingTime,
+            embeddingTime,
+            storageTime,
+            avgChunkSize: Math.round(avgChunkSize),
+            processingRate: Math.round(processingRate * 100) / 100,
+            textLength: cleanedText.length,
+            originalTextLength: pdfData.text.length,
+          },
         },
       });
     } catch (chromaError) {
@@ -287,6 +351,13 @@ export async function POST(request: NextRequest) {
             chromaError instanceof Error
               ? chromaError.message
               : "Failed to add documents to collection",
+          processingMetrics: {
+            totalTime: Date.now() - startTime,
+            parseTime: parseTime || 0,
+            chunkingTime: chunkingTime || 0,
+            embeddingTime: 0,
+            storageTime: 0,
+          },
         },
         { status: 500 }
       );
@@ -297,6 +368,13 @@ export async function POST(request: NextRequest) {
       {
         success: false,
         error: error instanceof Error ? error.message : "Failed to process PDF",
+        processingMetrics: {
+          totalTime: Date.now() - startTime,
+          parseTime: 0,
+          chunkingTime: 0,
+          embeddingTime: 0,
+          storageTime: 0,
+        },
       },
       { status: 500 }
     );

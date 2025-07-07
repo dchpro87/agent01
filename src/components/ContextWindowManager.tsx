@@ -22,6 +22,8 @@ interface ContextWindowManagerProps {
   onClose: () => void;
   activeCollections?: Set<string>;
   onActiveCollectionsChange?: (collections: Set<string>) => void;
+  chunksToRetrieve?: number;
+  onChunksToRetrieveChange?: (chunks: number) => void;
 }
 
 const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
@@ -29,6 +31,8 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
   onClose,
   activeCollections: externalActiveCollections,
   onActiveCollectionsChange,
+  chunksToRetrieve = 5,
+  onChunksToRetrieveChange,
 }) => {
   const [connection, setConnection] = useState<ChromaDBConnection | null>(null);
   const [collections, setCollections] = useState<Collection[]>([]);
@@ -236,11 +240,37 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
 
           {/* Active Collections Summary */}
           {activeCollections.size > 0 && (
-            <div className='flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg'>
-              <Database className='w-4 h-4 text-green-600 dark:text-green-400' />
-              <span className='text-sm font-medium text-green-800 dark:text-green-200'>
-                {activeCollections.size} Active in Context
-              </span>
+            <div className='flex items-center gap-4'>
+              <div className='flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg'>
+                <Database className='w-4 h-4 text-green-600 dark:text-green-400' />
+                <span className='text-sm font-medium text-green-800 dark:text-green-200'>
+                  {activeCollections.size} Active in Context
+                </span>
+              </div>
+
+              {/* Chunks to Retrieve Slider */}
+              <div className='flex items-center gap-3 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg'>
+                <span className='text-sm font-medium text-blue-800 dark:text-blue-200 whitespace-nowrap'>
+                  Chunks: {chunksToRetrieve}
+                </span>
+                <input
+                  type='range'
+                  min='1'
+                  max='30'
+                  value={chunksToRetrieve}
+                  onChange={(e) =>
+                    onChunksToRetrieveChange?.(parseInt(e.target.value))
+                  }
+                  className='w-20 h-2 bg-blue-200 dark:bg-blue-700 rounded-lg appearance-none cursor-pointer'
+                  style={{
+                    background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${
+                      ((chunksToRetrieve - 1) / 29) * 100
+                    }%, #cbd5e1 ${
+                      ((chunksToRetrieve - 1) / 29) * 100
+                    }%, #cbd5e1 100%)`,
+                  }}
+                />
+              </div>
             </div>
           )}
         </div>

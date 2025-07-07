@@ -418,11 +418,11 @@ export async function POST(request: NextRequest) {
         }
 
       case CHROMADB_ACTIONS.QUERY_COLLECTION:
-        if (!collection || !query_texts) {
+        if (!collection || !query_texts || !Array.isArray(query_texts)) {
           return NextResponse.json(
             {
               success: false,
-              error: "Collection name and query texts are required",
+              error: "Collection name and query texts (array) are required",
             },
             { status: 400 }
           );
@@ -450,12 +450,18 @@ export async function POST(request: NextRequest) {
             );
           }
 
-          const queryResults = await chromaCollection.query({
-            queryTexts: generateQueryEmbeddings ? undefined : query_texts, // Use queryTexts only if not using embeddings
-            queryEmbeddings, // Use generated embeddings if available
-            nResults: n_results || CHROMADB_DEFAULTS.QUERY_RESULTS_LIMIT,
-            where: where,
-          });
+          // Perform the query based on whether we're using custom embeddings or not
+          const queryResults = generateQueryEmbeddings
+            ? await chromaCollection.query({
+                queryEmbeddings,
+                nResults: n_results || CHROMADB_DEFAULTS.QUERY_RESULTS_LIMIT,
+                where: where,
+              })
+            : await chromaCollection.query({
+                queryTexts: query_texts,
+                nResults: n_results || CHROMADB_DEFAULTS.QUERY_RESULTS_LIMIT,
+                where: where,
+              });
 
           // Transform the results to match our interface
           const results =
@@ -477,13 +483,30 @@ export async function POST(request: NextRequest) {
             queryEmbeddingDimensions: queryEmbeddings?.[0]?.length,
           });
         } catch (error) {
+          console.error("ChromaDB query error:", error);
+
+          const errorMessage =
+            error instanceof Error ? error.message : "Unknown error";
+
+          // Provide more specific error messages for common issues
+          let specificError = errorMessage;
+          if (
+            errorMessage.includes("Collection") &&
+            errorMessage.includes("does not exist")
+          ) {
+            specificError = `Collection "${collection}" does not exist`;
+          } else if (errorMessage.includes("embedding")) {
+            specificError = `Embedding function mismatch or error: ${errorMessage}`;
+          } else if (errorMessage.includes("dimension")) {
+            specificError = `Embedding dimension mismatch: ${errorMessage}`;
+          }
+
           return NextResponse.json(
             {
               success: false,
-              error:
-                error instanceof Error
-                  ? error.message
-                  : "Failed to query collection",
+              error: specificError,
+              collection,
+              originalError: errorMessage,
             },
             { status: 500 }
           );

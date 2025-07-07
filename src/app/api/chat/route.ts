@@ -73,7 +73,8 @@ function cleanThinkingTags(
 // Function to query active ChromaDB collections
 async function queryActiveCollections(
   collections: string[],
-  query: string
+  query: string,
+  chunksToRetrieve: number = 5
 ): Promise<
   Array<{ id: string; document?: string; metadata?: Record<string, unknown> }>
 > {
@@ -96,7 +97,7 @@ async function queryActiveCollections(
             action: "query_collection",
             collection: collectionName,
             query_texts: [query],
-            n_results: 3, // Limit to top 3 results per collection
+            n_results: chunksToRetrieve, // Use dynamic value
             generate_ollama_embeddings: true, // Use our custom embedding function
           }),
         });
@@ -189,6 +190,7 @@ const RequestSchema = z.object({
   modelOptions: z.record(z.unknown()).optional(),
   toolsEnabled: z.boolean().optional(),
   activeCollections: z.array(z.string()).optional(),
+  chunksToRetrieve: z.number().min(1).max(30).optional(),
 });
 
 export async function POST(req: Request) {
@@ -247,6 +249,7 @@ export async function POST(req: Request) {
       modelOptions,
       toolsEnabled = true,
       activeCollections = [],
+      chunksToRetrieve = 5,
     } = validationResult.data;
 
     // Clean thinking tags from assistant messages only
@@ -305,8 +308,11 @@ export async function POST(req: Request) {
             activeCollections,
             typeof lastUserMessage.content === "string"
               ? lastUserMessage.content
-              : "search query"
+              : "search query",
+            chunksToRetrieve
           );
+
+          console.log("🧨🧨 Relevant documents found:", relevantDocs);
 
           if (relevantDocs.length > 0) {
             const contextPrompt = `\n\nRelevant context from knowledge base:\n${relevantDocs

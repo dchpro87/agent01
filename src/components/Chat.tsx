@@ -649,6 +649,9 @@ export default function Chat() {
     new Set()
   );
 
+  // Number of chunks to retrieve from each collection
+  const [chunksToRetrieve, setChunksToRetrieve] = useState<number>(5);
+
   // Use custom hooks for cleaner state management
   const connectionStatus = useConnectionStatus();
   const preferences = usePersistedPreferences();
@@ -675,6 +678,7 @@ export default function Chat() {
       modelOptions: preferences.modelOptions,
       toolsEnabled: preferences.toolsEnabled,
       activeCollections: Array.from(activeCollections),
+      chunksToRetrieve: chunksToRetrieve,
     },
     onError: (err) => {
       console.error("💥Chat error:", err);
@@ -1088,6 +1092,8 @@ export default function Chat() {
         onClose={() => setIsContextDialogOpen(false)}
         activeCollections={activeCollections}
         onActiveCollectionsChange={setActiveCollections}
+        chunksToRetrieve={chunksToRetrieve}
+        onChunksToRetrieveChange={setChunksToRetrieve}
       />
     </div>
   );

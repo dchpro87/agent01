@@ -6,6 +6,11 @@ export interface OllamaEmbeddingOptions {
   model: string;
   baseURL: string;
   timeout?: number;
+  batchSize?: number;
+  maxConcurrent?: number;
+  retryAttempts?: number;
+  retryDelay?: number;
+  onProgress?: (completed: number, total: number) => void;
 }
 
 /**
@@ -16,11 +21,21 @@ export class OllamaEmbeddingFunction implements EmbeddingFunction {
   private model: string;
   private baseURL: string;
   private timeout: number;
+  private batchSize: number;
+  private maxConcurrent: number;
+  private retryAttempts: number;
+  private retryDelay: number;
+  private onProgress?: (completed: number, total: number) => void;
 
   constructor(options: OllamaEmbeddingOptions) {
     this.model = options.model;
     this.baseURL = options.baseURL;
-    this.timeout = options.timeout || 30000; // 30 seconds default
+    this.timeout = options.timeout || 120000; // 2 minutes default (increased from 30s)
+    this.batchSize = options.batchSize || 5; // Reduced from 5 to avoid overwhelming
+    this.maxConcurrent = options.maxConcurrent || 2; // Limit concurrent requests
+    this.retryAttempts = options.retryAttempts || 3;
+    this.retryDelay = options.retryDelay || 2000; // 2 seconds between retries
+    this.onProgress = options.onProgress;
   }
 
   /**
@@ -32,15 +47,41 @@ export class OllamaEmbeddingFunction implements EmbeddingFunction {
       console.log(
         `Generating embeddings for ${texts.length} text(s) using ${this.model}`
       );
+      console.log(
+        `Configuration: timeout=${this.timeout}ms, batchSize=${this.batchSize}, maxConcurrent=${this.maxConcurrent}`
+      );
 
       const embeddings: number[][] = [];
+      let completed = 0;
 
-      // Process texts in batches to avoid overwhelming the server
-      const batchSize = 10;
-      for (let i = 0; i < texts.length; i += batchSize) {
-        const batch = texts.slice(i, i + batchSize);
-        const batchEmbeddings = await this.generateBatch(batch);
+      // Process texts in smaller batches with controlled concurrency
+      for (let i = 0; i < texts.length; i += this.batchSize) {
+        const batch = texts.slice(i, i + this.batchSize);
+        const batchNumber = Math.floor(i / this.batchSize) + 1;
+        const totalBatches = Math.ceil(texts.length / this.batchSize);
+
+        console.log(
+          `Processing batch ${batchNumber}/${totalBatches} (${batch.length} texts)`
+        );
+
+        const batchEmbeddings = await this.generateBatchWithConcurrency(batch);
         embeddings.push(...batchEmbeddings);
+
+        completed += batch.length;
+        if (this.onProgress) {
+          this.onProgress(completed, texts.length);
+        }
+
+        console.log(
+          `Completed ${completed}/${texts.length} embeddings (${Math.round(
+            (completed / texts.length) * 100
+          )}%)`
+        );
+
+        // Add a small delay between batches to prevent overwhelming the server
+        if (i + this.batchSize < texts.length) {
+          await this.delay(500); // 500ms delay between batches
+        }
       }
 
       console.log(`Successfully generated ${embeddings.length} embeddings`);
@@ -78,6 +119,8 @@ export class OllamaEmbeddingFunction implements EmbeddingFunction {
       model: this.model,
       baseURL: this.baseURL,
       timeout: this.timeout,
+      batchSize: this.batchSize,
+      maxConcurrent: this.maxConcurrent,
     };
   }
 
@@ -90,11 +133,63 @@ export class OllamaEmbeddingFunction implements EmbeddingFunction {
   }
 
   /**
-   * Generate embeddings for a batch of texts
+   * Simple delay function for rate limiting
+   */
+  private async delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Generate embeddings for a batch of texts with controlled concurrency
+   */
+  private async generateBatchWithConcurrency(
+    texts: string[]
+  ): Promise<number[][]> {
+    const results: number[][] = [];
+
+    // Process in smaller concurrent groups
+    for (let i = 0; i < texts.length; i += this.maxConcurrent) {
+      const concurrent = texts.slice(i, i + this.maxConcurrent);
+      const promises = concurrent.map((text) =>
+        this.generateSingleWithRetry(text)
+      );
+      const concurrentResults = await Promise.all(promises);
+      results.push(...concurrentResults);
+    }
+
+    return results;
+  }
+
+  /**
+   * Generate embeddings for a batch of texts (legacy method for compatibility)
    */
   private async generateBatch(texts: string[]): Promise<number[][]> {
-    const promises = texts.map((text) => this.generateSingle(text));
-    return Promise.all(promises);
+    return this.generateBatchWithConcurrency(texts);
+  }
+
+  /**
+   * Generate embedding for a single text with retry logic
+   */
+  private async generateSingleWithRetry(text: string): Promise<number[]> {
+    let lastError: Error;
+
+    for (let attempt = 1; attempt <= this.retryAttempts; attempt++) {
+      try {
+        return await this.generateSingle(text);
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+
+        if (attempt < this.retryAttempts) {
+          console.warn(
+            `Embedding attempt ${attempt} failed, retrying in ${this.retryDelay}ms...`,
+            lastError.message
+          );
+          await this.delay(this.retryDelay);
+        }
+      }
+    }
+
+    throw lastError!;
   }
 
   /**
@@ -147,12 +242,18 @@ export class OllamaEmbeddingFunction implements EmbeddingFunction {
  * Create an Ollama embedding function with default configuration
  */
 export function createOllamaEmbeddingFunction(
-  model: string = "nomic-embed-text"
+  model: string = "nomic-embed-text",
+  options?: Partial<OllamaEmbeddingOptions>
 ): OllamaEmbeddingFunction {
   return new OllamaEmbeddingFunction({
     model,
     baseURL: aiConfig.ollama.baseURL,
-    timeout: 30000,
+    timeout: 120000, // 2 minutes default
+    batchSize: 5, // Smaller batches for better reliability
+    maxConcurrent: 2, // Limit concurrent requests
+    retryAttempts: 3,
+    retryDelay: 2000,
+    ...options,
   });
 }
 

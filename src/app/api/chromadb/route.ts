@@ -94,7 +94,9 @@ export async function GET(request: NextRequest) {
       case CHROMADB_ACTIONS.GET_DOCUMENTS:
         const collectionName = searchParams.get("collection");
         const limitStr = searchParams.get("limit");
+        const offsetStr = searchParams.get("offset");
         const limit = limitStr ? parseInt(limitStr, 10) : undefined;
+        const offset = offsetStr ? parseInt(offsetStr, 10) : undefined;
 
         if (!collectionName) {
           return NextResponse.json(
@@ -112,8 +114,14 @@ export async function GET(request: NextRequest) {
             name: collectionName,
           });
 
+          // Get total count first
+          const totalData = await collection.get();
+          const totalCount = totalData.ids.length;
+
+          // Get paginated data
           const data = await collection.get({
             limit: limit,
+            offset: offset,
           });
 
           // Transform the data to match our interface
@@ -127,6 +135,9 @@ export async function GET(request: NextRequest) {
           return NextResponse.json({
             success: true,
             documents,
+            totalCount,
+            limit: limit || totalCount,
+            offset: offset || 0,
           });
         } catch (error) {
           return NextResponse.json(
@@ -209,12 +220,51 @@ export async function GET(request: NextRequest) {
           );
         }
 
+      case CHROMADB_ACTIONS.DELETE_COLLECTION:
+        const deleteCollectionName = searchParams.get("name");
+
+        if (!deleteCollectionName) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: "Collection name is required",
+            },
+            { status: 400 }
+          );
+        }
+
+        try {
+          const chromaClientForDelete = await getClient();
+
+          console.log(`Deleting collection "${deleteCollectionName}"`);
+
+          await chromaClientForDelete.deleteCollection({
+            name: deleteCollectionName,
+          });
+
+          return NextResponse.json({
+            success: true,
+            message: `Collection "${deleteCollectionName}" deleted successfully`,
+          });
+        } catch (error) {
+          return NextResponse.json(
+            {
+              success: false,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Failed to delete collection",
+            },
+            { status: 500 }
+          );
+        }
+
       default:
         return NextResponse.json(
           {
             success: false,
             error: `Invalid action. Use: ${Object.values(CHROMADB_ACTIONS)
-              .slice(0, 6)
+              .slice(0, 7)
               .join(", ")}`,
           },
           { status: 400 }

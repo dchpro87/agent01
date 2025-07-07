@@ -18,6 +18,13 @@ export interface CollectionDocument {
   embedding?: number[];
 }
 
+export interface PaginatedDocumentsResponse {
+  documents: CollectionDocument[];
+  totalCount: number;
+  limit: number;
+  offset: number;
+}
+
 export interface CollectionData {
   ids: string[];
   documents?: string[];
@@ -127,8 +134,9 @@ export class ChromaDBManager {
 
   async getCollectionDocuments(
     collectionName: string,
-    limit?: number
-  ): Promise<CollectionDocument[]> {
+    limit?: number,
+    offset?: number
+  ): Promise<PaginatedDocumentsResponse> {
     if (!this.isConnectedState) {
       throw new Error("ChromaDB client not connected");
     }
@@ -143,11 +151,20 @@ export class ChromaDBManager {
         params.append("limit", limit.toString());
       }
 
+      if (offset) {
+        params.append("offset", offset.toString());
+      }
+
       const response = await fetch(`${this.baseApiUrl}?${params}`);
       const data = await response.json();
 
       if (data.success) {
-        return data.documents || [];
+        return {
+          documents: data.documents || [],
+          totalCount: data.totalCount || 0,
+          limit: data.limit || data.documents?.length || 0,
+          offset: data.offset || 0,
+        };
       } else {
         throw new Error(data.error || "Failed to fetch collection documents");
       }
@@ -220,6 +237,29 @@ export class ChromaDBManager {
       }
     } catch (error) {
       console.error("Failed to create collection:", error);
+      throw error;
+    }
+  }
+
+  async deleteCollection(name: string): Promise<void> {
+    if (!this.isConnectedState) {
+      throw new Error("ChromaDB client not connected");
+    }
+
+    try {
+      const params = new URLSearchParams({
+        action: "delete_collection",
+        name: name,
+      });
+
+      const response = await fetch(`${this.baseApiUrl}?${params}`);
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || "Failed to delete collection");
+      }
+    } catch (error) {
+      console.error("Failed to delete collection:", error);
       throw error;
     }
   }

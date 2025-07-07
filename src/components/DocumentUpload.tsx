@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import {
   Upload,
   File,
@@ -31,31 +31,17 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
   onDocumentsAdded,
   useOllamaEmbedding = false,
 }) => {
-  const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>({
     status: "idle",
   });
 
-  const handleDrag = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
       if (file.type === "application/pdf") {
         setSelectedFile(file);
+        setUploadStatus({ status: "idle" });
       } else {
         setUploadStatus({
           status: "error",
@@ -63,25 +49,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         });
       }
     }
-  }, []);
-
-  const handleFileSelect = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.files && e.target.files[0]) {
-        const file = e.target.files[0];
-        if (file.type === "application/pdf") {
-          setSelectedFile(file);
-          setUploadStatus({ status: "idle" });
-        } else {
-          setUploadStatus({
-            status: "error",
-            message: "Please select a PDF file only.",
-          });
-        }
-      }
-    },
-    []
-  );
+  };
 
   const processAndUploadDocument = async () => {
     if (!selectedFile) return;
@@ -180,36 +148,28 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
       </h3>
 
       {!selectedFile ? (
-        <div
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-            dragActive
-              ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-              : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
-          }`}
-          onDragEnter={handleDrag}
-          onDragLeave={handleDrag}
-          onDragOver={handleDrag}
-          onDrop={handleDrop}
-        >
-          <Upload className='w-12 h-12 text-gray-400 mx-auto mb-4' />
-          <p className='text-gray-600 dark:text-gray-300 mb-2'>
-            Drag and drop a PDF file here, or
-          </p>
-          <label htmlFor='file-input' className='inline-block'>
-            <span className='bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg cursor-pointer transition-colors'>
-              Select PDF File
-            </span>
-            <input
-              id='file-input'
-              type='file'
-              accept='.pdf'
-              onChange={handleFileSelect}
-              className='hidden'
-            />
-          </label>
-          <p className='text-xs text-gray-500 dark:text-gray-400 mt-2'>
-            PDF files only. Max size: 10MB
-          </p>
+        <div className='space-y-4'>
+          <div className='text-center'>
+            <File className='w-12 h-12 text-gray-400 mx-auto mb-4' />
+            <p className='text-gray-600 dark:text-gray-300 mb-4'>
+              Select a PDF file to add to the collection
+            </p>
+            <label htmlFor='file-input' className='inline-block'>
+              <span className='bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg cursor-pointer transition-colors font-medium'>
+                Select PDF File
+              </span>
+              <input
+                id='file-input'
+                type='file'
+                accept='.pdf'
+                onChange={handleFileSelect}
+                className='hidden'
+              />
+            </label>
+            <p className='text-xs text-gray-500 dark:text-gray-400 mt-3'>
+              PDF files only. Max size: 10MB
+            </p>
+          </div>
         </div>
       ) : (
         <div className='space-y-4'>

@@ -235,10 +235,27 @@ export async function POST(request: NextRequest) {
         console.log(
           `Generating embeddings for ${documents.length} documents using Ollama nomic-embed-text`
         );
-        const embeddingFunction = createOllamaEmbeddingFunction();
+
+        // Create embedding function with optimized settings for large documents
+        const embeddingFunction = createOllamaEmbeddingFunction(
+          "nomic-embed-text",
+          {
+            timeout: 180000, // 3 minutes for large documents
+            batchSize: 2, // Very small batches for large PDF processing
+            maxConcurrent: 1, // Sequential processing to avoid overwhelming the server
+            retryAttempts: 5, // More retries for reliability
+            retryDelay: 3000, // Longer delay between retries
+          }
+        );
+
+        const startTime = Date.now();
         embeddings = await embeddingFunction.generate(documents);
+        const endTime = Date.now();
+
         console.log(
-          `Generated ${embeddings.length} embeddings with ${embeddings[0]?.length} dimensions each`
+          `Generated ${embeddings.length} embeddings with ${
+            embeddings[0]?.length
+          } dimensions each in ${Math.round((endTime - startTime) / 1000)}s`
         );
       }
 

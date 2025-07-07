@@ -142,7 +142,7 @@ export const MODEL_PRESETS = {
     maxTokens: 1024, // AI SDK standard
   },
   precise: {
-    temperature: 0.3,
+    temperature: 0.1,
     top_k: 20,
     top_p: 0, // Use temperature instead
     repeat_penalty: 1.15,

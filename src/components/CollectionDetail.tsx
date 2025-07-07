@@ -86,6 +86,9 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
   const [abortController, setAbortController] =
     useState<AbortController | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [selectedDocument, setSelectedDocument] =
+    useState<CollectionDocument | null>(null);
+  const [showDocumentDialog, setShowDocumentDialog] = useState(false);
 
   const documentsPerPage = 20; // Configurable page size
 
@@ -660,6 +663,16 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
     setCurrentPage(page);
   };
 
+  const handleDocumentClick = (doc: CollectionDocument) => {
+    setSelectedDocument(doc);
+    setShowDocumentDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setShowDocumentDialog(false);
+    setSelectedDocument(null);
+  };
+
   return (
     <div className='space-y-6 h-full max-h-[calc(100vh-2rem)] overflow-hidden'>
       {/* Header */}
@@ -1212,37 +1225,53 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
           </div>
         ) : documents.length > 0 ? (
           <div className='flex flex-col min-h-0 flex-1'>
-            <div className='overflow-y-auto max-h-[50vh] space-y-3 pr-2'>
-              {documents.map((doc, index) => {
-                const globalIndex =
-                  (currentPage - 1) * documentsPerPage + index + 1;
-                return (
-                  <div
-                    key={doc.id || index}
-                    className='bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-4'
-                  >
-                    <div className='flex items-start justify-between mb-2'>
-                      <h4 className='font-medium text-gray-900 dark:text-white text-sm'>
-                        Document {globalIndex}
-                      </h4>
-                      <span className='text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded'>
-                        {doc.id}
-                      </span>
-                    </div>
-
-                    <div className='text-sm text-gray-700 dark:text-gray-300 mb-3 p-2 bg-gray-50 dark:bg-gray-700 rounded'>
-                      {getDocumentContent(doc)}
-                    </div>
-
-                    {doc.metadata && (
-                      <div className='text-xs text-gray-500 dark:text-gray-400'>
-                        <strong>Metadata:</strong>{" "}
-                        {JSON.stringify(doc.metadata)}
+            <div className='overflow-y-auto max-h-[50vh] pr-2'>
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+                {documents.map((doc, index) => {
+                  const globalIndex =
+                    (currentPage - 1) * documentsPerPage + index + 1;
+                  return (
+                    <div
+                      key={doc.id || index}
+                      className='bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-4 flex flex-col h-fit cursor-pointer hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200'
+                      onClick={() => handleDocumentClick(doc)}
+                      title='Click to view full document content'
+                    >
+                      <div className='flex items-start justify-between mb-3'>
+                        <h4 className='font-medium text-gray-900 dark:text-white text-sm flex items-center gap-2'>
+                          Document {globalIndex}
+                          <span className='text-xs text-blue-500 dark:text-blue-400 opacity-70'>
+                            (click to view)
+                          </span>
+                        </h4>
+                        <span className='text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded shrink-0'>
+                          {doc.id.length > 8
+                            ? `${doc.id.substring(0, 8)}...`
+                            : doc.id}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                );
-              })}
+
+                      <div className='text-sm text-gray-700 dark:text-gray-300 mb-3 p-3 bg-gray-50 dark:bg-gray-700 rounded flex-1'>
+                        {getDocumentContent(doc)}
+                      </div>
+
+                      {doc.metadata && (
+                        <div className='text-xs text-gray-500 dark:text-gray-400 mt-auto'>
+                          <strong>Metadata:</strong>{" "}
+                          <span className='break-words'>
+                            {JSON.stringify(doc.metadata).length > 50
+                              ? `${JSON.stringify(doc.metadata).substring(
+                                  0,
+                                  50
+                                )}...`
+                              : JSON.stringify(doc.metadata)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Pagination Controls */}
@@ -1317,6 +1346,96 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
           </div>
         )}
       </div>
+
+      {/* Document Detail Modal */}
+      {showDocumentDialog && selectedDocument && (
+        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
+          <div className='bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col'>
+            {/* Modal Header */}
+            <div className='flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700'>
+              <div className='flex items-center gap-3'>
+                <div className='w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center'>
+                  <FileText className='w-4 h-4 text-blue-600 dark:text-blue-400' />
+                </div>
+                <div>
+                  <h3 className='text-lg font-semibold text-gray-900 dark:text-white'>
+                    Document Details
+                  </h3>
+                  <p className='text-sm text-gray-500 dark:text-gray-400'>
+                    ID:{" "}
+                    {selectedDocument.id.length > 16
+                      ? `${selectedDocument.id.substring(0, 16)}...`
+                      : selectedDocument.id}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleCloseDialog}
+                className='p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors'
+                aria-label='Close dialog'
+              >
+                <X className='w-5 h-5 text-gray-500 dark:text-gray-400' />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className='flex-1 overflow-hidden p-6 min-h-0'>
+              <div className='h-full flex flex-col space-y-4'>
+                {/* Document Content */}
+                <div className='flex-1 min-h-0'>
+                  <h4 className='text-sm font-medium text-gray-900 dark:text-white mb-2'>
+                    Document Content
+                  </h4>
+                  <div
+                    className='bg-gray-50 dark:bg-gray-700 rounded-lg p-4 overflow-y-scroll border border-gray-200 dark:border-gray-600'
+                    style={{
+                      height: "400px",
+                      minHeight: "300px",
+                      maxHeight: "500px",
+                    }}
+                  >
+                    <pre className='text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono leading-relaxed break-words'>
+                      {selectedDocument.document || "No content available"}
+                    </pre>
+                  </div>
+                </div>
+
+                {/* Metadata Section */}
+                {selectedDocument.metadata && (
+                  <div className='border-t border-gray-200 dark:border-gray-700 pt-4 flex-shrink-0'>
+                    <h4 className='text-sm font-medium text-gray-900 dark:text-white mb-2'>
+                      Metadata
+                    </h4>
+                    <div
+                      className='bg-gray-50 dark:bg-gray-700 rounded-lg p-3 overflow-y-scroll border border-gray-200 dark:border-gray-600'
+                      style={{
+                        height: "150px",
+                        maxHeight: "200px",
+                      }}
+                    >
+                      <pre className='text-xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap break-words'>
+                        {JSON.stringify(selectedDocument.metadata, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className='border-t border-gray-200 dark:border-gray-700 p-6'>
+              <div className='flex justify-end'>
+                <button
+                  onClick={handleCloseDialog}
+                  className='px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm font-medium'
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

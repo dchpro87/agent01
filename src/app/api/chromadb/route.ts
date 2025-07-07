@@ -95,6 +95,8 @@ export async function GET(request: NextRequest) {
         const collectionName = searchParams.get("collection");
         const limitStr = searchParams.get("limit");
         const offsetStr = searchParams.get("offset");
+        const useOllamaEmbeddingForGet =
+          searchParams.get("ollama_embedding") === "true";
         const limit = limitStr ? parseInt(limitStr, 10) : undefined;
         const offset = offsetStr ? parseInt(offsetStr, 10) : undefined;
 
@@ -110,8 +112,13 @@ export async function GET(request: NextRequest) {
 
         try {
           const chromaClientForDocs = await getClient();
+
+          // Get collection with the appropriate embedding function
           const collection = await chromaClientForDocs.getCollection({
             name: collectionName,
+            embeddingFunction: useOllamaEmbeddingForGet
+              ? createOllamaEmbeddingFunction()
+              : undefined,
           });
 
           // Get total count first
@@ -330,30 +337,37 @@ export async function POST(request: NextRequest) {
 
         try {
           const chromaClient = await getClient();
-          const chromaCollection = await chromaClient.getCollection({
-            name: collection,
-          });
 
-          // Check if we should generate embeddings using Ollama
-          const generateEmbeddings = body.generate_ollama_embeddings === true;
-          let embeddings: number[][] | undefined;
+          // Get collection with the appropriate embedding function
+          const useOllamaEmbedding = body.generate_ollama_embeddings === true;
+          const embeddingFunction = useOllamaEmbedding
+            ? createOllamaEmbeddingFunction()
+            : undefined;
 
-          if (generateEmbeddings) {
-            console.log(
-              `Generating embeddings for ${documents.length} documents using Ollama nomic-embed-text`
-            );
-            const embeddingFunction = createOllamaEmbeddingFunction();
-            embeddings = await embeddingFunction.generate(documents);
-            console.log(
-              `Generated ${embeddings.length} embeddings with ${embeddings[0]?.length} dimensions each`
-            );
+          console.log(
+            `Adding ${
+              documents.length
+            } documents to collection "${collection}" with ${
+              useOllamaEmbedding ? "Ollama nomic-embed-text" : "default"
+            } embedding function`
+          );
+
+          if (useOllamaEmbedding && embeddingFunction) {
+            const config = embeddingFunction.getConfig();
+            console.log(`ADD_DOCUMENTS Embedding Config:`, config);
           }
 
+          const chromaCollection = await chromaClient.getCollection({
+            name: collection,
+            embeddingFunction: embeddingFunction,
+          });
+
+          // Let ChromaDB handle embedding generation automatically
           await chromaCollection.add({
             ids,
             documents,
             metadatas,
-            embeddings, // Pass the generated embeddings directly
+            // Don't pass embeddings - let the collection's embedding function handle it
           });
 
           return NextResponse.json({
@@ -361,8 +375,9 @@ export async function POST(request: NextRequest) {
             message: `Added ${documents.length} documents to collection "${collection}"`,
             collection,
             addedCount: documents.length,
-            embeddingsGenerated: generateEmbeddings,
-            embeddingDimensions: embeddings?.[0]?.length,
+            embeddingFunction: useOllamaEmbedding
+              ? "ollama-nomic-embed"
+              : "default",
           });
         } catch (error) {
           return NextResponse.json(
@@ -390,8 +405,21 @@ export async function POST(request: NextRequest) {
 
         try {
           const chromaClient = await getClient();
+
+          // Get collection with the appropriate embedding function
+          const useOllamaEmbedding = body.generate_ollama_embeddings === true;
+          const embeddingFunction = useOllamaEmbedding
+            ? createOllamaEmbeddingFunction()
+            : undefined;
+
+          if (useOllamaEmbedding && embeddingFunction) {
+            const config = embeddingFunction.getConfig();
+            console.log(`DELETE_DOCUMENTS Embedding Config:`, config);
+          }
+
           const chromaCollection = await chromaClient.getCollection({
             name: collection,
+            embeddingFunction: embeddingFunction,
           });
 
           await chromaCollection.delete({
@@ -430,38 +458,37 @@ export async function POST(request: NextRequest) {
 
         try {
           const chromaClient = await getClient();
-          const chromaCollection = await chromaClient.getCollection({
-            name: collection,
-          });
 
-          // Check if we should generate query embeddings using Ollama
-          const generateQueryEmbeddings =
-            body.generate_ollama_embeddings === true;
-          let queryEmbeddings: number[][] | undefined;
+          // Get collection with the appropriate embedding function
+          const useOllamaEmbedding = body.generate_ollama_embeddings === true;
+          const embeddingFunction = useOllamaEmbedding
+            ? createOllamaEmbeddingFunction()
+            : undefined;
 
-          if (generateQueryEmbeddings) {
-            console.log(
-              `Generating query embeddings for ${query_texts.length} queries using Ollama nomic-embed-text`
-            );
-            const embeddingFunction = createOllamaEmbeddingFunction();
-            queryEmbeddings = await embeddingFunction.generate(query_texts);
-            console.log(
-              `Generated ${queryEmbeddings.length} query embeddings with ${queryEmbeddings[0]?.length} dimensions each`
-            );
+          console.log(
+            `Querying collection "${collection}" with ${
+              query_texts.length
+            } queries using ${
+              useOllamaEmbedding ? "Ollama nomic-embed-text" : "default"
+            } embedding function`
+          );
+
+          if (useOllamaEmbedding && embeddingFunction) {
+            const config = embeddingFunction.getConfig();
+            console.log(`QUERY_COLLECTION Embedding Config:`, config);
           }
 
-          // Perform the query based on whether we're using custom embeddings or not
-          const queryResults = generateQueryEmbeddings
-            ? await chromaCollection.query({
-                queryEmbeddings,
-                nResults: n_results || CHROMADB_DEFAULTS.QUERY_RESULTS_LIMIT,
-                where: where,
-              })
-            : await chromaCollection.query({
-                queryTexts: query_texts,
-                nResults: n_results || CHROMADB_DEFAULTS.QUERY_RESULTS_LIMIT,
-                where: where,
-              });
+          const chromaCollection = await chromaClient.getCollection({
+            name: collection,
+            embeddingFunction: embeddingFunction,
+          });
+
+          // Let ChromaDB handle embedding generation automatically using queryTexts
+          const queryResults = await chromaCollection.query({
+            queryTexts: query_texts,
+            nResults: n_results || CHROMADB_DEFAULTS.CHUNKS_TO_RETRIEVE,
+            where: where,
+          });
 
           // Transform the results to match our interface
           const results =
@@ -479,8 +506,9 @@ export async function POST(request: NextRequest) {
             query: query_texts,
             collection,
             resultsCount: results.length,
-            queryEmbeddingsGenerated: generateQueryEmbeddings,
-            queryEmbeddingDimensions: queryEmbeddings?.[0]?.length,
+            embeddingFunction: useOllamaEmbedding
+              ? "ollama-nomic-embed"
+              : "default",
           });
         } catch (error) {
           console.error("ChromaDB query error:", error);

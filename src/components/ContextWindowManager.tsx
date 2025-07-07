@@ -15,6 +15,7 @@ import {
   ChromaDBConnection,
   Collection,
 } from "@/lib/chromadb";
+import { CHROMADB_DEFAULTS } from "@/constants/chromadb-constants";
 import CollectionDetail from "./CollectionDetail";
 
 interface ContextWindowManagerProps {
@@ -31,7 +32,7 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
   onClose,
   activeCollections: externalActiveCollections,
   onActiveCollectionsChange,
-  chunksToRetrieve = 5,
+  chunksToRetrieve = CHROMADB_DEFAULTS.CHUNKS_TO_RETRIEVE,
   onChunksToRetrieveChange,
 }) => {
   const [connection, setConnection] = useState<ChromaDBConnection | null>(null);

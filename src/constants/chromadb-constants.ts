@@ -13,7 +13,7 @@ export const CHROMADB_API_ENDPOINTS = {
 
 // Default query configuration
 export const CHROMADB_DEFAULTS = {
-  QUERY_RESULTS_LIMIT: 10,
+  CHUNKS_TO_RETRIEVE: 5,
 } as const;
 
 // Action types for API requests

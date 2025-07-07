@@ -10,6 +10,13 @@ import { ChunkingOptions, TextChunk } from "@/types/pdf";
 
 let client: ChromaClient | null = null;
 
+// Internal chunk type for the splitting process (before index is assigned)
+interface InternalChunk {
+  content: string;
+  start: number;
+  end: number;
+}
+
 async function getClient(): Promise<ChromaClient> {
   if (!client) {
     client = new ChromaClient({
@@ -31,12 +38,16 @@ class RecursiveTextSplitter {
   }
 
   splitText(text: string): TextChunk[] {
-    const chunks: TextChunk[] = [];
+    const chunks: InternalChunk[] = [];
     this._split(text, 0, chunks);
     return chunks.map((chunk, index) => ({ ...chunk, index }));
   }
 
-  private _split(text: string, startIndex: number, chunks: any[]): void {
+  private _split(
+    text: string,
+    startIndex: number,
+    chunks: InternalChunk[]
+  ): void {
     if (text.length <= this.chunkSize) {
       if (text.trim()) {
         chunks.push({
@@ -51,7 +62,7 @@ class RecursiveTextSplitter {
     for (const separator of this.separators) {
       if (separator === "") {
         // Last resort: character splitting
-        let currentChunk = text.substring(0, this.chunkSize);
+        const currentChunk = text.substring(0, this.chunkSize);
         chunks.push({
           content: currentChunk,
           start: startIndex,
@@ -314,11 +325,22 @@ async function processWithUpdates(
 
     const documents = chunks.map((chunk) => chunk.content);
 
-    // Get ChromaDB collection
+    // Get ChromaDB collection with the same embedding function that will be used for queries
     const chromaClient = await getClient();
+    const embeddingFunction = useOllamaEmbedding
+      ? createOllamaEmbeddingFunction()
+      : undefined;
+
     const collection = await chromaClient.getCollection({
       name: collectionName,
+      embeddingFunction: embeddingFunction,
     });
+
+    console.log(
+      `PDF Stream Processing: Using collection "${collectionName}" with ${
+        useOllamaEmbedding ? "Ollama nomic-embed-text" : "default"
+      } embedding function`
+    );
 
     // Step 4: Generate embeddings (if requested)
     let embeddings: number[][] | undefined;

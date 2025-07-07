@@ -15,6 +15,7 @@ import { aiConfig, validateConfig } from "@/lib/ai-config";
 import { tools } from "@/lib/tools";
 import { z } from "zod";
 import { OllamaModelOptions } from "@/types/ollama";
+import { CHROMADB_DEFAULTS } from "@/constants/chromadb-constants";
 import {
   THINK_START_TAG,
   THINK_END_TAG,
@@ -74,7 +75,7 @@ function cleanThinkingTags(
 async function queryActiveCollections(
   collections: string[],
   query: string,
-  chunksToRetrieve: number = 5
+  chunksToRetrieve: number = CHROMADB_DEFAULTS.CHUNKS_TO_RETRIEVE
 ): Promise<
   Array<{ id: string; document?: string; metadata?: Record<string, unknown> }>
 > {
@@ -115,7 +116,7 @@ async function queryActiveCollections(
     }
 
     // Sort by relevance if available, otherwise just return all results
-    return allResults.slice(0, 5); // Limit total results to 5
+    return allResults.slice(0, chunksToRetrieve); // Limit total results to user-configured amount
   } catch (error) {
     console.error("Error querying ChromaDB collections:", error);
     return [];
@@ -249,7 +250,7 @@ export async function POST(req: Request) {
       modelOptions,
       toolsEnabled = true,
       activeCollections = [],
-      chunksToRetrieve = 5,
+      chunksToRetrieve = CHROMADB_DEFAULTS.CHUNKS_TO_RETRIEVE,
     } = validationResult.data;
 
     // Clean thinking tags from assistant messages only

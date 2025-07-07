@@ -9,6 +9,7 @@ import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { OllamaModelOptions } from "@/types/ollama";
+import { CHROMADB_DEFAULTS } from "@/constants/chromadb-constants";
 import {
   TOOL_SUPPORTED_MODELS,
   NO_TOOL_SUPPORT_MODELS,
@@ -650,7 +651,9 @@ export default function Chat() {
   );
 
   // Number of chunks to retrieve from each collection
-  const [chunksToRetrieve, setChunksToRetrieve] = useState<number>(5);
+  const [chunksToRetrieve, setChunksToRetrieve] = useState<number>(
+    CHROMADB_DEFAULTS.CHUNKS_TO_RETRIEVE
+  );
 
   // Use custom hooks for cleaner state management
   const connectionStatus = useConnectionStatus();

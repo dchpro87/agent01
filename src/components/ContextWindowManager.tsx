@@ -124,6 +124,16 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
     }
   };
 
+  const handleCollectionUpdated = async () => {
+    // Refresh collections list to update document counts
+    try {
+      const cols = await chromaDBManager.getCollections();
+      setCollections(cols);
+    } catch (error) {
+      console.error("Failed to refresh collections:", error);
+    }
+  };
+
   const handleBackToCollections = () => {
     setSelectedCollection(null);
   };
@@ -141,7 +151,7 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
 
       await chromaDBManager.createCollection(formattedName, useOllamaEmbedding);
 
-      // Refresh collections list
+      // Refresh collections list (this will include document counts)
       const cols = await chromaDBManager.getCollections();
       setCollections(cols);
 
@@ -180,7 +190,7 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
         handleCollectionToggle(collectionToDelete);
       }
 
-      // Refresh collections list
+      // Refresh collections list (this will include document counts)
       const cols = await chromaDBManager.getCollections();
       setCollections(cols);
 
@@ -371,7 +381,11 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
 
                       <div className='flex items-center justify-between'>
                         <span className='text-xs text-gray-500 dark:text-gray-400'>
-                          Collection
+                          {collection.documentCount !== undefined
+                            ? `${collection.documentCount} document${
+                                collection.documentCount !== 1 ? "s" : ""
+                              }`
+                            : "Loading..."}
                         </span>
                         <div className='flex items-center gap-1'>
                           <button
@@ -446,6 +460,7 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
             <CollectionDetail
               collection={selectedCollection}
               onBack={handleBackToCollections}
+              onCollectionUpdated={handleCollectionUpdated}
             />
           ) : (
             <div className='h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900'>

@@ -68,11 +68,13 @@ interface UploadStatus {
 interface CollectionDetailProps {
   collection: Collection;
   onBack: () => void;
+  onCollectionUpdated?: () => void;
 }
 
 const CollectionDetail: React.FC<CollectionDetailProps> = ({
   collection,
   onBack,
+  onCollectionUpdated,
 }) => {
   const [documents, setDocuments] = useState<CollectionDocument[]>([]);
   const [totalCount, setTotalCount] = useState<number>(0);
@@ -622,6 +624,9 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
         );
         setDocuments(response.documents);
         setTotalCount(response.totalCount);
+
+        // Notify parent component about collection update
+        onCollectionUpdated?.();
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to fetch documents";

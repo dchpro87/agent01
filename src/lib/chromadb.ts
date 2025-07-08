@@ -9,6 +9,7 @@ export interface Collection {
   id: string;
   name: string;
   metadata?: Record<string, unknown>;
+  documentCount?: number;
 }
 
 export interface CollectionDocument {
@@ -112,6 +113,20 @@ export class ChromaDBManager {
     }
   }
 
+  async getCollectionDocumentCount(collectionName: string): Promise<number> {
+    if (!this.isConnectedState) {
+      throw new Error("ChromaDB client not connected");
+    }
+
+    try {
+      const response = await this.getCollectionDocuments(collectionName, 1, 0);
+      return response.totalCount;
+    } catch (error) {
+      console.error("Failed to get collection document count:", error);
+      return 0;
+    }
+  }
+
   async getCollections(): Promise<Collection[]> {
     if (!this.isConnectedState) {
       throw new Error("ChromaDB client not connected");
@@ -122,7 +137,35 @@ export class ChromaDBManager {
       const data = await response.json();
 
       if (data.success) {
-        return data.collections || [];
+        const collections = data.collections || [];
+
+        // Fetch document counts for each collection
+        const collectionsWithCounts = await Promise.all(
+          collections.map(async (collection: Collection) => {
+            try {
+              const docResponse = await this.getCollectionDocuments(
+                collection.name,
+                1,
+                0
+              );
+              return {
+                ...collection,
+                documentCount: docResponse.totalCount,
+              };
+            } catch (error) {
+              console.warn(
+                `Failed to get document count for collection ${collection.name}:`,
+                error
+              );
+              return {
+                ...collection,
+                documentCount: 0,
+              };
+            }
+          })
+        );
+
+        return collectionsWithCounts;
       } else {
         throw new Error(data.error || "Failed to fetch collections");
       }

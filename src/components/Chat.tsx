@@ -814,27 +814,35 @@ export default function Chat() {
                 modelSupportsTools={preferences.modelSupportsTools}
               />
               {/* Context Window Icon */}
-              <button
-                onClick={() => setIsContextDialogOpen(true)}
-                disabled={isDisabled}
-                className={`relative p-2 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
-                  activeCollections.size > 0
-                    ? "text-green-600 dark:text-green-400"
-                    : "text-gray-600 dark:text-gray-400"
-                }`}
-                title={`Context Window Management${
-                  activeCollections.size > 0
-                    ? ` (${activeCollections.size} active)`
-                    : ""
-                }`}
-              >
-                <Database className='w-5 h-5' />
+              <div className='relative flex items-center gap-1'>
+                <button
+                  onClick={() => setIsContextDialogOpen(true)}
+                  disabled={isDisabled}
+                  className={`relative p-2 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
+                    activeCollections.size > 0
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-gray-600 dark:text-gray-400"
+                  }`}
+                  title={`Context Window Management${
+                    activeCollections.size > 0
+                      ? ` (${activeCollections.size} active, ${chunksToRetrieve} chunks each)`
+                      : ` (${chunksToRetrieve} chunks per collection)`
+                  }`}
+                >
+                  <Database className='w-5 h-5' />
+                </button>
+                {/* Collection count and chunk size indicators */}
                 {activeCollections.size > 0 && (
-                  <span className='absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium'>
-                    {activeCollections.size}
-                  </span>
+                  <div className='flex items-center gap-1'>
+                    <span className='bg-green-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium'>
+                      {activeCollections.size}
+                    </span>
+                    <span className='bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium'>
+                      {chunksToRetrieve}
+                    </span>
+                  </div>
                 )}
-              </button>
+              </div>
             </div>
           </div>
         </div>

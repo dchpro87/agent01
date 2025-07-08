@@ -1,4 +1,4 @@
-// PDF Processing Constants
+// PDF Processing constraints
 
 // Text Chunking Configuration
 export const DEFAULT_TEXT_SPLITTER_CONFIG = {

@@ -36,7 +36,7 @@ This document details the comprehensive AI SDK v4 implementation in this advance
 - **Context Augmentation**: Retrieved documents automatically enhance AI responses
 
 ### 5. **Configuration Management**
-- **Centralized Config**: Static configuration in `src/constants/app-config.ts` with full type safety
+- **Centralized Config**: Static configuration in `src/constraints/app-config.ts` with full type safety
 - **Model Presets**: 5 built-in configuration presets (balanced, creative, precise, coding, analytical)
 - **Runtime Validation**: Comprehensive parameter validation with user-friendly error messages  
 - **Model Options**: Support for temperature, max tokens, context window, top-p, top-k, repeat penalty
@@ -79,9 +79,9 @@ src/
 │   ├── SystemPromptSelector.tsx   # Personality system with 8 pre-built prompts
 │   ├── ModelConfigSelector.tsx    # Advanced parameter configuration interface
 │   └── ToolSwitch.tsx             # Tool enable/disable toggle component
-├── constants/
+├── constraints/
 │   ├── app-config.ts              # Static application configuration with validation
-│   ├── chat-constants.ts          # Chat-specific constants and configurations
+│   ├── chat-constraints.ts          # Chat-specific constraints and configurations
 │   ├── model-config.ts            # Model configuration presets and defaults
 │   └── predefined-system-prompts.ts # Built-in personality definitions
 ├── lib/
@@ -121,7 +121,7 @@ src/
 
 ## 🔧 Environment Configuration
 
-The application uses static configuration in `src/constants/app-config.ts` for better type safety:
+The application uses static configuration in `src/constraints/app-config.ts` for better type safety:
 
 ```typescript
 // Static configuration with full type safety

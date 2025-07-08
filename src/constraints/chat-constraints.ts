@@ -1,4 +1,4 @@
-// Chat component constants
+// Chat component constraints
 
 // Import model database and types
 import { MODEL_DATABASE, type ModelCapabilities } from "./model-database";
@@ -160,7 +160,7 @@ export const SUPPORTED_FILE_TYPES =
 export const MAX_CHAT_STEPS = 3;
 export const DEFAULT_CHAT_STEPS = 1;
 
-// API Route Constants
+// API Route constraints
 export const API_ROUTES = {
   CHAT: "/api/chat",
   HEALTH: "/api/health",
@@ -180,7 +180,7 @@ export const ERROR_MESSAGES = {
   AT_LEAST_ONE_MESSAGE: "At least one message is required",
 } as const;
 
-// Validation Constants
+// Validation constraints
 export const VALIDATION_LIMITS = {
   MAX_TOKENS_MIN: 1,
   MAX_TOKENS_MAX: 32000,

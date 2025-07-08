@@ -1,5 +1,5 @@
 /**
- * ChromaDB-related constants
+ * ChromaDB-related constraints
  */
 
 // ChromaDB server configuration

@@ -14,7 +14,7 @@ import {
 import {
   PREDEFINED_PROMPTS,
   type SystemPrompt,
-} from "@/constants/predefined-system-prompts";
+} from "@/constraints/predefined-system-prompts";
 
 interface SystemPromptSelectorProps {
   selectedPrompt: string;

@@ -6,7 +6,7 @@ import {
   CHROMADB_API_ENDPOINTS,
   CHROMADB_DEFAULTS,
   CHROMADB_ACTIONS,
-} from "@/constants/chromadb-constants";
+} from "@/constraints/chromadb-constraints";
 
 let client: ChromaClient | null = null;
 

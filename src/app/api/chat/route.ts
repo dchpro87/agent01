@@ -15,7 +15,7 @@ import { aiConfig, validateConfig } from "@/lib/ai-config";
 import { tools } from "@/lib/tools";
 import { z } from "zod";
 import { OllamaModelOptions } from "@/types/ollama";
-import { CHROMADB_DEFAULTS } from "@/constants/chromadb-constants";
+import { CHROMADB_DEFAULTS } from "@/constraints/chromadb-constraints";
 import {
   THINK_START_TAG,
   THINK_END_TAG,
@@ -28,7 +28,7 @@ import {
   DEFAULT_SYSTEM_PROMPTS,
   MAX_CHAT_STEPS,
   DEFAULT_CHAT_STEPS,
-} from "@/constants/chat-constants";
+} from "@/constraints/chat-constraints";
 
 // Function to clean thinking tags from message content
 function cleanThinkingTags(

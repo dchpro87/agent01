@@ -355,7 +355,7 @@ The system integrates with your existing setup:
 
 ### Application Configuration
 ```typescript
-// src/constants/app-config.ts
+// src/constraints/app-config.ts
 export const APP_CONFIG = {
   chromadb: {
     baseURL: "http://localhost:8000",

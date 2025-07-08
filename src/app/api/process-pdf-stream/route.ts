@@ -2,8 +2,8 @@ import { NextRequest } from "next/server";
 import { ChromaClient } from "chromadb";
 import { createOllamaEmbeddingFunction } from "@/lib/ollama-embedding";
 import { parsePDF, cleanText } from "@/lib/pdf-utils";
-import { DEFAULT_TEXT_SPLITTER_CONFIG } from "@/constants/pdf-constants";
-import { CHROMADB_BASE_URL } from "@/constants/chromadb-constants";
+import { DEFAULT_TEXT_SPLITTER_CONFIG } from "@/constraints/pdf-constraints";
+import { CHROMADB_BASE_URL } from "@/constraints/chromadb-constraints";
 import { ChunkingOptions, TextChunk } from "@/types/pdf";
 
 let client: ChromaClient | null = null;

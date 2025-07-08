@@ -9,7 +9,7 @@ import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { OllamaModelOptions } from "@/types/ollama";
-import { CHROMADB_DEFAULTS } from "@/constants/chromadb-constants";
+import { CHROMADB_DEFAULTS } from "@/constraints/chromadb-constraints";
 import {
   checkModelSupportsTools,
   THINK_START_TAG,
@@ -17,9 +17,9 @@ import {
   SUPPORTED_FILE_TYPES,
   MAX_CHAT_STEPS,
   DEFAULT_CHAT_STEPS,
-} from "@/constants/chat-constants";
-import { DEFAULT_OPTIONS } from "@/constants/model-config";
-import { PREDEFINED_PROMPTS } from "@/constants/predefined-system-prompts";
+} from "@/constraints/chat-constraints";
+import { DEFAULT_OPTIONS } from "@/constraints/model-config";
+import { PREDEFINED_PROMPTS } from "@/constraints/predefined-system-prompts";
 
 import {
   Send,

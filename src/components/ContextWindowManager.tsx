@@ -15,7 +15,7 @@ import {
   ChromaDBConnection,
   Collection,
 } from "@/lib/chromadb";
-import { CHROMADB_DEFAULTS } from "@/constants/chromadb-constants";
+import { CHROMADB_DEFAULTS } from "@/constraints/chromadb-constraints";
 import CollectionDetail from "./CollectionDetail";
 
 interface ContextWindowManagerProps {

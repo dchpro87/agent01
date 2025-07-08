@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Settings, ChevronDown, RotateCcw, X } from "lucide-react";
 import { OllamaModelOptions, MODEL_PRESETS, ModelPreset } from "@/types/ollama";
-import { DEFAULT_OPTIONS, PRESET_INFO } from "@/constants/model-config";
+import { DEFAULT_OPTIONS, PRESET_INFO } from "@/constraints/model-config";
 
 interface ModelConfigSelectorProps {
   selectedOptions: OllamaModelOptions;

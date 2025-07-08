@@ -160,7 +160,7 @@ A sophisticated feature-rich AI chat application built with Next.js 15, Vercel A
 
 ### Environment Configuration (Optional)
 
-The application uses static configuration in `src/constants/app-config.ts`. You can customize settings by editing this file:
+The application uses static configuration in `src/constraints/app-config.ts`. You can customize settings by editing this file:
 
 ```typescript
 // Example configuration
@@ -306,9 +306,9 @@ agent01/
 │   │   ├── SystemPromptSelector.tsx   # Personality management
 │   │   ├── ModelConfigSelector.tsx    # Parameter configuration
 │   │   └── ToolSwitch.tsx             # Tool enable/disable toggle
-│   ├── constants/
+│   ├── constraints/
 │   │   ├── app-config.ts              # Application configuration
-│   │   ├── chat-constants.ts          # Chat-specific constants
+│   │   ├── chat-constraints.ts          # Chat-specific constraints
 │   │   ├── model-config.ts            # Model configuration presets
 │   │   └── predefined-system-prompts.ts # Built-in personalities
 │   ├── lib/
@@ -467,7 +467,7 @@ Users can also create custom personalities through the UI:
 
 ### Environment Variables
 
-Configuration is managed through `src/constants/app-config.ts`. For environment-based configuration, you can use these variables:
+Configuration is managed through `src/constraints/app-config.ts`. For environment-based configuration, you can use these variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|

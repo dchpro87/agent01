@@ -245,7 +245,7 @@ curl -X POST "http://localhost:3000/api/chromadb" \
 
 ## Configuration
 
-### Application Configuration (`src/constants/app-config.ts`)
+### Application Configuration (`src/constraints/app-config.ts`)
 ```typescript
 export const APP_CONFIG = {
   chromadb: {

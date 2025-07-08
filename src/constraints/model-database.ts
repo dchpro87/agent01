@@ -18,7 +18,7 @@ export interface ModelCapabilities {
 export const MODEL_DATABASE: Record<string, ModelCapabilities> = {
   // DeepSeek R1 models - Advanced reasoning models
   "deepseek-r1:latest": {
-    tools: true,
+    tools: false,
     vision: false,
     embedding: false,
     thinking: true,
@@ -27,7 +27,7 @@ export const MODEL_DATABASE: Record<string, ModelCapabilities> = {
     description: "Latest DeepSeek reasoning model with advanced capabilities",
   },
   "deepseek-r1:7b": {
-    tools: true,
+    tools: false,
     vision: false,
     embedding: false,
     thinking: true,
@@ -36,7 +36,7 @@ export const MODEL_DATABASE: Record<string, ModelCapabilities> = {
     description: "7B parameter DeepSeek reasoning model",
   },
   "deepseek-r1:1.5b": {
-    tools: true,
+    tools: false,
     vision: false,
     embedding: false,
     thinking: true,
@@ -217,17 +217,6 @@ export const MODEL_DATABASE: Record<string, ModelCapabilities> = {
     contextSize: 32000,
     family: "mistral",
     description: "Standard Mistral model with good performance",
-  },
-
-  // Specialized models
-  "dimavz/whisper-tiny:latest": {
-    tools: false,
-    vision: false,
-    embedding: false,
-    thinking: false,
-    contextSize: 1024,
-    family: "whisper",
-    description: "Tiny Whisper model for speech recognition",
   },
 
   // Embedding models

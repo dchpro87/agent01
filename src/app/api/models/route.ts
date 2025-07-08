@@ -8,7 +8,7 @@ import {
   getModelContextSize,
   getModelFamily,
   getModelDescription,
-} from "@/constants/chat-constants";
+} from "@/constraints/chat-constraints";
 
 export async function GET() {
   try {

@@ -11,8 +11,7 @@ import rehypeHighlight from "rehype-highlight";
 import { OllamaModelOptions } from "@/types/ollama";
 import { CHROMADB_DEFAULTS } from "@/constants/chromadb-constants";
 import {
-  TOOL_SUPPORTED_MODELS,
-  NO_TOOL_SUPPORT_MODELS,
+  checkModelSupportsTools,
   THINK_START_TAG,
   THINK_END_TAG,
   SUPPORTED_FILE_TYPES,
@@ -92,23 +91,6 @@ function usePersistedPreferences() {
   const [modelSupportsTools, setModelSupportsTools] = useState<boolean>(true);
   const [isWarningDismissed, setIsWarningDismissed] = useState<boolean>(false);
   const [toolsEnabled, setToolsEnabled] = useState<boolean>(true);
-
-  // Function to check if a model supports tools (copied from API)
-  const checkModelSupportsTools = (modelName: string): boolean => {
-    const lowerModelName = modelName.toLowerCase();
-
-    if (
-      NO_TOOL_SUPPORT_MODELS.some((model) =>
-        lowerModelName.includes(model.toLowerCase())
-      )
-    ) {
-      return false;
-    }
-
-    return TOOL_SUPPORTED_MODELS.some((model) =>
-      lowerModelName.includes(model.toLowerCase())
-    );
-  };
 
   // Update tool support when model changes
   useEffect(() => {

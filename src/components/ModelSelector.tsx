@@ -1,13 +1,37 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronDown, Loader2, Bot, AlertTriangle, Wrench } from "lucide-react";
+import {
+  ChevronDown,
+  Loader2,
+  Bot,
+  AlertTriangle,
+  Wrench,
+  Eye,
+  Lightbulb,
+  Database,
+} from "lucide-react";
 
 interface Model {
   name: string;
   size: number;
   modified_at: string;
   supportsTools: boolean;
+  supportsVision: boolean;
+  supportsEmbedding: boolean;
+  supportsThinking: boolean;
+  contextSize: number;
+  family: string;
+  description: string;
+  capabilities: {
+    tools: boolean;
+    vision: boolean;
+    embedding: boolean;
+    thinking: boolean;
+    contextSize: number;
+    family: string;
+    description?: string;
+  } | null;
 }
 
 interface ModelSelectorProps {
@@ -131,22 +155,49 @@ export default function ModelSelector({
                 <div className='flex-1'>
                   <div className='font-medium flex items-center gap-2'>
                     {getModelDisplayName(model.name)}
-                    {model.supportsTools ? (
-                      <span title='Supports tools/function calling'>
-                        <Wrench className='w-3 h-3 text-green-500' />
-                      </span>
-                    ) : (
-                      <span title='Does not support tools/function calling'>
-                        <AlertTriangle className='w-3 h-3 text-amber-500' />
-                      </span>
-                    )}
+                    <div className='flex items-center gap-1'>
+                      {model.supportsTools && (
+                        <span title='Supports tools/function calling'>
+                          <Wrench className='w-3 h-3 text-green-500' />
+                        </span>
+                      )}
+                      {model.supportsVision && (
+                        <span title='Supports vision/image analysis'>
+                          <Eye className='w-3 h-3 text-blue-500' />
+                        </span>
+                      )}
+                      {model.supportsEmbedding && (
+                        <span title='Supports text embeddings'>
+                          <Database className='w-3 h-3 text-purple-500' />
+                        </span>
+                      )}
+                      {model.supportsThinking && (
+                        <span title='Supports thinking/reasoning'>
+                          <Lightbulb className='w-3 h-3 text-yellow-500' />
+                        </span>
+                      )}
+                      {!model.supportsTools &&
+                        !model.supportsVision &&
+                        !model.supportsEmbedding &&
+                        !model.supportsThinking && (
+                          <span title='Basic text-only model'>
+                            <AlertTriangle className='w-3 h-3 text-amber-500' />
+                          </span>
+                        )}
+                    </div>
                   </div>
                   <div className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
-                    Size: {formatModelSize(model.size)}
-                    {!model.supportsTools && (
-                      <span className='text-amber-600 dark:text-amber-400 ml-2'>
-                        • No tool support
-                      </span>
+                    <div className='flex flex-wrap gap-2'>
+                      <span>Size: {formatModelSize(model.size)}</span>
+                      <span>•</span>
+                      <span>Context: {model.contextSize.toLocaleString()}</span>
+                      <span>•</span>
+                      <span className='capitalize'>{model.family} family</span>
+                    </div>
+                    {model.description && (
+                      <div className='text-xs text-gray-400 dark:text-gray-500 mt-1 italic'>
+                        {model.description}
+                      </div>
                     )}
                   </div>
                 </div>

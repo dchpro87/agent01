@@ -1,52 +1,14 @@
 import { aiConfig } from "@/lib/ai-config";
-
-// Function to check if a model supports tools/function calling
-function checkModelSupportsTools(modelName: string): boolean {
-  // List of models known to support tools/function calling
-  const toolSupportedModels = [
-    // Llama models that support tools
-    "llama3.2",
-    "llama3.1",
-    "llama3",
-    "llama2",
-    // Qwen models
-    "qwen2.5",
-    "qwen2",
-    "qwen",
-    // Mistral models
-    "mistral",
-    "mixtral",
-    // Other models that support tools
-    "codellama",
-    "phi3",
-    "gemma2",
-    // Add more models as needed
-  ];
-
-  // Check if the model name contains any of the supported model patterns
-  const lowerModelName = modelName.toLowerCase();
-
-  // Models that are known NOT to support tools
-  const noToolSupport = [
-    "gemma:1b",
-    "gemma2:1b",
-    "gemma3:1b", // Small Gemma models
-    "tinyllama",
-    "orca-mini", // Very small models
-  ];
-
-  // First check if it's explicitly in the no-support list
-  if (
-    noToolSupport.some((model) => lowerModelName.includes(model.toLowerCase()))
-  ) {
-    return false;
-  }
-
-  // Then check if it's in the supported list
-  return toolSupportedModels.some((model) =>
-    lowerModelName.includes(model.toLowerCase())
-  );
-}
+import {
+  getModelCapabilities,
+  checkModelSupportsTools,
+  checkModelSupportsVision,
+  checkModelSupportsEmbedding,
+  checkModelSupportsThinking,
+  getModelContextSize,
+  getModelFamily,
+  getModelDescription,
+} from "@/constants/chat-constants";
 
 export async function GET() {
   try {
@@ -79,14 +41,27 @@ export async function GET() {
       modified_at: string;
     }
 
-    // Extract model names from the response
+    // Extract model names from the response and enrich with capabilities
     const models =
-      data.models?.map((model: OllamaModel) => ({
-        name: model.name,
-        size: model.size,
-        modified_at: model.modified_at,
-        supportsTools: checkModelSupportsTools(model.name),
-      })) || [];
+      data.models?.map((model: OllamaModel) => {
+        const capabilities = getModelCapabilities(model.name);
+
+        return {
+          name: model.name,
+          size: model.size,
+          modified_at: model.modified_at,
+          // Enhanced model information from our single source of truth
+          supportsTools: checkModelSupportsTools(model.name),
+          supportsVision: checkModelSupportsVision(model.name),
+          supportsEmbedding: checkModelSupportsEmbedding(model.name),
+          supportsThinking: checkModelSupportsThinking(model.name),
+          contextSize: getModelContextSize(model.name),
+          family: getModelFamily(model.name),
+          description: getModelDescription(model.name),
+          // Include full capabilities object for detailed information
+          capabilities,
+        };
+      }) || [];
 
     return new Response(
       JSON.stringify({

@@ -1,28 +1,152 @@
 // Chat component constants
 
-// Tool support configuration
-export const TOOL_SUPPORTED_MODELS = [
-  "llama3.2",
-  "llama3.1",
-  "llama3",
-  "llama2",
-  "qwen2.5",
-  "qwen2",
-  "qwen",
-  "mistral",
-  "mixtral",
-  "codellama",
-  "phi3",
-  "gemma2",
-];
+// Import model database and types
+import { MODEL_DATABASE, type ModelCapabilities } from "./model-database";
 
-export const NO_TOOL_SUPPORT_MODELS = [
-  "gemma:1b",
-  "gemma2:1b",
-  "gemma3:1b",
-  "tinyllama",
-  "orca-mini",
-];
+// Re-export the interface for convenience
+export type { ModelCapabilities } from "./model-database";
+
+// Helper functions to query model capabilities
+export function getModelCapabilities(
+  modelName: string
+): ModelCapabilities | null {
+  // First try exact match
+  if (MODEL_DATABASE[modelName]) {
+    return MODEL_DATABASE[modelName];
+  }
+
+  // Then try to match based on model family/pattern
+  const lowerModelName = modelName.toLowerCase();
+
+  // Find the best matching model pattern
+  for (const [pattern, capabilities] of Object.entries(MODEL_DATABASE)) {
+    if (lowerModelName.includes(pattern.toLowerCase())) {
+      return capabilities;
+    }
+  }
+
+  // Return null if no match found
+  return null;
+}
+
+export function checkModelSupportsTools(modelName: string): boolean {
+  const capabilities = getModelCapabilities(modelName);
+  return capabilities?.tools ?? false;
+}
+
+export function checkModelSupportsVision(modelName: string): boolean {
+  const capabilities = getModelCapabilities(modelName);
+  return capabilities?.vision ?? false;
+}
+
+export function checkModelSupportsEmbedding(modelName: string): boolean {
+  const capabilities = getModelCapabilities(modelName);
+  return capabilities?.embedding ?? false;
+}
+
+export function checkModelSupportsThinking(modelName: string): boolean {
+  const capabilities = getModelCapabilities(modelName);
+  return capabilities?.thinking ?? false;
+}
+
+export function getModelContextSize(modelName: string): number {
+  const capabilities = getModelCapabilities(modelName);
+  return capabilities?.contextSize ?? 4096; // Default context size
+}
+
+export function getModelFamily(modelName: string): string {
+  const capabilities = getModelCapabilities(modelName);
+  return capabilities?.family ?? "unknown";
+}
+
+export function getModelDescription(modelName: string): string {
+  const capabilities = getModelCapabilities(modelName);
+  return capabilities?.description ?? "Model capabilities unknown";
+}
+
+// Get models by capability
+export function getModelsByCapability(
+  capability: keyof ModelCapabilities
+): string[] {
+  return Object.keys(MODEL_DATABASE).filter(
+    (key) => MODEL_DATABASE[key][capability] === true
+  );
+}
+
+// Get tool-supporting models (for backward compatibility)
+export function getToolSupportedModels(): string[] {
+  return getModelsByCapability("tools");
+}
+
+// Get vision-supporting models
+export function getVisionSupportedModels(): string[] {
+  return getModelsByCapability("vision");
+}
+
+// Get embedding models
+export function getEmbeddingModels(): string[] {
+  return getModelsByCapability("embedding");
+}
+
+// Get thinking-capable models
+export function getThinkingModels(): string[] {
+  return getModelsByCapability("thinking");
+}
+
+// Get models by family
+export function getModelsByFamily(family: string): string[] {
+  return Object.keys(MODEL_DATABASE).filter(
+    (key) => MODEL_DATABASE[key].family.toLowerCase() === family.toLowerCase()
+  );
+}
+
+// Get recommended models for specific use cases
+export function getRecommendedModels(
+  useCase: "general" | "coding" | "vision" | "embedding" | "lightweight"
+): string[] {
+  switch (useCase) {
+    case "general":
+      return ["llama3.2:3b", "qwen2.5:7b", "mistral:7b"];
+    case "coding":
+      return ["qwen2.5-coder:7b", "codellama:7b", "llama3.2:7b"];
+    case "vision":
+      return ["llama3.2-vision", "llava:7b", "bakllava"];
+    case "embedding":
+      return ["nomic-embed-text", "bge-large-en-v1.5", "all-minilm"];
+    case "lightweight":
+      return ["llama3.2:1b", "qwen3:0.6b", "tinyllama"];
+    default:
+      return ["llama3.2:3b"];
+  }
+}
+
+// Check if model is recommended for production use
+export function isProductionReady(modelName: string): boolean {
+  const capabilities = getModelCapabilities(modelName);
+  if (!capabilities) return false;
+
+  // Production ready criteria: context size >= 4096 and not in lightweight category
+  const lightweightModels = [
+    "qwen3:0.6b",
+    "gemma:1b",
+    "gemma2:1b",
+    "gemma3:1b",
+    "tinyllama",
+  ];
+  return (
+    capabilities.contextSize >= 4096 &&
+    !lightweightModels.some((model) => modelName.toLowerCase().includes(model))
+  );
+}
+
+// Legacy exports for backward compatibility (deprecated - use getModelCapabilities instead)
+export const TOOL_SUPPORTED_MODELS = Object.keys(MODEL_DATABASE).filter(
+  (key) => MODEL_DATABASE[key].tools
+);
+
+export const NO_TOOL_SUPPORT_MODELS = Object.keys(MODEL_DATABASE).filter(
+  (key) => !MODEL_DATABASE[key].tools
+);
 
 // Thinking tags for parsing
 export const THINK_START_TAG = "<think>";

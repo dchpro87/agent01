@@ -19,8 +19,7 @@ import { CHROMADB_DEFAULTS } from "@/constants/chromadb-constants";
 import {
   THINK_START_TAG,
   THINK_END_TAG,
-  TOOL_SUPPORTED_MODELS,
-  NO_TOOL_SUPPORT_MODELS,
+  checkModelSupportsTools,
   ERROR_MESSAGES,
   VALIDATION_LIMITS,
   VALIDATION_ERROR_MESSAGES,
@@ -121,23 +120,6 @@ async function queryActiveCollections(
     console.error("Error querying ChromaDB collections:", error);
     return [];
   }
-}
-
-// Function to check if a model supports tools/function calling
-function checkModelSupportsTools(modelName: string): boolean {
-  const lowerModelName = modelName.toLowerCase();
-
-  if (
-    NO_TOOL_SUPPORT_MODELS.some((model) =>
-      lowerModelName.includes(model.toLowerCase())
-    )
-  ) {
-    return false;
-  }
-
-  return TOOL_SUPPORTED_MODELS.some((model) =>
-    lowerModelName.includes(model.toLowerCase())
-  );
 }
 
 // AI SDK compatible validation schema

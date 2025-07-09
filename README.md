@@ -1,6 +1,8 @@
 # Agent01 - Advanced AI Chat Application with Vector Database
 
-A sophisticated feature-rich AI chat application built with Next.js 15, Vercel AI SDK v4, Ollama, and ChromaDB. Experience intelligent conversations with advanced streaming, tool integration, customizable personalities, vector database context management, and enterprise-grade monitoring.
+A sophisticated feature-rich AI chat application built with **Next.js 15**, **Vercel AI SDK v4**, **Ollama**, and **ChromaDB**. Experience intelligent conversations with advanced streaming, tool integration, customizable personalities, vector database context management, and enterprise-grade monitoring.
+
+> **Latest Update:** July 2025 - Now featuring complete ChromaDB vector database integration, enhanced multimodal support, 8 distinct AI personalities, 5 configuration presets, and advanced context management with semantic search capabilities.
 
 ## ✨ Key Features
 
@@ -41,67 +43,78 @@ A sophisticated feature-rich AI chat application built with Next.js 15, Vercel A
 - **File Size Validation** - Automatic file size formatting and validation
 
 ### 🎭 **Personality System**
-- **8 Pre-built Personalities** - Distinct AI personalities with unique traits:
+- **8 Professionally Crafted Personalities** - Distinct AI characters with unique expertise and communication styles:
   - **Sarah** - Helpful, practical, and reliable general assistant (default)
-  - **Marcus** - Logical, systematic programming expert  
-  - **Emily** - Patient, encouraging educational tutor
-  - **Isabella** - Imaginative, expressive creative writer
-  - **Rogger** - Sharp, decisive analytical data expert
-  - **Dr. Flip** - Brilliant, eccentric scientific inventor
-  - **Chef Pierre** - Passionate French culinary master
-  - **Grace** - Compassionate, understanding counselor
-- **Custom System Prompts** - Create and save your own AI personalities
-- **Dynamic Prompt Management** - Switch personalities mid-conversation
-- **Categorized Prompts** - Organized by General, Technical, Creative, Education, Culinary, and Support
-- **Persistent Preferences** - All personality settings saved to localStorage
+  - **Marcus** - Logical, systematic programming expert with technical depth  
+  - **Emily** - Patient, encouraging educational tutor with gentle guidance
+  - **Isabella** - Imaginative, expressive creative writer with artistic flair
+  - **Rogger** - Sharp, decisive analytical data expert with insight-driven approach
+  - **Dr. Flip** - Brilliant, eccentric scientific inventor with boundless curiosity
+  - **Chef Pierre** - Passionate French culinary master with infectious enthusiasm
+  - **Grace** - Compassionate, understanding counselor with deep empathy
+- **Custom Personality Creator** - Full-featured UI for creating and managing personalized AI assistants
+- **Dynamic Personality Switching** - Change AI behavior and expertise mid-conversation seamlessly
+- **Intelligent Categorization** - Organized by General, Technical, Creative, Education, Culinary, and Support
+- **Persistent Personality Memory** - All personality settings and custom creations saved automatically
 
-### 🔧 **Built-in Tools**
-- **Real-time Clock** - Get current date/time in any timezone with proper formatting
-- **BMI Calculator** - Health calculations with metric/imperial support and category classification
-- **Weather Service** - Location-based weather information with realistic simulation (demo implementation)
-- **Tool Detection** - Automatic model capability detection for tool support
-- **Visual Feedback** - Clear display of tool execution and results with step-by-step progress
-- **Extensible Architecture** - Easy to add new tools and capabilities
-- **Parameter Validation** - Comprehensive input validation with Zod schemas
+### 🔧 **Built-in Tools & Function Calling**
+- **Real-time Clock** - Get current date/time in any timezone with proper formatting and locale support
+- **BMI Calculator** - Health calculations with metric/imperial support and comprehensive category classification
+- **Weather Service** - Location-based weather information with realistic simulation (demo implementation ready for API integration)
+- **Intelligent Tool Detection** - Automatic model capability detection with visual indicators for tool support
+- **Visual Tool Execution** - Clear, step-by-step display of tool calls and results with progress indicators
+- **Extensible Architecture** - Easy-to-extend framework for adding new tools and capabilities
+- **Comprehensive Validation** - Zod schema validation for all tool parameters with user-friendly error messages
+- **Tool Toggle Control** - Per-conversation enable/disable with smart model compatibility checking
 
-### ⚙️ **Advanced Configuration**
-- **Model Parameters** - Adjust temperature, top-p, top-k, context window, token limits
-- **Configuration Presets** - 5 built-in presets (balanced, creative, precise, coding, analytical)
-- **Real-time Health Monitoring** - Connection status and diagnostic information
-- **Request Logging** - Comprehensive logging with request tracking
-- **Error Handling** - Graceful degradation and detailed error messages
-- **Tool Toggle** - Enable/disable tools per conversation
-- **Validation & Limits** - Real-time parameter validation with helpful error messages
+### ⚙️ **Advanced Configuration & Performance**
+- **Precision Model Parameters** - Fine-tune temperature, top-p, top-k, context window, and token limits with real-time validation
+- **Professional Configuration Presets** - 5 expertly tuned presets for different use cases:
+  - **Balanced** - Optimal blend of creativity and coherence for general conversations
+  - **Creative** - High creativity and varied outputs for artistic and brainstorming tasks
+  - **Precise** - Focused and deterministic responses for factual and analytical work
+  - **Coding** - Optimized parameters for code generation and technical documentation
+  - **Analytical** - Structured analytical thinking for data analysis and problem-solving
+- **Real-time Health Monitoring** - Comprehensive connection status and diagnostic information with actionable insights
+- **Advanced Request Logging** - Detailed logging with unique request IDs for debugging and performance analysis
+- **Intelligent Error Handling** - Graceful degradation with detailed error messages and recovery suggestions
+- **Performance Optimization** - Token usage tracking, connection pooling, and response time monitoring
+- **Validation & Limits** - Real-time parameter validation with helpful error messages and suggested ranges
 
-### 🎨 **User Experience**
-- **Modern UI/UX** - Clean, intuitive interface with smooth animations
-- **Dark/Light Mode** - Automatic theme detection and manual toggle
-- **Responsive Design** - Perfect experience on desktop, tablet, and mobile
-- **Accessibility** - Screen reader friendly with proper ARIA labels
-- **Keyboard Shortcuts** - Enter to send, Shift+Enter for new line
-- **Connection Status** - Visual indicators for Ollama server connectivity
-- **Loading States** - Smooth loading animations and progress indicators
-- **Error Recovery** - Automatic retry logic and detailed error messages
+### 🎨 **Premium User Experience**
+- **Modern, Intuitive UI/UX** - Clean, professional interface with smooth animations and micro-interactions
+- **Adaptive Dark/Light Mode** - Automatic theme detection with manual toggle and system preference sync
+- **Fully Responsive Design** - Perfect experience across desktop, tablet, and mobile with optimized layouts
+- **Accessibility First** - Screen reader friendly with proper ARIA labels, keyboard navigation, and contrast compliance
+- **Smart Keyboard Shortcuts** - Enter to send, Shift+Enter for new line, Escape to cancel, and more
+- **Real-time Connection Status** - Visual indicators for Ollama server connectivity with automatic reconnection
+- **Elegant Loading States** - Smooth loading animations, progress indicators, and status feedback
+- **Intelligent Error Recovery** - Automatic retry logic with detailed error messages and suggested solutions
+- **Performance Optimized** - Fast rendering, efficient memory usage, and optimized for large conversations
 
 ## 🆕 Latest Features & Updates (July 2025)
 
-### **Recent Enhancements**
-- **🗄️ ChromaDB Vector Database Integration** - Full vector database support with semantic search
-- **📊 Context Window Management** - Visual interface for managing collections and document context
-- **🔍 Semantic Search & Retrieval** - Automatic document retrieval and context augmentation
-- **📄 Collection Detail Views** - Browse and examine documents within collections
-- **🎯 Active Collection System** - Add/remove collections from context with visual indicators
-- **🔗 Custom Ollama Embeddings** - nomic-embed-text integration for high-quality embeddings
-- **⚙️ Configuration Presets** - 5 built-in presets: balanced, creative, precise, coding, analytical
-- **🔧 Tool Toggle Control** - Enable/disable tools per conversation with visual indicators
-- **📊 Multi-step Conversations** - Extended tool sequences (MAX_CHAT_STEPS: 5) for complex tasks
+### **Major New Features**
+- **🗄️ ChromaDB Vector Database Integration** - Complete vector database support with semantic search and context augmentation
+- **📊 Visual Context Window Manager** - Intuitive interface for managing document collections and active context
+- **🔍 Intelligent Semantic Search** - Automatic document retrieval based on conversation context
+- **📄 Collection Detail Views** - Browse documents, view metadata, and explore collection contents
+- **🎯 Active Collection System** - Real-time visual indicators for context-aware conversations
+- **🔗 Custom Ollama Embeddings** - High-quality nomic-embed-text integration for superior semantic understanding
 
-### **Performance & Reliability**
-- **⚡ Optimized Streaming** - Enhanced request headers and performance monitoring
-- **🛡️ Error Handling** - Comprehensive error recovery with actionable suggestions
-- **📈 Request Tracking** - Detailed logging with unique request IDs
-- **🔄 Connection Monitoring** - Real-time Ollama server health checking
-- **✅ Validation** - Runtime parameter validation with user-friendly messages
+### **Enhanced AI Capabilities**
+- **⚙️ Configuration Presets** - 5 professionally tuned presets: balanced, creative, precise, coding, analytical
+- **🔧 Smart Tool Toggle** - Intelligent tool enable/disable with model capability detection
+- **📊 Multi-step Conversations** - Extended tool call sequences (up to 5 steps) for complex problem solving
+- **🎭 Advanced Personality System** - 8 distinct, professionally crafted AI personalities with custom creation support
+- **💾 Enhanced Persistence** - All preferences, personalities, and settings automatically saved
+
+### **Improved User Experience**
+- **�️ Advanced File Management** - Better preview, validation, and processing for multimodal content
+- **� Responsive Design Enhancements** - Optimized interface for all device sizes with improved accessibility
+- **⚡ Performance Optimizations** - Faster streaming, better error handling, and enhanced connection monitoring
+- **🛡️ Enhanced Security** - Comprehensive input validation, secure file handling, and improved error boundaries
+- **📈 Real-time Diagnostics** - Advanced health monitoring with actionable insights and suggestions
 
 ## 🚀 Quick Start
 
@@ -160,127 +173,163 @@ A sophisticated feature-rich AI chat application built with Next.js 15, Vercel A
 
 ### Environment Configuration (Optional)
 
-The application uses static configuration in `src/constraints/app-config.ts`. You can customize settings by editing this file:
+The application uses **static configuration** in `src/constraints/app-config.ts` for optimal type safety and performance. You can customize settings by editing this file directly, or use environment variables for deployment flexibility:
 
 ```typescript
-// Example configuration
+// src/constraints/app-config.ts - Primary configuration method
 export const APP_CONFIG: AppConfig = {
   ollama: {
-    baseURL: "http://localhost:11434",     // Change to your Ollama server
-    model: "llama3.2:3b",                  // Default model
-    temperature: 0.7,                      // Default creativity
-    maxRetries: 2,                         // Retry attempts
+    baseURL: "http://localhost:11434",     // Ollama server endpoint
+    model: "llama3.2:3b",                  // Default model selection
+    temperature: 0.7,                      // Creativity vs consistency balance
+    maxRetries: 2,                         // Retry attempts for failed requests
     defaultOptions: {
-      maxTokens: 4096,                     // Default response length
-      // ... other model parameters
+      maxTokens: 4096,                     // Response length limit
+      numCtx: 4096,                        // Context window size
+      // Additional model parameters available
     },
   },
   streaming: {
-    timeout: 30000,                        // 30 second timeout
-    keepAlive: true,                       // Keep connections alive
+    timeout: 30000,                        // Request timeout (30 seconds)
+    keepAlive: true,                       // Keep connections alive for performance
   },
   logging: {
-    enabled: true,                         // Enable request logging
-    logLevel: "info",                      // Log level
+    enabled: true,                         // Enable comprehensive request logging
+    logLevel: "info",                      // Logging verbosity level
+  },
+  chromadb: {
+    baseURL: "http://localhost:8000",      // ChromaDB server endpoint
+    timeout: 30000,                        // ChromaDB request timeout
   },
 };
 ```
 
-Alternatively, create a `.env.local` file for environment-based configuration:
-
+**Environment Variables (Alternative Configuration)**:
 ```bash
-# Ollama Configuration
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.2:3b
-OLLAMA_TEMPERATURE=0.7
+# Core Ollama Configuration
+OLLAMA_BASE_URL=http://localhost:11434    # Ollama server URL
+OLLAMA_MODEL=llama3.2:3b                  # Default model
+OLLAMA_TEMPERATURE=0.7                    # Default creativity setting
 
 # Model Parameters
-OLLAMA_MAX_TOKENS=4096
-OLLAMA_MAX_RETRIES=2
+OLLAMA_MAX_TOKENS=4096                    # Default response length
+OLLAMA_MAX_RETRIES=2                      # Number of retry attempts
+OLLAMA_NUM_CTX=4096                       # Context window size
 
-# Monitoring
-AI_LOGGING=true
-AI_LOG_LEVEL=info
+# Monitoring & Development
+AI_LOGGING=true                           # Enable request logging
+AI_LOG_LEVEL=info                         # Logging verbosity
+
+# Vector Database Configuration
+CHROMADB_URL=http://localhost:8000        # ChromaDB server URL
+EMBEDDING_MODEL=nomic-embed-text          # Ollama embedding model
 ```
+
+> **Recommendation**: Use static configuration for development and environment variables for production deployments.
 
 ## 📱 Using the Application
 
-### Vector Database & Context Management
-- Click the **🗄️ database icon** in the header to open the Context Window Manager
-- **Connect to ChromaDB**: Automatic connection to localhost:8000 (if ChromaDB is running)
-- **Browse Collections**: View all available vector database collections
-- **Add to Context**: Click the database icon on collection cards to add them to active context
-- **Active Collections**: See which collections are currently active with green highlighting
-- **Document Details**: Click on collection names to view documents and metadata
-- **Semantic Search**: When collections are active, your questions automatically search relevant documents
-- **Context Augmentation**: AI responses include relevant information from your active collections
+## 📱 Using the Application
 
-### Model Selection
-- Click the **🤖 bot icon** in the header to select from available Ollama models
-- Models with tool support show a **🔧 wrench icon** for function calling capabilities
-- Models without tool support show a **⚠️ warning icon** 
-- Model information includes size, capabilities, and performance indicators
-- Real-time model availability checking and validation
+### 🗄️ **Vector Database & Context Management**
+- **One-Click Access**: Click the **🗄️ database icon** in the header to open the intuitive Context Window Manager
+- **Automatic ChromaDB Connection**: Seamless connection to localhost:8000 with real-time health monitoring
+- **Visual Collection Browser**: Browse all available vector database collections with metadata and document counts
+- **Smart Context Addition**: Click the database icon on collection cards to instantly add them to active context
+- **Real-time Active Collections**: See currently active collections with green highlighting and count badges
+- **Detailed Document Exploration**: Click collection names to view documents, metadata, and content previews
+- **Intelligent Semantic Search**: When collections are active, questions automatically trigger relevant document retrieval
+- **Context-Enhanced Responses**: AI responses include pertinent information from your active knowledge base
+- **Flexible Context Management**: Easy add/remove collections with immediate visual feedback and status updates
 
-### Personality Selection
-- Click the **⚙️ settings icon** to choose from 8 unique AI personalities:
-  - **Sarah** - Helpful and reliable general assistant (default)
-  - **Marcus** - Expert programming assistant with systematic approach
-  - **Emily** - Patient educational tutor with gentle guidance
-  - **Isabella** - Creative writing companion with artistic flair
-  - **Rogger** - Sharp analytical data expert with decisive insights
-  - **Dr. Flip** - Brilliant eccentric scientist with boundless curiosity
-  - **Chef Pierre** - Passionate French culinary master with infectious enthusiasm
-  - **Grace** - Compassionate counselor with deep empathy
-- Create custom personalities with the **+ button** and save them for future use
-- Switch personalities seamlessly during conversations
+### 🤖 **Model Selection & Management**
+- **Smart Model Discovery**: Click the **🤖 bot icon** in the header to view all available Ollama models with real-time status
+- **Capability Indicators**: Models with tool support display a **🔧 wrench icon** for function calling capabilities
+- **Compatibility Warnings**: Models without tool support show a **⚠️ warning icon** with helpful upgrade suggestions
+- **Detailed Model Information**: View model size, capabilities, performance indicators, and memory requirements
+- **Real-time Availability**: Automatic model availability checking and validation with connection status
+- **Intelligent Recommendations**: Model suggestions based on your current task and conversation context
 
-### File Attachments
-- Click the **📎 paperclip icon** next to the input field to attach files
-- **Supported formats:**
-  - **Images:** PNG, JPEG, GIF, WebP, BMP (for vision-capable models)
-  - **Documents:** PDF, TXT, CSV, JSON, DOCX, DOC
-- **Features:**
-  - Preview attached files before sending with file type icons
-  - Send files with or without accompanying text
-  - Remove individual files or clear all attachments
-  - Drag & drop support for easy file attachment
-  - Files are automatically processed for multimodal AI models
+### 🎭 **Personality Selection & Customization**
+- **Professional Personality Gallery**: Click the **⚙️ settings icon** to explore 8 expertly crafted AI personalities:
+  - **Sarah** - Reliable general assistant with practical problem-solving approach (default choice)
+  - **Marcus** - Expert programming assistant with systematic methodology and technical depth
+  - **Emily** - Patient educational tutor with gentle guidance and encouraging teaching style
+  - **Isabella** - Creative writing companion with artistic flair and imaginative storytelling
+  - **Rogger** - Sharp analytical data expert with decisive insights and data-driven conclusions
+  - **Dr. Flip** - Brilliant eccentric scientist with boundless curiosity and innovative thinking
+  - **Chef Pierre** - Passionate French culinary master with infectious enthusiasm and cultural expertise
+  - **Grace** - Compassionate counselor with deep empathy and understanding communication
+- **Custom Personality Creator**: Use the **+ button** to create personalized AI assistants with custom behavior and expertise
+- **Seamless Personality Switching**: Change AI personalities mid-conversation without losing context or history
+- **Intelligent Categorization**: Personalities organized by purpose - General, Technical, Creative, Education, Culinary, Support
+- **Persistent Memory**: All personality preferences and custom creations automatically saved for future sessions
 
-### Model Configuration
-- Click the **⚙️ gear icon** to adjust advanced parameters:
-  - **Temperature** - Creativity vs consistency (0.0-2.0, default: 0.7)
-  - **Max Tokens** - Response length limit (1-32,000, default: 4,096)
-  - **Context Window** - Conversation memory size (1-32,000)
-  - **Top-P** - Response variety control (0.0-1.0, precision to 1 decimal)
-  - **Top-K** - Token selection diversity
-  - **Repeat Penalty** - Reduce repetitive responses
-- **Configuration Presets** - 5 built-in presets for different use cases:
-  - **Balanced** - Optimal balance of creativity and coherence
-  - **Creative** - High creativity and varied outputs
-  - **Precise** - Focused and deterministic responses
-  - **Coding** - Optimized for code generation
-  - **Analytical** - Structured analytical thinking
-- Real-time validation with helpful error messages
-- Settings persist across sessions
+### 📎 **File Attachments & Multimodal Support**
+- **Intuitive File Upload**: Click the **📎 paperclip icon** next to the input field for easy file attachment
+- **Comprehensive Format Support**:
+  - **Visual Content**: PNG, JPEG, GIF, WebP, BMP (automatically processed by vision-capable models)
+  - **Documents**: PDF, TXT, CSV, JSON, DOCX, DOC (content extracted and analyzed)
+  - **Future-Ready**: Extensible architecture for additional file types
+- **Advanced Features**:
+  - **Visual File Preview**: Preview attached files before sending with file type icons and size information
+  - **Flexible Messaging**: Send files with or without accompanying text messages
+  - **Granular File Management**: Remove individual files or clear all attachments with one click
+  - **Drag & Drop Support**: Intuitive drag and drop interface for effortless file attachment
+  - **Smart Processing**: Files automatically processed for multimodal AI models with content extraction
+  - **Size Validation**: Automatic file size formatting, validation, and helpful limit suggestions
 
-### Tool Usage
-Ask questions that require real-time data and watch the AI use tools:
-- *"What time is it?"* or *"What time is it in Tokyo?"* - Uses getCurrentTime tool with timezone support
-- *"What's my BMI if I'm 5'9" and weigh 160 lbs?"* - Uses BMI calculator with unit conversion
-- *"What's the weather in London?"* - Uses weather service with simulated realistic data
-- Tools display execution details and results visually in the chat
-- Only compatible models can use tools (automatically detected)
+### ⚙️ **Advanced Model Configuration**
+- **Precision Parameter Control**: Click the **⚙️ gear icon** to access professional-grade parameter tuning:
+  - **Temperature** - Creativity vs consistency balance (0.0-2.0, default: 0.7) with real-time preview
+  - **Max Tokens** - Response length control (1-32,000, default: 4,096) with context awareness
+  - **Context Window** - Conversation memory size (1-32,000) with model-specific optimization
+  - **Top-P** - Response variety control (0.0-1.0, precision to 1 decimal) for nucleus sampling
+  - **Top-K** - Token selection diversity for controlling randomness
+  - **Repeat Penalty** - Reduce repetitive responses with intelligent penalty adjustment
+- **Professional Configuration Presets** - 5 expertly tuned presets for different scenarios:
+  - **Balanced** - Optimal blend of creativity and coherence for general conversations
+  - **Creative** - Enhanced creativity and varied outputs for artistic and brainstorming tasks  
+  - **Precise** - Focused and deterministic responses for factual and analytical work
+  - **Coding** - Optimized parameters for code generation and technical documentation
+  - **Analytical** - Structured analytical thinking for data analysis and problem-solving
+- **Intelligent Validation**: Real-time parameter validation with helpful error messages and suggested ranges
+- **Persistent Configuration**: All settings automatically saved and restored across sessions
+- **Model-Specific Optimization**: Parameters automatically adjusted based on selected model capabilities
 
-### Advanced Features
-- **Reset Conversation** - Clear chat history anytime with confirmation dialog
-- **Real-time Status** - Connection monitoring in header with health indicators
-- **Error Recovery** - Automatic reconnection and retry logic with detailed error messages
-- **Thinking Visualization** - See AI reasoning process with `<think>` tag parsing and removal
-- **Markdown Rendering** - Rich text, code blocks, tables, and mathematical expressions
-- **Responsive Design** - Optimized for desktop, tablet, and mobile devices
-- **Accessibility** - Screen reader friendly with proper ARIA labels and keyboard navigation
-- **Performance Monitoring** - Request tracking, token usage, and response time logging
+### 🔧 **Tool Usage & Function Calling**
+Experience the power of function calling with intelligent tools that enhance AI capabilities:
+
+- **Time & Date Queries**: 
+  - *"What time is it?"* or *"What time is it in Tokyo?"* - Uses getCurrentTime tool with timezone support and locale formatting
+  - Supports all major timezones with automatic daylight saving time detection
+
+- **Health & Fitness Calculations**: 
+  - *"What's my BMI if I'm 5'9" and weigh 160 lbs?"* - Uses BMI calculator with metric/imperial conversion
+  - Provides category classification (underweight, normal, overweight, obese) with health insights
+
+- **Weather Information**: 
+  - *"What's the weather in London?"* - Uses weather service with realistic simulation
+  - Demo implementation ready for real API integration with location-based data
+
+- **Advanced Features**:
+  - **Visual Tool Execution**: Watch tools work with step-by-step progress indicators and detailed results
+  - **Smart Model Detection**: Only tool-compatible models can access functions (automatically detected with visual indicators)
+  - **Multi-step Tool Chains**: Complex queries can trigger multiple tool calls in sequence (up to 5 steps)
+  - **Error Handling**: Graceful tool failure handling with fallback responses and suggestions
+  - **Parameter Validation**: Comprehensive input validation with user-friendly error messages
+
+### 🚀 **Advanced Features & Capabilities**
+- **Intelligent Conversation Reset** - Clear chat history with confirmation dialog while preserving settings and preferences
+- **Real-time System Monitoring** - Comprehensive connection monitoring with health indicators and diagnostic information
+- **Intelligent Error Recovery** - Automatic reconnection and retry logic with detailed error messages and actionable suggestions
+- **Thinking Process Visualization** - See AI reasoning process with `<think>` tag parsing and removal for transparent decision-making
+- **Rich Markdown Rendering** - Support for text formatting, code blocks, tables, lists, and mathematical expressions
+- **Multi-Device Optimization** - Perfectly responsive design optimized for desktop, tablet, and mobile with touch-friendly interfaces
+- **Accessibility Excellence** - Screen reader friendly with proper ARIA labels, keyboard navigation, and high contrast support
+- **Performance Intelligence** - Request tracking, token usage monitoring, response time analysis, and optimization suggestions
+- **Memory Management** - Efficient handling of large conversations with smart context window management
+- **Future-Ready Architecture** - Extensible design ready for new AI models, tools, and integration capabilities
 
 ## 🏗️ Architecture
 
@@ -290,48 +339,73 @@ agent01/
 ├── src/
 │   ├── app/
 │   │   ├── api/
-│   │   │   ├── chat/route.ts          # Streaming chat endpoint with tool support
-│   │   │   ├── chromadb/route.ts      # ChromaDB integration API
-│   │   │   ├── embeddings/route.ts    # Ollama embeddings API
-│   │   │   ├── health/route.ts        # Health monitoring & diagnostics
-│   │   │   └── models/route.ts        # Model discovery & validation
-│   │   ├── layout.tsx                 # Root layout with theme support
-│   │   ├── page.tsx                   # Main application page
-│   │   └── globals.css                # Global styles & Tailwind
+│   │   │   ├── chat/route.ts          # Streaming chat endpoint with multimodal & context support
+│   │   │   ├── chromadb/route.ts      # ChromaDB integration API with collection management
+│   │   │   ├── embeddings/route.ts    # Ollama embeddings API for vector generation
+│   │   │   ├── health/route.ts        # Health monitoring & diagnostics endpoint
+│   │   │   ├── models/route.ts        # Model discovery & validation API
+│   │   │   ├── cancel-upload/route.ts # File upload cancellation endpoint
+│   │   │   └── process-pdf-stream/route.ts # PDF processing endpoint
+│   │   ├── layout.tsx                 # Root layout with theme support & global configuration
+│   │   ├── page.tsx                   # Main application page with chat interface
+│   │   ├── favicon.ico                # Application favicon
+│   │   └── globals.css                # Global styles with Tailwind v4 configuration
 │   ├── components/
-│   │   ├── Chat.tsx                   # Main chat interface with streaming
-│   │   ├── CollectionDetail.tsx       # Vector database collection detail view
-│   │   ├── ContextWindowManager.tsx   # ChromaDB context management interface
-│   │   ├── ModelSelector.tsx          # Model selection dropdown
-│   │   ├── SystemPromptSelector.tsx   # Personality management
-│   │   ├── ModelConfigSelector.tsx    # Parameter configuration
-│   │   └── ToolSwitch.tsx             # Tool enable/disable toggle
+│   │   ├── Chat.tsx                   # Advanced chat UI with streaming, attachments & context
+│   │   ├── CollectionDetail.tsx       # Vector database collection detail view with document browsing
+│   │   ├── ContextWindowManager.tsx   # ChromaDB context management interface with visual feedback
+│   │   ├── ModelSelector.tsx          # Model selection with capability indicators & health status
+│   │   ├── SystemPromptSelector.tsx   # Personality system with 8 pre-built & custom prompts
+│   │   ├── ModelConfigSelector.tsx    # Advanced parameter configuration with presets
+│   │   └── ToolSwitch.tsx             # Tool enable/disable toggle with compatibility checking
 │   ├── constraints/
-│   │   ├── app-config.ts              # Application configuration
-│   │   ├── chat-constraints.ts          # Chat-specific constraints
-│   │   ├── model-config.ts            # Model configuration presets
-│   │   └── predefined-system-prompts.ts # Built-in personalities
+│   │   ├── app-config.ts              # Static application configuration with type safety
+│   │   ├── chat-constraints.ts        # Chat-specific constraints & validation rules
+│   │   ├── chromadb-constraints.ts    # ChromaDB configuration & defaults
+│   │   ├── model-config.ts            # Model configuration presets & parameter ranges
+│   │   ├── model-database.ts          # Model capability database & compatibility matrix
+│   │   ├── pdf-constraints.ts         # PDF processing configuration & limits
+│   │   └── predefined-system-prompts.ts # Built-in personality definitions & categories
 │   ├── lib/
-│   │   ├── ai-config.ts               # AI configuration utilities
-│   │   ├── ai-health.ts               # Health monitoring utilities
-│   │   ├── ai-middleware.ts           # Request logging & tracking
-│   │   ├── chromadb.ts                # ChromaDB client manager
-│   │   ├── ollama-embedding.ts        # Custom Ollama embedding function
-│   │   ├── ollama-embedding-new.ts    # Enhanced embedding implementation
-│   │   └── tools.ts                   # Built-in tool definitions
+│   │   ├── ai-config.ts               # AI configuration utilities & validation helpers
+│   │   ├── ai-health.ts               # Health monitoring utilities & diagnostic functions
+│   │   ├── ai-middleware.ts           # Request logging, tracking & performance monitoring
+│   │   ├── chromadb.ts                # ChromaDB client manager & API interface
+│   │   ├── ollama-embedding.ts        # Custom Ollama embedding function for ChromaDB
+│   │   ├── pdf-utils.ts               # PDF processing utilities & content extraction
+│   │   └── tools.ts                   # Tool definitions (time, BMI, weather) with Zod validation
 │   ├── types/
-│   │   ├── index.ts                   # General type definitions
-│   │   └── ollama.ts                  # Ollama-specific types
-│   └── utils/                         # Utility functions
-├── public/                            # Static assets
-├── docs/
-│   ├── AI_SDK_IMPLEMENTATION.md       # Technical implementation details
-│   ├── CHROMADB_SETUP.md             # ChromaDB setup and configuration
-│   └── CHROMADB_CONTEXT_IMPLEMENTATION.md # Context system implementation
-├── package.json                       # Dependencies & scripts
-├── next.config.ts                     # Next.js configuration
-├── tailwind.config.ts                 # Tailwind CSS configuration
-└── tsconfig.json                      # TypeScript configuration
+│   │   ├── app-config.ts              # Application configuration type definitions
+│   │   ├── index.ts                   # General application type definitions
+│   │   ├── ollama.ts                  # Ollama-specific types & model configurations
+│   │   ├── pdf-parse.d.ts             # PDF parsing type declarations
+│   │   └── pdf.ts                     # PDF processing type definitions
+│   ├── utils/
+│   │   ├── pdf-processor.ts           # PDF content processing & extraction utilities
+│   │   └── text-chunker.ts            # Text chunking utilities for embeddings
+│   └── captures/                      # Development screenshots & documentation
+│       ├── Capture.PNG                # Application screenshot
+│       └── sample.md                  # Sample markdown content
+├── public/                            # Static assets & icons
+│   ├── file.svg                       # File type icons
+│   ├── globe.svg                      # Web/global icons
+│   ├── next.svg                       # Next.js branding
+│   ├── ollama.svg                     # Ollama branding
+│   ├── vercel.svg                     # Vercel branding
+│   └── window.svg                     # UI element icons
+├── docs/                              # Comprehensive documentation
+│   ├── AI_SDK_IMPLEMENTATION.md       # Technical implementation details & patterns
+│   ├── CHROMADB_CONTEXT_IMPLEMENTATION.md # Context system implementation guide
+│   └── CHROMADB_SETUP.md             # ChromaDB setup & configuration guide
+├── package.json                       # Dependencies, scripts & project metadata
+├── next.config.ts                     # Next.js configuration with optimizations
+├── eslint.config.mjs                  # ESLint configuration with modern rules
+├── postcss.config.mjs                 # PostCSS configuration for Tailwind
+├── tailwind.config.ts                 # Tailwind CSS configuration with custom theme
+├── tsconfig.json                      # TypeScript configuration with strict settings
+├── tsconfig.tsbuildinfo               # TypeScript build cache
+├── next-env.d.ts                      # Next.js type declarations
+└── README.md                          # This comprehensive documentation
 ```
 
 ### Key Technologies
@@ -343,26 +417,41 @@ agent01/
 - **[Tailwind CSS 4](https://tailwindcss.com/)** - Modern utility-first styling
 - **[Lucide React](https://lucide.dev/)** - Beautiful, consistent icons
 
-#### **AI Integration**
-- **[Vercel AI SDK v4.3.16](https://sdk.vercel.ai/)** - Streaming AI responses with tool integration
-- **[Ollama AI Provider v1.2.0](https://ollama.ai/)** - Local LLM inference engine
-- **[React Markdown v10.1.0](https://github.com/remarkjs/react-markdown)** - Rich text rendering with GFM support
-- **[Rehype Highlight v7.0.2](https://github.com/rehypejs/rehype-highlight)** - Code syntax highlighting
-- **[Remark GFM v4.0.1](https://github.com/remarkjs/remark-gfm)** - GitHub Flavored Markdown support
-- **[Zod v3.25.67](https://zod.dev/)** - Runtime type validation and schema validation
+#### **Core Production Dependencies**
+```json
+{
+  "@ai-sdk/openai": "^1.3.22",          // OpenAI provider for Ollama compatibility
+  "@ai-sdk/react": "^1.2.12",           // React hooks for AI SDK integration
+  "ai": "^4.3.16",                       // Core AI SDK v4 with streaming support
+  "chromadb": "^3.0.6",                 // ChromaDB JavaScript client for vector database
+  "@chroma-core/default-embed": "^0.1.8", // Default embedding functions for ChromaDB
+  "next": "15.3.4",                      // Next.js 15 with App Router and React 19
+  "react": "^19.0.0",                    // Latest React with concurrent features
+  "react-dom": "^19.0.0",               // React DOM with improved hydration
+  "ollama-ai-provider": "^1.2.0",       // Ollama integration provider for AI SDK
+  "react-markdown": "^10.1.0",          // Markdown rendering with GFM support
+  "rehype-highlight": "^7.0.2",         // Code syntax highlighting for markdown
+  "remark-gfm": "^4.0.1",               // GitHub Flavored Markdown support
+  "zod": "^3.25.67",                     // Runtime type validation and schema validation
+  "lucide-react": "^0.523.0",           // Modern icon library with 1000+ icons
+  "pdf-parse": "^1.1.1"                 // PDF content extraction for document processing
+}
+```
 
-#### **Vector Database & Embeddings**
-- **[ChromaDB v3.0.6](https://docs.trychroma.com/)** - Vector database for semantic search
-- **[@chroma-core/default-embed v0.1.8](https://docs.trychroma.com/embeddings)** - Default embedding functions
-- **Custom Ollama Embeddings** - nomic-embed-text integration for high-quality embeddings
-- **Semantic Search** - Context-aware document retrieval and augmentation
-- **Collection Management** - Full CRUD operations for vector database collections
-
-#### **Development Tools**
-- **[ESLint 9](https://eslint.org/)** - Modern code linting with updated configuration
-- **[PostCSS](https://postcss.org/)** - CSS processing pipeline with Tailwind
-- **[TypeScript 5](https://www.typescriptlang.org/)** - Latest TypeScript with enhanced type safety
-- **VS Code Integration** - Optimized development experience with proper task configuration
+#### **Development Dependencies**
+```json
+{
+  "@eslint/eslintrc": "^3",              // ESLint configuration utilities
+  "@tailwindcss/postcss": "^4",         // PostCSS plugin for Tailwind CSS v4
+  "@types/node": "^20",                  // Node.js type definitions
+  "@types/react": "^19",                 // React type definitions for TypeScript
+  "@types/react-dom": "^19",             // React DOM type definitions
+  "eslint": "^9",                        // Latest ESLint with modern rules
+  "eslint-config-next": "15.3.4",       // Next.js optimized ESLint configuration
+  "tailwindcss": "^4",                   // Tailwind CSS v4 with enhanced performance
+  "typescript": "^5"                     // TypeScript 5 with enhanced type safety
+}
+```
 
 ### Core Features Implementation
 
@@ -403,21 +492,27 @@ agent01/
 ### Available Scripts
 
 ```bash
-# Development
+# Core Development Commands
 npm run dev          # Start development server with hot reload
-npm run build        # Build for production
+npm run build        # Build optimized production bundle
 npm run start        # Start production server
-npm run lint         # Run ESLint code analysis
+npm run lint         # Run ESLint code analysis with modern rules
 
-# Utilities
-npm run check-ollama # Check Ollama connection and models
+# Utility Commands
+npm run check-ollama # Check Ollama connection and available models
 
-# ChromaDB Testing (if ChromaDB is set up)
-# Test embeddings API
+# API Testing Commands (when services are running)
+# Test ChromaDB health and connection
+curl "http://localhost:3000/api/chromadb?action=health"
+
+# Test embeddings generation with Ollama
 curl "http://localhost:3000/api/embeddings?action=test"
 
-# Test ChromaDB connection
-curl "http://localhost:3000/api/chromadb?action=health"
+# Check application health status
+curl "http://localhost:3000/api/health"
+
+# Test model availability
+curl "http://localhost:3000/api/models"
 ```
 
 ### Adding New Tools
@@ -487,56 +582,98 @@ Configuration is managed through `src/constraints/app-config.ts`. For environmen
 
 #### **Ollama Connection Issues**
 ```bash
-# Check if Ollama is running
+# Check if Ollama is running and accessible
 curl http://localhost:11434/api/tags
 
-# Restart Ollama service
+# Restart Ollama service (if needed)
 ollama serve
 
-# Pull missing model
-ollama pull llama3.2:3b
+# Verify Ollama installation
+ollama --version
+
+# Check available models
+ollama list
 ```
 
-#### **Model Not Found**
+#### **Model Not Found Errors**
 ```bash
-# List available models
+# List currently available models
 ollama list
 
 # Pull the specific model you need
+ollama pull llama3.2:3b
+ollama pull qwen2.5:7b
+ollama pull nomic-embed-text  # For embeddings
+
+# Remove and re-pull if model is corrupted
+ollama rm model-name
 ollama pull model-name
 ```
 
-#### **Tool Support Issues**
-- Small models (1B parameters) typically don't support tools
-- Use models like `llama3.2:3b`, `qwen2.5:7b`, or `mistral:7b`
-- Check the model info in the UI for tool support indicators
+#### **Tool Support & Compatibility Issues**
+- **Small models** (1B parameters) typically don't support function calling
+- **Recommended tool-compatible models**: `llama3.2:3b`, `qwen2.5:7b`, `mistral:7b`, `gemma2:9b`
+- Check the model info in the UI for tool support indicators (🔧 = supported, ⚠️ = not supported)
+- The app automatically detects tool capabilities and displays warnings
 
-#### **ChromaDB Not Available**
+#### **ChromaDB Vector Database Issues**
 ```bash
 # Check if ChromaDB is running
 curl http://localhost:8000/api/v1/heartbeat
 
-# Start ChromaDB server
+# Start ChromaDB server (Python installation required)
+pip install chromadb
 chroma run --host localhost --port 8000
 
-# Install ChromaDB if not available
-pip install chromadb
+# Alternative: Docker installation
+docker run -p 8000:8000 chromadb/chroma
+
+# Check ChromaDB version
+python -c "import chromadb; print(chromadb.__version__)"
 ```
 
-#### **Embedding Issues**
+#### **Embedding & Semantic Search Issues**
 ```bash
-# Ensure embedding model is available
+# Ensure embedding model is available in Ollama
 ollama pull nomic-embed-text
 
-# Test embedding generation
+# Test embedding generation via API
 curl "http://localhost:3000/api/embeddings?action=test"
+
+# Check ChromaDB collections
+curl "http://localhost:3000/api/chromadb?action=collections"
+
+# Verify embedding dimensions match (nomic-embed-text uses 768 dimensions)
 ```
 
-#### **Performance Optimization**
-- Use smaller context windows for faster responses
-- Lower temperature for more consistent outputs
-- Adjust `num_predict` to control response length
-- Consider model size vs. performance trade-offs
+#### **Performance & Memory Issues**
+- **Reduce context window** for faster responses (lower memory usage)
+- **Lower temperature** (0.3-0.5) for more consistent outputs
+- **Adjust max tokens** to control response length and processing time
+- **Consider model size vs performance trade-offs** (3B vs 7B vs 13B models)
+- **Monitor system resources** when running multiple models simultaneously
+
+#### **File Upload & Multimodal Issues**
+- **Supported file types**: Images (PNG, JPEG, GIF, WebP, BMP), Documents (PDF, TXT, CSV, JSON, DOCX, DOC)
+- **File size limits**: Check browser and server limits for large files
+- **Vision model requirements**: Use vision-capable models for image processing
+- **PDF processing**: Ensure `pdf-parse` dependency is properly installed
+
+#### **Application Startup Issues**
+```bash
+# Clear Next.js cache
+rm -rf .next
+
+# Clear node modules and reinstall
+rm -rf node_modules package-lock.json
+npm install
+
+# Check for TypeScript errors
+npm run lint
+
+# Verify all dependencies are installed
+npm ls
+```
 
 ## 🚀 Deployment
 
@@ -646,34 +783,56 @@ EMBEDDING_MODEL=nomic-embed-text
 
 ## 🤝 Contributing
 
+We welcome contributions that enhance the application's capabilities and user experience!
+
 ### Development Setup
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Install dependencies: `npm install`
-4. Start development server: `npm run dev`
-5. Make your changes and test thoroughly
-6. Commit changes: `git commit -m 'Add amazing feature'`
-7. Push to your fork: `git push origin feature/amazing-feature`
-8. Create a Pull Request
+1. **Fork the repository** on GitHub
+2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
+3. **Install dependencies**: `npm install`
+4. **Start development server**: `npm run dev`
+5. **Start required services**:
+   ```bash
+   # Start Ollama
+   ollama serve
+   
+   # Start ChromaDB (optional)
+   chroma run --host localhost --port 8000
+   ```
+6. **Make your changes** and test thoroughly
+7. **Commit changes**: `git commit -m 'Add amazing feature'`
+8. **Push to your fork**: `git push origin feature/amazing-feature`
+9. **Create a Pull Request** with detailed description
 
 ### Contribution Guidelines
-- Follow TypeScript best practices
-- Add tests for new features
-- Update documentation as needed
-- Ensure code passes ESLint checks
-- Test with multiple Ollama models
-- Consider accessibility in UI changes
+- **Follow TypeScript best practices** with strict type checking
+- **Add comprehensive tests** for new features and bug fixes
+- **Update documentation** as needed (README, code comments, /docs folder)
+- **Ensure code passes** ESLint checks (`npm run lint`)
+- **Test with multiple Ollama models** to ensure compatibility
+- **Consider accessibility** in all UI changes (ARIA labels, keyboard navigation)
+- **Follow semantic commit messages** for clear history
 
-### Areas for Contribution
-- **New Tools** - Add useful function calling tools
-- **UI/UX Improvements** - Enhance the user interface
-- **Model Support** - Add support for new AI providers
-- **Performance** - Optimize streaming and rendering
-- **Documentation** - Improve guides and examples
-- **Testing** - Add comprehensive test coverage
-- **ChromaDB Features** - Enhance vector database functionality
-- **Embedding Models** - Add support for additional embedding providers
-- **Collection Management** - Improve document and collection operations
+### Priority Areas for Contribution
+- **🔧 New Tools & Integrations** - Add useful function calling tools (web search, API integrations, calculations)
+- **🎨 UI/UX Improvements** - Enhance the user interface, animations, and user experience
+- **🤖 AI Model Support** - Add support for new AI providers (OpenAI, Anthropic, Google, etc.)
+- **⚡ Performance Optimization** - Optimize streaming, rendering, memory usage, and response times
+- **📚 Documentation & Examples** - Improve guides, tutorials, and usage examples
+- **🧪 Testing & Quality** - Add comprehensive test coverage (unit, integration, e2e)
+- **🗄️ ChromaDB Features** - Enhance vector database functionality, collection management, search
+- **🔗 Embedding Models** - Add support for additional embedding providers and models
+- **📄 Document Processing** - Improve PDF, DOCX, and other document format support
+- **🌐 Internationalization** - Add multi-language support and localization
+- **♿ Accessibility** - Enhance screen reader support and keyboard navigation
+- **🔒 Security** - Improve input validation, sanitization, and secure practices
+
+### Code Style & Standards
+- Use **TypeScript** for all new code with proper type definitions
+- Follow **React 19** best practices with functional components and hooks
+- Use **Tailwind CSS** for styling with consistent design patterns
+- Implement **Zod schemas** for all validation and type safety
+- Add **JSDoc comments** for complex functions and components
+- Follow **Next.js 15** conventions for API routes and components
 
 ## 📄 License
 
@@ -687,15 +846,31 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **[Tailwind CSS](https://tailwindcss.com)** for beautiful, responsive styling
 - **The open-source community** for inspiration and contributions
 
-## 📞 Support
+## 📞 Support & Resources
 
-- **Issues** - [GitHub Issues](https://github.com/dchpro87/agent01/issues)
-- **Discussions** - [GitHub Discussions](https://github.com/dchpro87/agent01/discussions)
-- **Documentation** - Check `/docs` folder for detailed guides
-- **Ollama Help** - [Ollama Documentation](https://ollama.ai/docs)
+### Getting Help
+- **📋 Issues** - [GitHub Issues](https://github.com/dchpro87/agent01/issues) for bug reports and feature requests
+- **💬 Discussions** - [GitHub Discussions](https://github.com/dchpro87/agent01/discussions) for questions and community support
+- **📖 Documentation** - Check `/docs` folder for detailed technical guides and implementation details
+- **🦙 Ollama Help** - [Ollama Documentation](https://ollama.ai/docs) for model setup and configuration
+- **🗄️ ChromaDB Support** - [ChromaDB Documentation](https://docs.trychroma.com/) for vector database questions
+
+### External Resources
+- **[Vercel AI SDK Documentation](https://sdk.vercel.ai/)** - Official AI SDK guides and API reference
+- **[Next.js 15 Documentation](https://nextjs.org/docs)** - Framework documentation and best practices  
+- **[React 19 Documentation](https://react.dev/)** - Latest React features and patterns
+- **[Tailwind CSS Documentation](https://tailwindcss.com/docs)** - Styling framework and utility classes
+- **[TypeScript Handbook](https://www.typescriptlang.org/docs/)** - Type safety and advanced TypeScript features
+
+### Community & Updates
+- **⭐ Star this repository** if you find it helpful!
+- **🔔 Watch** for updates and new releases
+- **🍴 Fork** to create your own customized version
+- **🐛 Report bugs** to help improve the application
+- **💡 Suggest features** for future development
 
 ---
 
 **Built with ❤️ by [dchpro87](https://github.com/dchpro87)**
 
-*Star ⭐ this repo if you find it helpful!*
+*Experience the future of AI-powered conversations with advanced context understanding and intelligent tool integration.*

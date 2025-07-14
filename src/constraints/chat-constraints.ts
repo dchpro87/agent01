@@ -120,25 +120,6 @@ export function getRecommendedModels(
   }
 }
 
-// Check if model is recommended for production use
-export function isProductionReady(modelName: string): boolean {
-  const capabilities = getModelCapabilities(modelName);
-  if (!capabilities) return false;
-
-  // Production ready criteria: context size >= 4096 and not in lightweight category
-  const lightweightModels = [
-    "qwen3:0.6b",
-    "gemma:1b",
-    "gemma2:1b",
-    "gemma3:1b",
-    "tinyllama",
-  ];
-  return (
-    capabilities.contextSize >= 4096 &&
-    !lightweightModels.some((model) => modelName.toLowerCase().includes(model))
-  );
-}
-
 // Legacy exports for backward compatibility (deprecated - use getModelCapabilities instead)
 export const TOOL_SUPPORTED_MODELS = Object.keys(MODEL_DATABASE).filter(
   (key) => MODEL_DATABASE[key].tools

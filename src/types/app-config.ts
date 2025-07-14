@@ -16,4 +16,8 @@ export interface AppConfig {
     enabled: boolean;
     logLevel: "debug" | "info" | "warn" | "error";
   };
+  serpApi?: {
+    apiKey: string;
+    timeout?: number;
+  };
 }

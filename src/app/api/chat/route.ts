@@ -204,7 +204,7 @@ export async function POST(req: Request) {
 
     const requestBody = await req.json();
     console.log(
-      "🔍 💥💥💥💥Request body received:",
+      "🔍 💥Request body received:",
       JSON.stringify(requestBody, null, 2)
     );
 
@@ -295,7 +295,7 @@ export async function POST(req: Request) {
             chunksToRetrieve
           );
 
-          console.log("🧨🧨 Relevant documents found:", relevantDocs);
+          console.log("🧨 Relevant documents found:", relevantDocs);
 
           if (relevantDocs.length > 0) {
             const contextPrompt = `\n\nRelevant context from knowledge base:\n${relevantDocs
@@ -305,7 +305,7 @@ export async function POST(req: Request) {
               )
               .join(
                 "\n\n"
-              )}\n\nPlease use this context to provide a more informed response.`;
+              )}\n\Always use this context to provide a more informed response.`;
 
             finalSystemPromptWithContext = finalSystemPrompt + contextPrompt;
           }

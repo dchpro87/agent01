@@ -1,4 +1,292 @@
 import { z } from "zod";
+import { getJson } from "serpapi";
+import { APP_CONFIG } from "@/constraints/app-config";
+
+// Type definitions for SerpApi responses
+interface SearchResult {
+  title?: string;
+  snippet?: string;
+  description?: string;
+  link?: string;
+  url?: string;
+  publication_info?: {
+    authors?: string;
+    summary?: string;
+  };
+}
+
+interface NewsResult {
+  title?: string;
+  snippet?: string;
+  date?: string;
+  source?: string;
+  link?: string;
+}
+
+interface ShoppingResult {
+  title?: string;
+  price?: string;
+  rating?: string;
+  source?: string;
+  link?: string;
+}
+
+interface ImageResult {
+  title?: string;
+  original?: {
+    width?: string;
+    height?: string;
+    link?: string;
+  };
+  source?: string;
+}
+
+interface VideoResult {
+  title?: string;
+  channel?: string;
+  duration?: string;
+  views?: string;
+  published_date?: string;
+  link?: string;
+}
+
+interface SerpApiResponse {
+  organic_results?: SearchResult[];
+  news_results?: NewsResult[];
+  shopping_results?: ShoppingResult[];
+  images_results?: ImageResult[];
+  video_results?: VideoResult[];
+  answer_box?: {
+    answer?: string;
+    snippet?: string;
+    link?: string;
+  };
+  knowledge_graph?: {
+    title?: string;
+    description?: string;
+    website?: string;
+  };
+  related_questions?: Array<{ question: string }>;
+  total_results?: number;
+  search_metadata?: {
+    id?: string;
+    processing_time_ms?: number;
+  };
+}
+
+interface SearchParams {
+  engine: string;
+  api_key: string;
+  q: string;
+  num: number;
+  location?: string;
+  hl?: string;
+  safe?: string;
+  tbs?: string;
+  [key: string]: string | number | undefined; // Allow additional properties
+}
+
+// Helper function to format search results based on engine type
+function formatSearchResults(
+  response: SerpApiResponse,
+  engine: string
+): string {
+  let formatted = "";
+
+  try {
+    switch (engine) {
+      case "google":
+      case "bing":
+      case "yahoo":
+      case "duckduckgo":
+        // Standard web search results
+        if (response.organic_results && response.organic_results.length > 0) {
+          formatted += "🌐 **Web Results:**\n";
+          response.organic_results
+            .slice(0, 10)
+            .forEach((result: SearchResult, index: number) => {
+              formatted += `\n${index + 1}. **${
+                result.title || "No title"
+              }**\n`;
+              formatted += `   ${
+                result.snippet || result.description || "No description"
+              }\n`;
+              formatted += `   🔗 ${result.link || result.url || "No URL"}\n`;
+            });
+        }
+
+        // Answer box/featured snippet
+        if (response.answer_box) {
+          formatted += "\n💡 **Featured Answer:**\n";
+          formatted +=
+            `${response.answer_box.answer}` ||
+            `${response.answer_box.snippet}` ||
+            "No answer available";
+          formatted += `\n`;
+          if (response.answer_box.link) {
+            formatted += `🔗 Source: ${response.answer_box.link}\n`;
+          }
+        }
+
+        // Knowledge graph
+        if (response.knowledge_graph) {
+          formatted += "\n📚 **Knowledge Graph:**\n";
+          formatted += `**${response.knowledge_graph.title || "No title"}**\n`;
+          formatted +=
+            `${response.knowledge_graph.description}` || "No description";
+          formatted += `\n`;
+          if (response.knowledge_graph.website) {
+            formatted += `🌐 Website: ${response.knowledge_graph.website}\n`;
+          }
+        }
+
+        // Related questions
+        if (
+          response.related_questions &&
+          response.related_questions.length > 0
+        ) {
+          formatted += "\n❓ **Related Questions:**\n";
+          response.related_questions
+            .slice(0, 3)
+            .forEach((q: { question: string }, index: number) => {
+              formatted += `${index + 1}. ${q.question}\n`;
+            });
+        }
+        break;
+
+      case "google_news":
+        if (response.news_results && response.news_results.length > 0) {
+          formatted += "📰 **News Results:**\n";
+          response.news_results
+            .slice(0, 10)
+            .forEach((article: NewsResult, index: number) => {
+              formatted += `\n${index + 1}. **${
+                article.title || "No title"
+              }**\n`;
+              formatted += `   ${article.snippet || "No snippet"}\n`;
+              formatted += `   📅 ${article.date || "No date"}\n`;
+              formatted += `   📰 Source: ${
+                article.source || "Unknown source"
+              }\n`;
+              formatted += `   🔗 ${article.link || "No URL"}\n`;
+            });
+        }
+        break;
+
+      case "google_shopping":
+        if (response.shopping_results && response.shopping_results.length > 0) {
+          formatted += "🛒 **Shopping Results:**\n";
+          response.shopping_results
+            .slice(0, 10)
+            .forEach((product: ShoppingResult, index: number) => {
+              formatted += `\n${index + 1}. **${
+                product.title || "No title"
+              }**\n`;
+              formatted += `   💰 Price: ${
+                product.price || "Price not available"
+              }\n`;
+              formatted += `   ⭐ Rating: ${product.rating || "No rating"}\n`;
+              formatted += `   🏪 Store: ${
+                product.source || "Unknown store"
+              }\n`;
+              formatted += `   🔗 ${product.link || "No URL"}\n`;
+            });
+        }
+        break;
+
+      case "google_images":
+        if (response.images_results && response.images_results.length > 0) {
+          formatted += "🖼️ **Image Results:**\n";
+          response.images_results
+            .slice(0, 10)
+            .forEach((image: ImageResult, index: number) => {
+              formatted += `\n${index + 1}. **${image.title || "No title"}**\n`;
+              formatted += `   📏 Size: ${image.original?.width || "Unknown"}x${
+                image.original?.height || "Unknown"
+              }\n`;
+              formatted += `   🔗 Image: ${image.original?.link || "No URL"}\n`;
+              formatted += `   🌐 Source: ${
+                image.source || "Unknown source"
+              }\n`;
+            });
+        }
+        break;
+
+      case "youtube":
+        if (response.video_results && response.video_results.length > 0) {
+          formatted += "🎥 **Video Results:**\n";
+          response.video_results
+            .slice(0, 10)
+            .forEach((video: VideoResult, index: number) => {
+              formatted += `\n${index + 1}. **${video.title || "No title"}**\n`;
+              formatted += `   📺 Channel: ${
+                video.channel || "Unknown channel"
+              }\n`;
+              formatted += `   ⏱️ Duration: ${
+                video.duration || "Unknown duration"
+              }\n`;
+              formatted += `   👀 Views: ${video.views || "Unknown views"}\n`;
+              formatted += `   📅 Published: ${
+                video.published_date || "Unknown date"
+              }\n`;
+              formatted += `   🔗 ${video.link || "No URL"}\n`;
+            });
+        }
+        break;
+
+      case "google_scholar":
+        if (response.organic_results && response.organic_results.length > 0) {
+          formatted += "🎓 **Academic Results:**\n";
+          response.organic_results
+            .slice(0, 10)
+            .forEach((paper: SearchResult, index: number) => {
+              formatted += `\n${index + 1}. **${paper.title || "No title"}**\n`;
+              formatted += `   ✍️ Authors: ${
+                paper.publication_info?.authors || "Unknown authors"
+              }\n`;
+              formatted += `   📚 Publication: ${
+                paper.publication_info?.summary || "Unknown publication"
+              }\n`;
+              formatted += `   📄 Snippet: ${paper.snippet || "No snippet"}\n`;
+              formatted += `   🔗 ${paper.link || "No URL"}\n`;
+            });
+        }
+        break;
+
+      default:
+        // Fallback for other engines
+        if (response.organic_results && response.organic_results.length > 0) {
+          formatted += "🔍 **Search Results:**\n";
+          response.organic_results
+            .slice(0, 10)
+            .forEach((result: SearchResult, index: number) => {
+              formatted += `\n${index + 1}. **${
+                result.title || "No title"
+              }**\n`;
+              formatted += `   ${
+                result.snippet || result.description || "No description"
+              }\n`;
+              formatted += `   🔗 ${result.link || result.url || "No URL"}\n`;
+            });
+        }
+    }
+
+    // Add additional info if available
+    if (response.total_results) {
+      formatted += `\n📊 Total Results Found: ${response.total_results.toLocaleString()}\n`;
+    }
+
+    if (!formatted.trim()) {
+      formatted = "No results found for this query.";
+    }
+  } catch (error) {
+    formatted = `Error formatting results: ${
+      error instanceof Error ? error.message : "Unknown error"
+    }`;
+  }
+
+  return formatted;
+}
 
 export const tools = {
   /** Get the current date and time */
@@ -43,6 +331,7 @@ export const tools = {
       }
     },
   },
+
   /** Calculate Body Mass Index (BMI) */
   calculateBMI: {
     description:
@@ -119,6 +408,7 @@ BMI Categories:
       }
     },
   },
+
   /** Get current weather information for a location */
   getWeather: {
     description:
@@ -220,6 +510,165 @@ In a production environment, this would connect to a real weather API.`;
           error instanceof Error ? error.message : "Unknown error"
         }`;
         console.log("🔧 getWeather tool error:", errorResult);
+        return errorResult;
+      }
+    },
+  },
+
+  /** Web search tool using SerpApi to search across multiple search engines */
+  searchWeb: {
+    description:
+      "Search the web across various search engines (Google, Bing, Yahoo, etc.) using SerpApi. This tool can perform web searches, find specific information, get search results, news, images, shopping results, and more. Useful for finding current information, research, competitive analysis, and content discovery.",
+    parameters: z.object({
+      query: z.string().describe("The search query or keywords to search for"),
+      engine: z
+        .enum([
+          "google",
+          "bing",
+          "yahoo",
+          "duckduckgo",
+          "yandex",
+          "baidu",
+          "google_news",
+          "google_scholar",
+          "google_shopping",
+          "google_images",
+          "youtube",
+        ])
+        .optional()
+        .default("google")
+        .describe("The search engine to use for the search"),
+      location: z
+        .string()
+        .optional()
+        .describe(
+          "Location for localized search results (e.g., 'Austin, Texas', 'London, UK')"
+        ),
+      resultsCount: z
+        .number()
+        .min(1)
+        .max(100)
+        .optional()
+        .default(10)
+        .describe("Number of search results to return (1-100)"),
+      language: z
+        .string()
+        .optional()
+        .describe("Language code for search results (e.g., 'en', 'es', 'fr')"),
+      safeSearch: z
+        .enum(["active", "moderate", "off"])
+        .optional()
+        .default("moderate")
+        .describe("Safe search filter level"),
+      timeframe: z
+        .enum(["hour", "day", "week", "month", "year"])
+        .optional()
+        .describe(
+          "Time filter for recent results (only for supported engines)"
+        ),
+    }),
+    execute: async ({
+      query,
+      engine = "google",
+      location,
+      resultsCount = 10,
+      language,
+      safeSearch = "moderate",
+      timeframe,
+    }: {
+      query: string;
+      engine?: string;
+      location?: string;
+      resultsCount?: number;
+      language?: string;
+      safeSearch?: "active" | "moderate" | "off";
+      timeframe?: "hour" | "day" | "week" | "month" | "year";
+    }) => {
+      console.log("🔧 searchWeb tool called with:", {
+        query,
+        engine,
+        location,
+        resultsCount,
+        language,
+        safeSearch,
+        timeframe,
+      });
+      try {
+        // Get API key from app configuration
+        const apiKey = APP_CONFIG.serpApi?.apiKey;
+
+        if (!apiKey) {
+          const errorResult =
+            "SerpApi API key not found. Please add SERP_API_KEY to your environment variables or update the app configuration.";
+          console.log("🔧 searchWeb tool error:", errorResult);
+          return errorResult;
+        }
+
+        // Build search parameters
+        const searchParams: SearchParams = {
+          engine: engine,
+          api_key: apiKey,
+          q: query,
+          num: resultsCount,
+        };
+
+        // Add optional parameters
+        if (location) {
+          searchParams.location = location;
+        }
+
+        if (language) {
+          searchParams.hl = language;
+        }
+
+        if (safeSearch !== "moderate") {
+          searchParams.safe = safeSearch;
+        }
+
+        // Add time-based filtering for supported engines
+        if (timeframe && (engine === "google" || engine === "google_news")) {
+          const timeMapping = {
+            hour: "h",
+            day: "d",
+            week: "w",
+            month: "m",
+            year: "y",
+          };
+          searchParams.tbs = `qdr:${timeMapping[timeframe]}`;
+        }
+
+        console.log("🔧 Calling SerpApi with parameters:", searchParams);
+
+        // Perform the search
+        const response = await getJson(searchParams);
+
+        console.log("🔧 SerpApi response received");
+
+        // Format the response based on the engine type
+        const formattedResults = formatSearchResults(response, engine);
+
+        const result = `🔍 Web Search Results for "${query}" using ${engine.toUpperCase()}:
+
+${formattedResults}
+
+📊 Search Metadata:
+• Engine: ${engine}
+• Query: ${query}
+• Location: ${location || "Global"}
+• Results: ${resultsCount}
+• Search ID: ${response.search_metadata?.id || "N/A"}
+• Processing Time: ${response.search_metadata?.processing_time_ms || "N/A"}ms
+• Timestamp: ${new Date().toLocaleString()}
+
+Powered by SerpApi`;
+
+        console.log("🔧 searchWeb tool result length:", result.length);
+        return result;
+      } catch (error) {
+        const errorResult = `Error performing web search: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`;
+        console.log("🔧 searchWeb tool error:", errorResult);
         return errorResult;
       }
     },

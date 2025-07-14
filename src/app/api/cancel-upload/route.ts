@@ -1,5 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
-import { chromaDBManager } from "@/lib/chromadb";
+import { NextRequest, NextResponse } from 'next/server';
+import { ChromaClient } from 'chromadb';
+import { CHROMADB_BASE_URL } from '@/constraints/chromadb-constraints';
+
+let client: ChromaClient | null = null;
+
+async function getClient(): Promise<ChromaClient> {
+  if (!client) {
+    client = new ChromaClient({
+      path: CHROMADB_BASE_URL,
+    });
+  }
+  return client;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -7,7 +19,7 @@ export async function POST(request: NextRequest) {
 
     if (!collectionName) {
       return NextResponse.json(
-        { error: "Collection name is required" },
+        { error: 'Collection name is required' },
         { status: 400 }
       );
     }
@@ -16,106 +28,114 @@ export async function POST(request: NextRequest) {
       `Performing cleanup for collection: ${collectionName}, file: ${fileName}`
     );
 
-    // Check if collection exists
-    const collections = await chromaDBManager.getCollections();
-    const collection = collections.find((c) => c.name === collectionName);
+    const chromaClient = await getClient();
 
-    if (!collection) {
-      console.log(`Collection ${collectionName} not found, no cleanup needed`);
+    // Check if collection exists
+    let collection;
+    try {
+      collection = await chromaClient.getCollection({ name: collectionName });
+    } catch (collectionError) {
+      console.log(`Collection ${collectionName} not found:`, collectionError);
       return NextResponse.json({
-        message: "Collection not found, no cleanup needed",
+        message: 'Collection not found, no cleanup needed',
         cleaned: false,
       });
     }
 
-    // Get all documents in the collection to check for partial uploads
-    const documents = await chromaDBManager.getCollectionDocuments(
-      collectionName
-    );
+    if (fileName) {
+      try {
+        // Get all documents in the collection
+        const results = await collection.get();
 
-    if (fileName && documents.documents.length > 0) {
-      // Look for documents that might be from the cancelled upload
-      // This approach uses timestamp-based filtering for recently added documents
-      const now = Date.now();
-      const fiveMinutesAgo = now - 5 * 60 * 1000; // 5 minutes ago
-
-      const recentDocuments = documents.documents.filter((doc) => {
-        // Check if metadata contains the filename or if document was recently added
-        const metadata = doc.metadata;
-        if (metadata && typeof metadata === "object") {
-          // Check for filename match
-          const hasFilename =
-            ("source" in metadata &&
-              typeof metadata.source === "string" &&
-              metadata.source.includes(fileName)) ||
-            ("filename" in metadata &&
-              typeof metadata.filename === "string" &&
-              metadata.filename.includes(fileName));
-
-          // Check for recent timestamp (if available)
-          const hasRecentTimestamp =
-            "timestamp" in metadata &&
-            typeof metadata.timestamp === "number" &&
-            metadata.timestamp > fiveMinutesAgo;
-
-          // Check for upload session (if available)
-          const hasUploadSession =
-            "uploadSession" in metadata &&
-            typeof metadata.uploadSession === "string";
-
-          return hasFilename || hasRecentTimestamp || hasUploadSession;
+        if (!results.ids || results.ids.length === 0) {
+          return NextResponse.json({
+            message: 'Collection is empty, no cleanup needed',
+            cleaned: false,
+          });
         }
-        return false;
-      });
 
-      if (recentDocuments.length > 0) {
-        console.log(`Found ${recentDocuments.length} documents to clean up`);
+        // Look for documents that might be from the cancelled upload
+        // Filter based on metadata containing the filename
+        const documentsToDelete: string[] = [];
 
-        // Delete the documents that match the cancelled file
-        const documentIds = recentDocuments.map((doc) => doc.id);
+        if (results.metadatas) {
+          results.ids.forEach((id, index) => {
+            const metadata = results.metadatas?.[index];
+            if (metadata && typeof metadata === 'object') {
+              // Check if metadata contains the filename
+              const hasFilename =
+                (metadata.source_file &&
+                  typeof metadata.source_file === 'string' &&
+                  metadata.source_file === fileName) ||
+                (metadata.filename &&
+                  typeof metadata.filename === 'string' &&
+                  metadata.filename === fileName);
 
-        try {
-          await chromaDBManager.deleteDocuments(collectionName, documentIds);
+              // Also check for recent timestamp (within last 10 minutes for safety)
+              const now = Date.now();
+              const tenMinutesAgo = now - 10 * 60 * 1000;
+              const hasRecentTimestamp =
+                metadata.upload_timestamp &&
+                typeof metadata.upload_timestamp === 'string' &&
+                new Date(metadata.upload_timestamp).getTime() > tenMinutesAgo;
+
+              if (hasFilename || hasRecentTimestamp) {
+                documentsToDelete.push(id);
+              }
+            }
+          });
+        }
+
+        if (documentsToDelete.length > 0) {
           console.log(
-            `Successfully deleted ${documentIds.length} documents from ${collectionName}`
+            `Found ${documentsToDelete.length} documents to clean up`
+          );
+
+          // Delete the documents that match the cancelled file
+          await collection.delete({ ids: documentsToDelete });
+
+          console.log(
+            `Successfully deleted ${documentsToDelete.length} documents from ${collectionName}`
           );
 
           return NextResponse.json({
-            message: `Cleanup completed: removed ${documentIds.length} documents`,
+            message: `Cleanup completed: removed ${documentsToDelete.length} documents`,
             cleaned: true,
-            documentsRemoved: documentIds.length,
-            removedDocuments: documentIds,
+            documentsRemoved: documentsToDelete.length,
+            removedDocuments: documentsToDelete,
           });
-        } catch (deleteError) {
-          console.error(
-            "Error deleting documents during cleanup:",
-            deleteError
-          );
-          return NextResponse.json(
-            {
-              message: "Partial cleanup completed with errors",
-              cleaned: false,
-              error:
-                deleteError instanceof Error
-                  ? deleteError.message
-                  : "Unknown error",
-            },
-            { status: 500 }
-          );
+        } else {
+          return NextResponse.json({
+            message: 'No matching documents found for cleanup',
+            cleaned: false,
+          });
         }
+      } catch (deleteError) {
+        console.error('Error during document cleanup:', deleteError);
+        return NextResponse.json(
+          {
+            message: 'Cleanup failed',
+            cleaned: false,
+            error:
+              deleteError instanceof Error
+                ? deleteError.message
+                : 'Unknown error',
+          },
+          { status: 500 }
+        );
       }
     }
 
     return NextResponse.json({
-      message: "No cleanup needed - no matching documents found",
+      message: 'No filename provided for cleanup',
       cleaned: false,
     });
   } catch (error) {
-    console.error("Error during cleanup:", error);
+    console.error('Error during cleanup:', error);
     return NextResponse.json(
       {
-        error: "Cleanup failed",
-        details: error instanceof Error ? error.message : "Unknown error",
+        error: 'Cleanup failed',
+        details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     );

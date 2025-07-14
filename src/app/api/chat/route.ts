@@ -12,7 +12,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { streamText, CoreMessage } from "ai";
 import { AILogger, generateRequestId } from "@/lib/ai-middleware";
 import { aiConfig, validateConfig } from "@/lib/ai-config";
-import { tools } from "@/lib/tools";
+import { tools } from "@/lib/tools-main";
 import { z } from "zod";
 import { OllamaModelOptions } from "@/types/ollama";
 import { CHROMADB_DEFAULTS } from "@/constraints/chromadb-constraints";

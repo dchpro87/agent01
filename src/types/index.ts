@@ -44,3 +44,6 @@ export type ChatStatus = "idle" | "submitted" | "streaming";
 
 // Re-export app config types
 export * from "./app-config";
+
+// Re-export SerpApi types
+export * from "./serpapi";

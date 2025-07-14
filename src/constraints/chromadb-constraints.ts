@@ -1,6 +1,5 @@
 /**
- * ChromaDB-related constraints
- */
+ * ChromaDB-related constraints */
 
 // ChromaDB server configuration
 export const CHROMADB_BASE_URL = "http://localhost:8000";

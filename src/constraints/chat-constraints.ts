@@ -150,7 +150,7 @@ export const VALIDATION_LIMITS = {
   MAX_TOKENS_MIN: 1,
   MAX_TOKENS_MAX: 32000,
   NUM_CTX_MIN: 1,
-  NUM_CTX_MAX: 32000,
+  NUM_CTX_MAX: 128000,
   TEMPERATURE_MIN: 0,
   TEMPERATURE_MAX: 2,
   TOP_P_MIN: 0,
@@ -161,7 +161,7 @@ export const VALIDATION_LIMITS = {
 // Validation Error Messages
 export const VALIDATION_ERROR_MESSAGES = {
   MAX_TOKENS_RANGE: "maxTokens/num_predict must be between 1 and 32000",
-  NUM_CTX_RANGE: "num_ctx must be between 1 and 32000",
+  NUM_CTX_RANGE: "num_ctx must be between 1 and 128000",
   TEMPERATURE_RANGE: "temperature must be between 0 and 2",
   TOP_P_RANGE: "top_p must be between 0 and 1",
   TOP_P_DECIMALS: "top_p can only have 1 decimal place",

@@ -11,6 +11,7 @@ import {
   Lightbulb,
   Database,
 } from "lucide-react";
+import Message from "./Message";
 
 interface Model {
   name: string;
@@ -111,9 +112,21 @@ export default function ModelSelector({
 
   if (error || models.length === 0) {
     return (
-      <div className='flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400'>
-        <Bot className='w-4 h-4' />
-        <span>{error || "No models available"}</span>
+      <div className='relative'>
+        <div className='flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400'>
+          <Bot className='w-4 h-4' />
+          <span>Model Error</span>
+        </div>
+        <div className='absolute top-full left-0 mt-2 w-80 z-50'>
+          <Message
+            message={error || "No models available"}
+            type='error'
+            isVisible={true}
+            onClose={() => setError(null)}
+            autoHide={true}
+            autoHideDelay={5000}
+          />
+        </div>
       </div>
     );
   }

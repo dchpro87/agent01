@@ -1,8 +1,28 @@
-# Agent01 - Advanced AI Chat Application with Vector Database
+# Agent01 - Adva### 🗄️ **Vector Database & Context Management**
+- **ChromaDB Integration** - Full vector database support with semanti### **Improved User Experience**
+- **🌐 Real-time Web Search Interface** - Seamless integration of web search results with formatted, structured output
+- **📄 Advanced PDF Management** - Drag-and-drop PDF upload with real-time processing progress and detailed analytics
+- **🗄️ Enhanced Vector Database UI** - Improved collection management with document browsing and metadata viewing
+- **📱 Advanced File Management** - Better preview, validation, and processing for multimodal content
+- **🎨 Responsive Design Enhancements** - Optimized interface for all device sizes with improved accessibility
+- **⚡ Performance Optimizations** - Faster streaming, better error handling, and enhanced connection monitoring
+- **🛡️ Enhanced Security** - Comprehensive input validation, secure file handling, and improved error boundaries
+- **📈 Real-time Diagnostics** - Advanced health monitoring with actionable insights and suggestions
+- **🔄 Intelligent Error Recovery** - Automatic retry logic and graceful degradation for better reliabilitych capabilities
+- **Advanced PDF Processing** - Streaming PDF upload with real-time progress tracking and intelligent chunking
+- **Context Window Manager** - Visual interface for managing collections and context data
+- **Document Upload & Processing** - Direct PDF upload with automatic text extraction, chunking, and embedding generation
+- **Active Collection System** - Add/remove collections from chat context with real-time indicators
+- **Semantic Search Integration** - Automatic document retrieval based on user queries
+- **Collection Detail Views** - Browse documents, view metadata, and explore collection contents with comprehensive document management
+- **Custom Ollama Embeddings** - High-quality nomic-embed-text integration for superior semantic understanding
+- **Real-time Context Augmentation** - Retrieved documents automatically enhance AI responses
+- **Performance Monitoring** - Detailed metrics for processing time, embedding generation, and storage efficiency
+- **Batch Processing** - Efficient handling of large documents with intelligent batching and error recoveryChat Application with Vector Database & Web Search
 
-A sophisticated feature-rich AI chat application built with **Next.js 15**, **Vercel AI SDK v4**, **Ollama**, and **ChromaDB**. Experience intelligent conversations with advanced streaming, tool integration, customizable personalities, vector database context management, and enterprise-grade monitoring.
+A sophisticated feature-rich AI chat application built with **Next.js 15**, **Vercel AI SDK v4**, **Ollama**, and **ChromaDB**. Experience intelligent conversations with advanced streaming, comprehensive tool integration, customizable personalities, vector database context management, real-time web search capabilities, and enterprise-grade monitoring.
 
-> **Latest Update:** July 2025 - Now featuring complete ChromaDB vector database integration, enhanced multimodal support, 8 distinct AI personalities, 5 configuration presets, and advanced context management with semantic search capabilities.
+> **Latest Update:** July 2025 - Now featuring complete ChromaDB vector database integration, SerpAPI web search integration, enhanced multimodal support, 10+ distinct AI personalities, 5 configuration presets, advanced PDF processing, and intelligent context management with semantic search capabilities.
 
 ## ✨ Key Features
 
@@ -43,7 +63,7 @@ A sophisticated feature-rich AI chat application built with **Next.js 15**, **Ve
 - **File Size Validation** - Automatic file size formatting and validation
 
 ### 🎭 **Personality System**
-- **8 Professionally Crafted Personalities** - Distinct AI characters with unique expertise and communication styles:
+- **10+ Professionally Crafted Personalities** - Distinct AI characters with unique expertise and communication styles:
   - **Sarah** - Helpful, practical, and reliable general assistant (default)
   - **Marcus** - Logical, systematic programming expert with technical depth  
   - **Emily** - Patient, encouraging educational tutor with gentle guidance
@@ -52,12 +72,20 @@ A sophisticated feature-rich AI chat application built with **Next.js 15**, **Ve
   - **Dr. Flip** - Brilliant, eccentric scientific inventor with boundless curiosity
   - **Chef Pierre** - Passionate French culinary master with infectious enthusiasm
   - **Grace** - Compassionate, understanding counselor with deep empathy
+  - **Dr. Harrison** - PhD-level consultant for industrial risk assessment and due diligence
+  - **Vision** - OCR specialist for accurate text extraction from images
+  - **Dr. Prometheus** - Expert system prompt engineer and AI instruction designer
 - **Custom Personality Creator** - Full-featured UI for creating and managing personalized AI assistants
 - **Dynamic Personality Switching** - Change AI behavior and expertise mid-conversation seamlessly
-- **Intelligent Categorization** - Organized by General, Technical, Creative, Education, Culinary, and Support
+- **Intelligent Categorization** - Organized by General, Technical, Creative, Education, Culinary, Legal, and Support
 - **Persistent Personality Memory** - All personality settings and custom creations saved automatically
 
 ### 🔧 **Built-in Tools & Function Calling**
+- **Real-time Web Search** - Comprehensive web search across Google, Bing, Yahoo, DuckDuckGo, and specialized engines
+- **SerpAPI Integration** - Professional search API with support for web, news, images, shopping, academic, and video search
+- **Advanced Search Features** - Location-based search, time filtering, safe search, language preferences, and result customization
+- **Multi-Engine Support** - Choose from 11 different search engines including Google Scholar, YouTube, and Google Shopping
+- **Structured Search Results** - Formatted results with featured snippets, knowledge graphs, related questions, and rich metadata
 - **Real-time Clock** - Get current date/time in any timezone with proper formatting and locale support
 - **BMI Calculator** - Health calculations with metric/imperial support and comprehensive category classification
 - **Weather Service** - Location-based weather information with realistic simulation (demo implementation ready for API integration)
@@ -95,19 +123,25 @@ A sophisticated feature-rich AI chat application built with **Next.js 15**, **Ve
 ## 🆕 Latest Features & Updates (July 2025)
 
 ### **Major New Features**
+- **🌐 SerpAPI Web Search Integration** - Professional web search with 11 search engines including Google, Bing, Yahoo, DuckDuckGo, YouTube, and specialized engines
+- **📄 Advanced PDF Processing** - Streaming PDF upload with real-time progress tracking, intelligent chunking, and automatic embedding generation
 - **🗄️ ChromaDB Vector Database Integration** - Complete vector database support with semantic search and context augmentation
 - **📊 Visual Context Window Manager** - Intuitive interface for managing document collections and active context
 - **🔍 Intelligent Semantic Search** - Automatic document retrieval based on conversation context
-- **📄 Collection Detail Views** - Browse documents, view metadata, and explore collection contents
+- **� Collection Detail Views** - Browse documents, view metadata, and explore collection contents with comprehensive management
 - **🎯 Active Collection System** - Real-time visual indicators for context-aware conversations
 - **🔗 Custom Ollama Embeddings** - High-quality nomic-embed-text integration for superior semantic understanding
+- **📈 Performance Analytics** - Detailed metrics for PDF processing, embedding generation, and search performance
 
 ### **Enhanced AI Capabilities**
+- **🌐 Real-time Web Search** - Comprehensive web search integration with SerpAPI supporting 11 search engines
+- **📄 Advanced Document Processing** - Streaming PDF upload with intelligent chunking and real-time progress tracking
 - **⚙️ Configuration Presets** - 5 professionally tuned presets: balanced, creative, precise, coding, analytical
 - **🔧 Smart Tool Toggle** - Intelligent tool enable/disable with model capability detection
 - **📊 Multi-step Conversations** - Extended tool call sequences (up to 5 steps) for complex problem solving
-- **🎭 Advanced Personality System** - 8 distinct, professionally crafted AI personalities with custom creation support
+- **🎭 Advanced Personality System** - 10+ distinct, professionally crafted AI personalities with custom creation support
 - **💾 Enhanced Persistence** - All preferences, personalities, and settings automatically saved
+- **🔍 Context-Aware Responses** - Automatic document retrieval and integration from vector database collections
 
 ### **Improved User Experience**
 - **�️ Advanced File Management** - Better preview, validation, and processing for multimodal content
@@ -123,7 +157,8 @@ A sophisticated feature-rich AI chat application built with **Next.js 15**, **Ve
 1. **Node.js 18+** - [Download here](https://nodejs.org/)
 2. **Ollama** - [Install from ollama.ai](https://ollama.ai)
 3. **ChromaDB (Optional)** - For vector database functionality
-4. **Git** - For cloning the repository
+4. **SerpAPI Key (Optional)** - For web search functionality - [Get your key](https://serpapi.com/manage-api-key)
+5. **Git** - For cloning the repository
 
 ### Installation
 
@@ -149,7 +184,12 @@ A sophisticated feature-rich AI chat application built with **Next.js 15**, **Ve
    ollama pull nomic-embed-text
    ```
 
-3. **Setup ChromaDB (Optional - for vector database features):**
+4. **Get your SerpAPI key (Optional - for web search features):**
+   - Sign up at [SerpAPI](https://serpapi.com) for web search functionality
+   - Get your API key from the [manage API key page](https://serpapi.com/manage-api-key)
+   - Add to your environment: `$env:SERP_API_KEY="your_key_here"` (Windows PowerShell)
+
+5. **Setup ChromaDB (Optional - for vector database features):**
    ```bash
    # Install ChromaDB
    pip install chromadb
@@ -158,17 +198,17 @@ A sophisticated feature-rich AI chat application built with **Next.js 15**, **Ve
    chroma run --host localhost --port 8000
    ```
 
-4. **Start Ollama server:**
+6. **Start Ollama server:**
    ```bash
    ollama serve
    ```
 
-5. **Launch the application:**
+7. **Launch the application:**
    ```bash
    npm run dev
    ```
 
-6. **Open your browser:**
+8. **Open your browser:**
    Navigate to [http://localhost:3000](http://localhost:3000)
 
 ### Environment Configuration (Optional)
@@ -201,6 +241,10 @@ export const APP_CONFIG: AppConfig = {
     baseURL: "http://localhost:8000",      // ChromaDB server endpoint
     timeout: 30000,                        // ChromaDB request timeout
   },
+  serpApi: {
+    apiKey: process.env.SERP_API_KEY || "", // SerpAPI key for web search
+    timeout: 10000,                        // SerpAPI request timeout
+  },
 };
 ```
 
@@ -223,6 +267,10 @@ AI_LOG_LEVEL=info                         # Logging verbosity
 # Vector Database Configuration
 CHROMADB_URL=http://localhost:8000        # ChromaDB server URL
 EMBEDDING_MODEL=nomic-embed-text          # Ollama embedding model
+
+# Web Search Configuration
+SERP_API_KEY=your_serpapi_key_here        # SerpAPI key for web search functionality
+SERP_API_TIMEOUT=10000                    # SerpAPI request timeout (milliseconds)
 ```
 
 > **Recommendation**: Use static configuration for development and environment variables for production deployments.
@@ -234,10 +282,13 @@ EMBEDDING_MODEL=nomic-embed-text          # Ollama embedding model
 ### 🗄️ **Vector Database & Context Management**
 - **One-Click Access**: Click the **🗄️ database icon** in the header to open the intuitive Context Window Manager
 - **Automatic ChromaDB Connection**: Seamless connection to localhost:8000 with real-time health monitoring
+- **Advanced PDF Processing**: Drag-and-drop PDF upload with streaming progress, intelligent chunking, and automatic embedding generation
 - **Visual Collection Browser**: Browse all available vector database collections with metadata and document counts
 - **Smart Context Addition**: Click the database icon on collection cards to instantly add them to active context
 - **Real-time Active Collections**: See currently active collections with green highlighting and count badges
 - **Detailed Document Exploration**: Click collection names to view documents, metadata, and content previews
+- **Document Upload Interface**: Upload PDFs directly through the collection detail view with real-time progress tracking
+- **Performance Analytics**: Monitor processing time, embedding generation, and storage efficiency metrics
 - **Intelligent Semantic Search**: When collections are active, questions automatically trigger relevant document retrieval
 - **Context-Enhanced Responses**: AI responses include pertinent information from your active knowledge base
 - **Flexible Context Management**: Easy add/remove collections with immediate visual feedback and status updates
@@ -251,7 +302,7 @@ EMBEDDING_MODEL=nomic-embed-text          # Ollama embedding model
 - **Intelligent Recommendations**: Model suggestions based on your current task and conversation context
 
 ### 🎭 **Personality Selection & Customization**
-- **Professional Personality Gallery**: Click the **⚙️ settings icon** to explore 8 expertly crafted AI personalities:
+- **Professional Personality Gallery**: Click the **⚙️ settings icon** to explore 10+ expertly crafted AI personalities:
   - **Sarah** - Reliable general assistant with practical problem-solving approach (default choice)
   - **Marcus** - Expert programming assistant with systematic methodology and technical depth
   - **Emily** - Patient educational tutor with gentle guidance and encouraging teaching style
@@ -260,9 +311,12 @@ EMBEDDING_MODEL=nomic-embed-text          # Ollama embedding model
   - **Dr. Flip** - Brilliant eccentric scientist with boundless curiosity and innovative thinking
   - **Chef Pierre** - Passionate French culinary master with infectious enthusiasm and cultural expertise
   - **Grace** - Compassionate counselor with deep empathy and understanding communication
+  - **Dr. Harrison** - PhD-level consultant for industrial risk assessment and due diligence
+  - **Vision** - OCR specialist for accurate text extraction from images
+  - **Dr. Prometheus** - Expert system prompt engineer and AI instruction designer
 - **Custom Personality Creator**: Use the **+ button** to create personalized AI assistants with custom behavior and expertise
 - **Seamless Personality Switching**: Change AI personalities mid-conversation without losing context or history
-- **Intelligent Categorization**: Personalities organized by purpose - General, Technical, Creative, Education, Culinary, Support
+- **Intelligent Categorization**: Personalities organized by purpose - General, Technical, Creative, Education, Culinary, Legal, Support
 - **Persistent Memory**: All personality preferences and custom creations automatically saved for future sessions
 
 ### 📎 **File Attachments & Multimodal Support**
@@ -299,6 +353,12 @@ EMBEDDING_MODEL=nomic-embed-text          # Ollama embedding model
 
 ### 🔧 **Tool Usage & Function Calling**
 Experience the power of function calling with intelligent tools that enhance AI capabilities:
+
+- **Real-time Web Search**: 
+  - *"Search for the latest AI news"* or *"Find restaurants in Tokyo"* - Uses SerpAPI with 11 search engines
+  - Supports Google, Bing, Yahoo, DuckDuckGo, YouTube, Google News, Scholar, Shopping, and Images
+  - Location-based search, time filtering, safe search, and result customization options
+  - Structured results with featured snippets, knowledge graphs, and related questions
 
 - **Time & Date Queries**: 
   - *"What time is it?"* or *"What time is it in Tokyo?"* - Uses getCurrentTime tool with timezone support and locale formatting
@@ -345,17 +405,17 @@ agent01/
 │   │   │   ├── health/route.ts        # Health monitoring & diagnostics endpoint
 │   │   │   ├── models/route.ts        # Model discovery & validation API
 │   │   │   ├── cancel-upload/route.ts # File upload cancellation endpoint
-│   │   │   └── process-pdf-stream/route.ts # PDF processing endpoint
+│   │   │   └── process-pdf-stream/route.ts # Streaming PDF processing endpoint
 │   │   ├── layout.tsx                 # Root layout with theme support & global configuration
 │   │   ├── page.tsx                   # Main application page with chat interface
 │   │   ├── favicon.ico                # Application favicon
 │   │   └── globals.css                # Global styles with Tailwind v4 configuration
 │   ├── components/
 │   │   ├── Chat.tsx                   # Advanced chat UI with streaming, attachments & context
-│   │   ├── CollectionDetail.tsx       # Vector database collection detail view with document browsing
+│   │   ├── CollectionDetail.tsx       # Vector database collection detail view with PDF upload
 │   │   ├── ContextWindowManager.tsx   # ChromaDB context management interface with visual feedback
 │   │   ├── ModelSelector.tsx          # Model selection with capability indicators & health status
-│   │   ├── SystemPromptSelector.tsx   # Personality system with 8 pre-built & custom prompts
+│   │   ├── SystemPromptSelector.tsx   # Personality system with 10+ pre-built & custom prompts
 │   │   ├── ModelConfigSelector.tsx    # Advanced parameter configuration with presets
 │   │   └── ToolSwitch.tsx             # Tool enable/disable toggle with compatibility checking
 │   ├── constraints/
@@ -373,15 +433,27 @@ agent01/
 │   │   ├── chromadb.ts                # ChromaDB client manager & API interface
 │   │   ├── ollama-embedding.ts        # Custom Ollama embedding function for ChromaDB
 │   │   ├── pdf-utils.ts               # PDF processing utilities & content extraction
-│   │   └── tools.ts                   # Tool definitions (time, BMI, weather) with Zod validation
+│   │   ├── tools-main.ts              # Main tools configuration and exports
+│   │   └── tools/                     # Individual tool implementations
+│   │       ├── calculate-bmi.ts       # BMI calculation tool with health insights
+│   │       ├── get-current-time.ts    # Time/date tool with timezone support
+│   │       ├── get-weather.ts         # Weather information tool (demo)
+│   │       ├── search-web.ts          # SerpAPI web search tool with 11 engines
+│   │       └── index.ts               # Tools export configuration
 │   ├── types/
 │   │   ├── app-config.ts              # Application configuration type definitions
+│   │   ├── chat.ts                    # Chat-specific type definitions
 │   │   ├── index.ts                   # General application type definitions
 │   │   ├── ollama.ts                  # Ollama-specific types & model configurations
 │   │   ├── pdf-parse.d.ts             # PDF parsing type declarations
-│   │   └── pdf.ts                     # PDF processing type definitions
+│   │   ├── pdf.ts                     # PDF processing type definitions
+│   │   └── serpapi.ts                 # SerpAPI response type definitions
 │   ├── utils/
+│   │   ├── file-utils.tsx             # File handling utilities
+│   │   ├── markdown-utils.tsx         # Markdown processing utilities
 │   │   ├── pdf-processor.ts           # PDF content processing & extraction utilities
+│   │   ├── search-formatter.ts        # SerpAPI response formatting utilities
+│   │   ├── server.ts                  # Server-side utilities
 │   │   └── text-chunker.ts            # Text chunking utilities for embeddings
 │   └── captures/                      # Development screenshots & documentation
 │       ├── Capture.PNG                # Application screenshot
@@ -396,7 +468,7 @@ agent01/
 ├── docs/                              # Comprehensive documentation
 │   ├── AI_SDK_IMPLEMENTATION.md       # Technical implementation details & patterns
 │   ├── CHROMADB_CONTEXT_IMPLEMENTATION.md # Context system implementation guide
-│   └── CHROMADB_SETUP.md             # ChromaDB setup & configuration guide
+│   └── SERPAPI_WEB_SEARCH.md          # SerpAPI web search integration guide
 ├── package.json                       # Dependencies, scripts & project metadata
 ├── next.config.ts                     # Next.js configuration with optimizations
 ├── eslint.config.mjs                  # ESLint configuration with modern rules
@@ -425,6 +497,8 @@ agent01/
   "ai": "^4.3.16",                       // Core AI SDK v4 with streaming support
   "chromadb": "^3.0.6",                 // ChromaDB JavaScript client for vector database
   "@chroma-core/default-embed": "^0.1.8", // Default embedding functions for ChromaDB
+  "serpapi": "^2.1.0",                  // SerpAPI for comprehensive web search capabilities
+  "sharp": "^0.34.3",                   // High-performance image processing library
   "next": "15.3.4",                      // Next.js 15 with App Router and React 19
   "react": "^19.0.0",                    // Latest React with concurrent features
   "react-dom": "^19.0.0",               // React DOM with improved hydration
@@ -517,29 +591,43 @@ curl "http://localhost:3000/api/models"
 
 ### Adding New Tools
 
-Create new tools in `src/lib/tools.ts`:
+Create new tools in the `src/lib/tools/` directory and update the exports:
 
 ```typescript
-export const tools = {
-  // Existing tools...
-  
-  myNewTool: {
-    description: "Description of what your tool does",
-    parameters: z.object({
-      param1: z.string().describe("Parameter description"),
-      param2: z.number().optional().describe("Optional parameter"),
-    }),
-    execute: async ({ param1, param2 }) => {
-      // Your tool implementation
-      return "Tool result";
-    },
+// src/lib/tools/my-new-tool.ts
+import { z } from "zod";
+
+export const myNewTool = {
+  description: "Description of what your tool does",
+  parameters: z.object({
+    param1: z.string().describe("Parameter description"),
+    param2: z.number().optional().describe("Optional parameter"),
+  }),
+  execute: async ({ param1, param2 }) => {
+    // Your tool implementation
+    return "Tool result";
   },
+};
+```
+
+Then update `src/lib/tools/index.ts`:
+```typescript
+export { myNewTool } from "./my-new-tool";
+```
+
+And add to `src/lib/tools-main.ts`:
+```typescript
+import { myNewTool } from "./tools";
+
+export const tools = {
+  // existing tools...
+  myNewTool,
 };
 ```
 
 ### Adding New Personalities
 
-Add to `PREDEFINED_PROMPTS` in `src/components/SystemPromptSelector.tsx`:
+Add to `PREDEFINED_PROMPTS` in `src/constraints/predefined-system-prompts.ts`:
 
 ```typescript
 {
@@ -548,7 +636,7 @@ Add to `PREDEFINED_PROMPTS` in `src/components/SystemPromptSelector.tsx`:
   description: "Brief description of the personality",
   prompt: "Detailed system prompt that defines the AI's behavior, tone, and expertise...",
   icon: YourIcon, // From lucide-react (Bot, User, Code, BookOpen, etc.)
-  category: "Category", // General, Technical, Creative, Education, Culinary, Support
+  category: "Category", // General, Technical, Creative, Education, Culinary, Legal, Support
 }
 ```
 
@@ -575,6 +663,7 @@ Configuration is managed through `src/constraints/app-config.ts`. For environmen
 | `AI_LOG_LEVEL` | `info` | Logging verbosity |
 | `CHROMADB_URL` | `http://localhost:8000` | ChromaDB server URL |
 | `EMBEDDING_MODEL` | `nomic-embed-text` | Ollama embedding model |
+| `SERP_API_KEY` | `""` | SerpAPI key for web search |
 
 **Note:** The application primarily uses static configuration in `app-config.ts` for better type safety and validation.
 
@@ -616,7 +705,18 @@ ollama pull model-name
 - Check the model info in the UI for tool support indicators (🔧 = supported, ⚠️ = not supported)
 - The app automatically detects tool capabilities and displays warnings
 
-#### **ChromaDB Vector Database Issues**
+#### **SerpAPI Web Search Issues**
+```bash
+# Check if SerpAPI key is configured
+echo $SERP_API_KEY  # Unix/Linux/macOS
+echo $env:SERP_API_KEY  # Windows PowerShell
+
+# Test SerpAPI directly
+curl "https://serpapi.com/search.json?q=test&api_key=YOUR_KEY"
+
+# Test through the application API
+curl "http://localhost:3000/api/chat" -X POST -H "Content-Type: application/json" -d '{"messages":[{"role":"user","content":"search for current AI news"}]}'
+```
 ```bash
 # Check if ChromaDB is running
 curl http://localhost:8000/api/v1/heartbeat
@@ -632,7 +732,7 @@ docker run -p 8000:8000 chromadb/chroma
 python -c "import chromadb; print(chromadb.__version__)"
 ```
 
-#### **Embedding & Semantic Search Issues**
+#### **ChromaDB Vector Database Issues**
 ```bash
 # Ensure embedding model is available in Ollama
 ollama pull nomic-embed-text
@@ -646,6 +746,9 @@ curl "http://localhost:3000/api/chromadb?action=collections"
 # Verify embedding dimensions match (nomic-embed-text uses 768 dimensions)
 ```
 
+#### **Embedding & Semantic Search Issues**
+- **Reduce context window** for faster responses (lower memory usage)
+- **Lower temperature** (0.3-0.5) for more consistent outputs
 #### **Performance & Memory Issues**
 - **Reduce context window** for faster responses (lower memory usage)
 - **Lower temperature** (0.3-0.5) for more consistent outputs
@@ -653,11 +756,13 @@ curl "http://localhost:3000/api/chromadb?action=collections"
 - **Consider model size vs performance trade-offs** (3B vs 7B vs 13B models)
 - **Monitor system resources** when running multiple models simultaneously
 
-#### **File Upload & Multimodal Issues**
+#### **PDF Processing & Upload Issues**
 - **Supported file types**: Images (PNG, JPEG, GIF, WebP, BMP), Documents (PDF, TXT, CSV, JSON, DOCX, DOC)
 - **File size limits**: Check browser and server limits for large files
 - **Vision model requirements**: Use vision-capable models for image processing
 - **PDF processing**: Ensure `pdf-parse` dependency is properly installed
+- **Streaming PDF upload**: Monitor progress in the collection detail view for large documents
+- **ChromaDB integration**: Ensure ChromaDB is running before uploading PDFs to collections
 
 #### **Application Startup Issues**
 ```bash
@@ -813,7 +918,9 @@ We welcome contributions that enhance the application's capabilities and user ex
 - **Follow semantic commit messages** for clear history
 
 ### Priority Areas for Contribution
-- **🔧 New Tools & Integrations** - Add useful function calling tools (web search, API integrations, calculations)
+- **🌐 Web Search Enhancements** - Improve SerpAPI integration, add more search engines, enhance result formatting
+- **🔧 New Tools & Integrations** - Add useful function calling tools (API integrations, calculations, data processing)
+- **📄 Document Processing** - Improve PDF, DOCX, and other document format support with better chunking strategies
 - **🎨 UI/UX Improvements** - Enhance the user interface, animations, and user experience
 - **🤖 AI Model Support** - Add support for new AI providers (OpenAI, Anthropic, Google, etc.)
 - **⚡ Performance Optimization** - Optimize streaming, rendering, memory usage, and response times
@@ -821,7 +928,6 @@ We welcome contributions that enhance the application's capabilities and user ex
 - **🧪 Testing & Quality** - Add comprehensive test coverage (unit, integration, e2e)
 - **🗄️ ChromaDB Features** - Enhance vector database functionality, collection management, search
 - **🔗 Embedding Models** - Add support for additional embedding providers and models
-- **📄 Document Processing** - Improve PDF, DOCX, and other document format support
 - **🌐 Internationalization** - Add multi-language support and localization
 - **♿ Accessibility** - Enhance screen reader support and keyboard navigation
 - **🔒 Security** - Improve input validation, sanitization, and secure practices
@@ -842,6 +948,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **[Vercel](https://vercel.com)** for the excellent AI SDK
 - **[Ollama](https://ollama.ai)** for making local AI accessible
+- **[SerpAPI](https://serpapi.com)** for comprehensive web search capabilities
+- **[ChromaDB](https://trychroma.com)** for powerful vector database functionality
 - **[Next.js](https://nextjs.org)** for the amazing React framework
 - **[Tailwind CSS](https://tailwindcss.com)** for beautiful, responsive styling
 - **The open-source community** for inspiration and contributions

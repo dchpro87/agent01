@@ -12,24 +12,24 @@ import {
   SUPPORTED_FILE_TYPES,
   MAX_CHAT_STEPS,
   DEFAULT_CHAT_STEPS,
-  MAX_FILE_SIZE_DISPLAY,
 } from "@/constraints/chat-constraints";
 
 import {
   Send,
   User,
-  AlertCircle,
   RotateCcw,
   X,
   Brain,
   Paperclip,
   Database,
+  RotateCw,
 } from "lucide-react";
 import ModelSelector from "./ModelSelector";
 import SystemPromptSelector from "./SystemPromptSelector";
 import ModelConfigSelector from "./ModelConfigSelector";
 import ToolSwitch from "./ToolSwitch";
 import ContextWindowManager from "./ContextWindowManager";
+import MessageComponent from "./Message";
 
 // Import custom hooks
 import { useConnectionStatus, usePersistedPreferences } from "@/hooks";
@@ -299,9 +299,13 @@ const MessageItem = React.memo(
   ({
     message,
     connectionStatus,
+    onResend,
+    isStreaming,
   }: {
     message: Message;
     connectionStatus: { status: string };
+    onResend?: (message: Message) => void;
+    isStreaming?: boolean;
   }) => (
     <div
       className={`flex gap-4 ${
@@ -331,10 +335,28 @@ const MessageItem = React.memo(
       <div
         className={`max-w-3xl px-4 py-3 rounded-2xl ${
           message.role === "user"
-            ? "bg-blue-500 text-white ml-12"
+            ? "bg-blue-500 text-white ml-12 relative group"
             : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700"
         }`}
       >
+        {/* Resend button for user messages */}
+        {message.role === "user" && onResend && (
+          <button
+            onClick={() => onResend(message)}
+            disabled={isStreaming}
+            className={`absolute top-2 right-2 p-1 rounded-full transition-all duration-200 ${
+              isStreaming
+                ? "bg-blue-400 cursor-not-allowed opacity-50"
+                : "bg-blue-600 hover:bg-blue-700 opacity-0 group-hover:opacity-100"
+            } text-white`}
+            title={
+              isStreaming ? "Cannot resend while streaming" : "Resend message"
+            }
+          >
+            <RotateCw className='w-4 h-4' />
+          </button>
+        )}
+
         <div className='prose prose-sm max-w-none dark:prose-invert'>
           {message.role === "assistant" ? (
             <>
@@ -496,6 +518,59 @@ export default function Chat() {
     stop();
   };
 
+  const handleResend = (message: Message) => {
+    // Prevent resending if currently streaming
+    if (isStreaming) {
+      return;
+    }
+
+    // Set the input value to the message content
+    handleInputChange({
+      target: { value: message.content },
+    } as React.ChangeEvent<HTMLTextAreaElement>);
+
+    // If the message has attachments, show a note about reattaching
+    if (
+      message.experimental_attachments &&
+      message.experimental_attachments.length > 0
+    ) {
+      setFileError(
+        "Note: Original attachments cannot be resent automatically. Please reattach files if needed."
+      );
+    }
+
+    // Focus the input
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+
+    // Create a synthetic form event and submit
+    setTimeout(() => {
+      if (inputRef.current?.closest("form")) {
+        // Create a proper synthetic event object
+        const syntheticEvent = {
+          preventDefault: () => {},
+          stopPropagation: () => {},
+          persist: () => {},
+          target: inputRef.current?.closest("form"),
+          currentTarget: inputRef.current?.closest("form"),
+          nativeEvent: {} as Event,
+          bubbles: true,
+          cancelable: true,
+          defaultPrevented: false,
+          eventPhase: 0,
+          isTrusted: false,
+          timeStamp: Date.now(),
+          type: "submit",
+          isDefaultPrevented: () => false,
+          isPropagationStopped: () => false,
+        } as unknown as React.FormEvent<HTMLFormElement>;
+
+        handleFormSubmit(syntheticEvent);
+      }
+    }, 100);
+  };
+
   const isDisabled =
     status === "streaming" ||
     status === "submitted" ||
@@ -611,24 +686,13 @@ export default function Chat() {
         !preferences.isWarningDismissed && (
           <div className='fixed top-[73px] left-0 right-0 border-b border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 z-30'>
             <div className='max-w-4xl mx-auto px-4 py-3'>
-              <div className='flex items-center justify-between text-amber-800 dark:text-amber-200'>
-                <div className='flex items-center gap-2'>
-                  <AlertCircle className='w-4 h-4' />
-                  <span className='text-sm'>
-                    <strong>{preferences.selectedModel}</strong> doesn&apos;t
-                    support tools/function calling. Features like getting
-                    current time won&apos;t be available. Consider using models
-                    like llama3.2, qwen2.5, or mistral for full functionality.
-                  </span>
-                </div>
-                <button
-                  onClick={() => preferences.setIsWarningDismissed(true)}
-                  className='ml-4 p-1 hover:bg-amber-200 dark:hover:bg-amber-800 rounded-full transition-colors'
-                  aria-label='Close warning'
-                >
-                  <X className='w-4 h-4' />
-                </button>
-              </div>
+              <MessageComponent
+                message={`${preferences.selectedModel} doesn't support tools/function calling. Features like getting current time won't be available. Consider using models like llama3.2, qwen2.5, or mistral for full functionality.`}
+                type='warning'
+                isVisible={true}
+                onClose={() => preferences.setIsWarningDismissed(true)}
+                autoHide={false}
+              />
             </div>
           </div>
         )}
@@ -701,6 +765,8 @@ export default function Chat() {
                   key={message.id}
                   message={message}
                   connectionStatus={connectionStatus}
+                  onResend={handleResend}
+                  isStreaming={isStreaming}
                 />
               ))}
 
@@ -748,21 +814,14 @@ export default function Chat() {
       {fileError && (
         <div className='fixed bottom-[140px] left-0 right-0 z-40'>
           <div className='max-w-4xl mx-auto px-4 py-2'>
-            <div className='bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 flex items-center justify-between'>
-              <div className='flex items-center gap-2'>
-                <AlertCircle className='w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0' />
-                <p className='text-red-600 dark:text-red-400 text-sm'>
-                  {fileError}
-                </p>
-              </div>
-              <button
-                onClick={() => setFileError(null)}
-                className='ml-4 p-1 hover:bg-red-100 dark:hover:bg-red-800 rounded-full transition-colors'
-                aria-label='Close error'
-              >
-                <X className='w-4 h-4 text-red-600 dark:text-red-400' />
-              </button>
-            </div>
+            <MessageComponent
+              message={fileError}
+              type='error'
+              isVisible={!!fileError}
+              onClose={() => setFileError(null)}
+              autoHide={true}
+              autoHideDelay={5000}
+            />
           </div>
         </div>
       )}
@@ -771,11 +830,17 @@ export default function Chat() {
       {error && (
         <div className='fixed bottom-[140px] left-0 right-0 z-40'>
           <div className='max-w-4xl mx-auto px-4 py-2'>
-            <div className='bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3'>
-              <p className='text-red-600 dark:text-red-400 text-sm'>
-                Error: {error.message}
-              </p>
-            </div>
+            <MessageComponent
+              message={`Error: ${error.message}`}
+              type='error'
+              isVisible={!!error}
+              onClose={() => {
+                // Clear the error by reloading the page or taking appropriate action
+                window.location.reload();
+              }}
+              autoHide={true}
+              autoHideDelay={5000}
+            />
           </div>
         </div>
       )}
@@ -915,8 +980,8 @@ export default function Chat() {
           </form>
           <p className='text-xs text-gray-500 dark:text-gray-400 mt-2 text-center'>
             Press Enter to send, Shift+Enter for new line • Supports images,
-            PDFs, and text files (max {MAX_FILE_SIZE_DISPLAY} each) • Images are
-            automatically resized to 896x896px for optimal processing
+            PDFs, and text files • Images are automatically resized to 896x896px
+            for optimal processing
           </p>
         </div>
       </div>

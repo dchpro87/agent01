@@ -17,6 +17,7 @@ import {
 } from "@/lib/chromadb";
 import { CHROMADB_DEFAULTS } from "@/constraints/chromadb-constraints";
 import CollectionDetail from "./CollectionDetail";
+import Message from "./Message";
 
 interface ContextWindowManagerProps {
   isOpen: boolean;
@@ -624,16 +625,22 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
 
       {/* Error Display Overlay */}
       {connection?.error && (
-        <div className='absolute bottom-4 right-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4 max-w-md shadow-lg z-10'>
-          <div className='flex items-center gap-2 mb-2'>
-            <AlertCircle className='w-4 h-4 text-red-500' />
-            <h3 className='text-sm font-medium text-red-800 dark:text-red-200'>
-              Connection Error
-            </h3>
-          </div>
-          <p className='text-sm text-red-700 dark:text-red-300'>
-            {connection.error}
-          </p>
+        <div className='absolute bottom-4 right-4 max-w-md shadow-lg z-10'>
+          <Message
+            message={connection.error}
+            type='error'
+            isVisible={!!connection.error}
+            onClose={() => {
+              // Reset the connection error by updating local state
+              if (connection) {
+                const updatedConnection = { ...connection };
+                delete updatedConnection.error;
+                setConnection(updatedConnection);
+              }
+            }}
+            autoHide={true}
+            autoHideDelay={5000}
+          />
         </div>
       )}
     </div>

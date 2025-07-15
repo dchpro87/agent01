@@ -5,21 +5,15 @@ import type { Message } from "@ai-sdk/react";
 import { useState, useEffect, useRef } from "react";
 import React from "react";
 import ReactMarkdown from "react-markdown";
-import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { OllamaModelOptions } from "@/types/ollama";
 import { CHROMADB_DEFAULTS } from "@/constraints/chromadb-constraints";
 import {
-  checkModelSupportsTools,
-  THINK_START_TAG,
-  THINK_END_TAG,
   SUPPORTED_FILE_TYPES,
   MAX_CHAT_STEPS,
   DEFAULT_CHAT_STEPS,
+  MAX_FILE_SIZE_DISPLAY,
 } from "@/constraints/chat-constraints";
-import { DEFAULT_OPTIONS } from "@/constraints/model-config";
-import { PREDEFINED_PROMPTS } from "@/constraints/predefined-system-prompts";
 
 import {
   Send,
@@ -29,9 +23,6 @@ import {
   X,
   Brain,
   Paperclip,
-  FileText,
-  Image as ImageIcon,
-  File,
   Database,
 } from "lucide-react";
 import ModelSelector from "./ModelSelector";
@@ -40,228 +31,21 @@ import ModelConfigSelector from "./ModelConfigSelector";
 import ToolSwitch from "./ToolSwitch";
 import ContextWindowManager from "./ContextWindowManager";
 
-// Custom hook for connection status
-function useConnectionStatus() {
-  const [status, setStatus] = useState<
-    "checking" | "connected" | "disconnected"
-  >("checking");
-  const [serverInfo, setServerInfo] = useState<string>("");
+// Import custom hooks
+import { useConnectionStatus, usePersistedPreferences } from "@/hooks";
 
-  const checkConnection = async () => {
-    try {
-      const response = await fetch("/api/health");
-      if (response.ok || response.status === 206) {
-        const data = await response.json();
-        if (data.status === "healthy" || data.status === "partial") {
-          setStatus("connected");
-          if (data.details?.baseURL) {
-            try {
-              const url = new URL(data.details.baseURL);
-              setServerInfo(`${url.hostname}:${url.port || "80"}`);
-            } catch {
-              setServerInfo(data.details.baseURL);
-            }
-          }
-        } else {
-          setStatus("disconnected");
-        }
-      } else {
-        setStatus("disconnected");
-      }
-    } catch {
-      setStatus("disconnected");
-    }
-  };
+// Import utilities
+import {
+  getFileIcon,
+  formatFileSize,
+  processFiles,
+  validateFiles,
+  markdownComponents,
+  parseThinkingTags,
+} from "@/utils";
 
-  useEffect(() => {
-    checkConnection();
-  }, []);
-
-  return { status, serverInfo, checkConnection };
-}
-
-// Custom hook for persisted preferences
-function usePersistedPreferences() {
-  const [selectedModel, setSelectedModel] = useState<string>("");
-  const [systemPrompt, setSystemPrompt] = useState<string>(
-    PREDEFINED_PROMPTS[0].prompt
-  );
-  const [modelOptions, setModelOptions] =
-    useState<OllamaModelOptions>(DEFAULT_OPTIONS); // Default to "balanced" preset
-  const [modelSupportsTools, setModelSupportsTools] = useState<boolean>(true);
-  const [isWarningDismissed, setIsWarningDismissed] = useState<boolean>(false);
-  const [toolsEnabled, setToolsEnabled] = useState<boolean>(true);
-
-  // Update tool support when model changes
-  useEffect(() => {
-    if (selectedModel) {
-      setModelSupportsTools(checkModelSupportsTools(selectedModel));
-      // Reset warning dismissal when model changes
-      setIsWarningDismissed(false);
-    }
-  }, [selectedModel]);
-
-  // Load from localStorage on mount
-  useEffect(() => {
-    const savedModel = localStorage.getItem("selectedModel");
-    const savedPrompt = localStorage.getItem("selectedSystemPrompt");
-    const savedOptions = localStorage.getItem("modelOptions");
-    const savedToolsEnabled = localStorage.getItem("toolsEnabled");
-
-    if (savedModel) setSelectedModel(savedModel);
-    if (savedPrompt) setSystemPrompt(savedPrompt);
-    if (savedToolsEnabled !== null)
-      setToolsEnabled(savedToolsEnabled === "true");
-    if (savedOptions) {
-      try {
-        setModelOptions(JSON.parse(savedOptions));
-      } catch (error) {
-        console.error("Failed to parse saved model options:", error);
-      }
-    }
-  }, []);
-
-  // Save to localStorage when values change
-  useEffect(() => {
-    if (selectedModel) localStorage.setItem("selectedModel", selectedModel);
-  }, [selectedModel]);
-
-  useEffect(() => {
-    if (systemPrompt)
-      localStorage.setItem("selectedSystemPrompt", systemPrompt);
-  }, [systemPrompt]);
-
-  useEffect(() => {
-    localStorage.setItem("modelOptions", JSON.stringify(modelOptions));
-  }, [modelOptions]);
-
-  // Save toolsEnabled to localStorage when it changes
-  useEffect(() => {
-    localStorage.setItem("toolsEnabled", String(toolsEnabled));
-  }, [toolsEnabled]);
-
-  return {
-    selectedModel,
-    setSelectedModel,
-    systemPrompt,
-    setSystemPrompt,
-    modelOptions,
-    setModelOptions,
-    modelSupportsTools,
-    isWarningDismissed,
-    setIsWarningDismissed,
-    toolsEnabled,
-    setToolsEnabled,
-  };
-}
-
-// Simplified markdown components
-const markdownComponents: Components = {
-  p: ({ children, ...props }) => (
-    <p className='mb-2 last:mb-0' {...props}>
-      {children}
-    </p>
-  ),
-  code: ({ children, className, ...props }) => {
-    const isInline = !className?.includes("language-");
-    return isInline ? (
-      <code
-        className='bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded text-sm font-mono'
-        {...props}
-      >
-        {children}
-      </code>
-    ) : (
-      <code className={className} {...props}>
-        {children}
-      </code>
-    );
-  },
-  pre: ({ children, ...props }) => (
-    <pre
-      className='bg-gray-100 dark:bg-gray-700 p-3 rounded-lg mt-2 mb-2 overflow-x-auto'
-      {...props}
-    >
-      {children}
-    </pre>
-  ),
-};
-
-// Simplified thinking tag parser
-function parseThinkingTags(content: string): (ContentPart | ThinkPart)[] {
-  const parts: (ContentPart | ThinkPart)[] = [];
-  let currentIndex = 0;
-
-  while (currentIndex < content.length) {
-    const thinkStart = content.indexOf(THINK_START_TAG, currentIndex);
-
-    if (thinkStart === -1) {
-      // No more thinking tags, add remaining content
-      const remaining = content.slice(currentIndex).trim();
-      if (remaining) {
-        parts.push({ type: "content", text: remaining });
-      }
-      break;
-    }
-
-    // Add content before thinking tag
-    if (thinkStart > currentIndex) {
-      const beforeText = content.slice(currentIndex, thinkStart).trim();
-      if (beforeText) {
-        parts.push({ type: "content", text: beforeText });
-      }
-    }
-
-    // Find end of thinking tag
-    const thinkContentStart = thinkStart + THINK_START_TAG.length;
-    const thinkEnd = content.indexOf(THINK_END_TAG, thinkContentStart);
-
-    if (thinkEnd === -1) {
-      // Incomplete thinking tag (streaming)
-      const thinkContent = content.slice(thinkContentStart);
-      if (thinkContent) {
-        parts.push({ type: "think", text: thinkContent });
-      }
-      break;
-    } else {
-      // Complete thinking tag
-      const thinkContent = content.slice(thinkContentStart, thinkEnd).trim();
-      if (thinkContent) {
-        parts.push({ type: "think", text: thinkContent });
-      }
-      currentIndex = thinkEnd + THINK_END_TAG.length;
-    }
-  }
-
-  return parts.length > 0 ? parts : [{ type: "content", text: content }];
-}
-
-// Type definitions for tool invocations (based on AI SDK structure)
-type ToolInvocation = {
-  toolCallId: string;
-  toolName: string;
-  args: Record<string, unknown>;
-  state: "partial-call" | "call" | "result";
-  result?: unknown;
-};
-
-// Type definitions for our custom parts
-type ContentPart = {
-  type: "content";
-  text: string;
-};
-
-type ThinkPart = {
-  type: "think";
-  text: string;
-};
-
-type ToolPart = {
-  type: "tool";
-  toolInvocation: ToolInvocation;
-};
-
-type MessagePart = ContentPart | ThinkPart | ToolPart;
+// Import types
+import type { ToolInvocation, MessagePart } from "@/types/chat";
 
 // Enhanced assistant message component that handles thinking tags and tool invocations
 const AssistantMessage = React.memo(
@@ -406,37 +190,14 @@ const AssistantMessage = React.memo(
 
 AssistantMessage.displayName = "AssistantMessage";
 
-// Helper function to get file icon based on mime type
-const getFileIcon = (contentType: string) => {
-  if (contentType.startsWith("image/")) {
-    return <ImageIcon className='w-4 h-4' />;
-  }
-  if (contentType.includes("pdf")) {
-    return <FileText className='w-4 h-4' />;
-  }
-  if (contentType.includes("text/")) {
-    return <FileText className='w-4 h-4' />;
-  }
-  return <File className='w-4 h-4' />;
-};
-
-// Helper function to format file size
-const formatFileSize = (bytes: number): string => {
-  if (bytes < 1024) return bytes + " B";
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
-};
-
 // Component to preview attached files before sending
 const AttachmentPreview = React.memo(
-  ({ files, onRemove }: { files: FileList; onRemove: () => void }) => {
-    const fileArray = Array.from(files);
-
+  ({ files, onRemove }: { files: File[]; onRemove: () => void }) => {
     return (
       <div className='border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3'>
         <div className='flex items-center justify-between mb-2'>
           <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>
-            {fileArray.length} file{fileArray.length !== 1 ? "s" : ""} attached
+            {files.length} file{files.length !== 1 ? "s" : ""} attached
           </span>
           <button
             onClick={onRemove}
@@ -447,7 +208,7 @@ const AttachmentPreview = React.memo(
           </button>
         </div>
         <div className='flex flex-wrap gap-2'>
-          {fileArray.map((file, index) => (
+          {files.map((file, index) => (
             <div
               key={index}
               className='flex items-center gap-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm'
@@ -621,7 +382,9 @@ export default function Chat() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // File attachment state
-  const [attachedFiles, setAttachedFiles] = useState<FileList | null>(null);
+  const [attachedFiles, setAttachedFiles] = useState<File[] | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [isProcessingFiles, setIsProcessingFiles] = useState<boolean>(false);
 
   // Context window dialog state
   const [isContextDialogOpen, setIsContextDialogOpen] =
@@ -695,12 +458,22 @@ export default function Chat() {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     connectionStatus.checkConnection();
+
+    // Convert File[] to DataTransfer/FileList format for the API
+    let fileList: FileList | undefined;
+    if (attachedFiles && attachedFiles.length > 0) {
+      const dataTransfer = new DataTransfer();
+      attachedFiles.forEach((file) => dataTransfer.items.add(file));
+      fileList = dataTransfer.files;
+    }
+
     handleSubmit(e, {
-      experimental_attachments: attachedFiles || undefined,
+      experimental_attachments: fileList,
       allowEmptySubmit: true, // Allow sending files without text
     });
-    // Clear attachments after sending
+    // Clear attachments and file error after sending
     setAttachedFiles(null);
+    setFileError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -712,6 +485,7 @@ export default function Chat() {
     }
     setMessages([]);
     setAttachedFiles(null);
+    setFileError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -869,8 +643,8 @@ export default function Chat() {
             ? "pt-[130px]" // Header + warning
             : "pt-[73px]" // Just header
         } ${
-          (attachedFiles && attachedFiles.length > 0) || error
-            ? "pb-[200px]" // Extra bottom padding when attachment preview or error is shown
+          (attachedFiles && attachedFiles.length > 0) || error || fileError
+            ? "pb-[240px]" // Extra bottom padding when attachment preview or error is shown
             : "pb-[140px]" // Normal bottom padding
         }`}
       >
@@ -970,9 +744,32 @@ export default function Chat() {
         </div>
       </div>
 
+      {/* File size error message */}
+      {fileError && (
+        <div className='fixed bottom-[140px] left-0 right-0 z-40'>
+          <div className='max-w-4xl mx-auto px-4 py-2'>
+            <div className='bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 flex items-center justify-between'>
+              <div className='flex items-center gap-2'>
+                <AlertCircle className='w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0' />
+                <p className='text-red-600 dark:text-red-400 text-sm'>
+                  {fileError}
+                </p>
+              </div>
+              <button
+                onClick={() => setFileError(null)}
+                className='ml-4 p-1 hover:bg-red-100 dark:hover:bg-red-800 rounded-full transition-colors'
+                aria-label='Close error'
+              >
+                <X className='w-4 h-4 text-red-600 dark:text-red-400' />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Error message */}
       {error && (
-        <div className='fixed bottom-[100px] left-0 right-0 z-20'>
+        <div className='fixed bottom-[140px] left-0 right-0 z-40'>
           <div className='max-w-4xl mx-auto px-4 py-2'>
             <div className='bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3'>
               <p className='text-red-600 dark:text-red-400 text-sm'>
@@ -985,11 +782,12 @@ export default function Chat() {
 
       {/* Attachment preview */}
       {attachedFiles && attachedFiles.length > 0 && (
-        <div className='fixed bottom-[100px] left-0 right-0 z-20'>
+        <div className='fixed bottom-[140px] left-0 right-0 z-40'>
           <AttachmentPreview
             files={attachedFiles}
             onRemove={() => {
               setAttachedFiles(null);
+              setFileError(null);
               if (fileInputRef.current) {
                 fileInputRef.current.value = "";
               }
@@ -1005,14 +803,40 @@ export default function Chat() {
           <input
             type='file'
             ref={fileInputRef}
-            onChange={(e) => {
+            onChange={async (e) => {
               if (e.target.files && e.target.files.length > 0) {
-                setAttachedFiles(e.target.files);
+                setIsProcessingFiles(true);
+                setFileError(null);
+
+                try {
+                  // Process files (resize images)
+                  const processedFiles = await processFiles(e.target.files);
+
+                  // Validate processed files
+                  const validation = validateFiles(processedFiles);
+                  if (validation.isValid) {
+                    setAttachedFiles(processedFiles);
+                    setFileError(null);
+                  } else {
+                    setFileError(validation.error || "Invalid file");
+                    setAttachedFiles(null);
+                    // Clear the input so user can try again
+                    e.target.value = "";
+                  }
+                } catch (error) {
+                  console.error("Error processing files:", error);
+                  setFileError("Failed to process files. Please try again.");
+                  setAttachedFiles(null);
+                  e.target.value = "";
+                } finally {
+                  setIsProcessingFiles(false);
+                }
               }
             }}
             multiple
             accept={SUPPORTED_FILE_TYPES}
             className='hidden'
+            disabled={isDisabled || isProcessingFiles}
           />
 
           <form onSubmit={handleFormSubmit} className='flex gap-3'>
@@ -1041,11 +865,17 @@ export default function Chat() {
               <button
                 type='button'
                 onClick={() => fileInputRef.current?.click()}
-                disabled={isDisabled}
+                disabled={isDisabled || isProcessingFiles}
                 className='absolute right-12 top-1/2 transform -translate-y-1/2 p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
-                title='Attach files'
+                title={
+                  isProcessingFiles ? "Processing files..." : "Attach files"
+                }
               >
-                <Paperclip className='w-5 h-5' />
+                {isProcessingFiles ? (
+                  <div className='w-5 h-5 border-2 border-gray-500 border-t-transparent rounded-full animate-spin' />
+                ) : (
+                  <Paperclip className='w-5 h-5' />
+                )}
               </button>
             </div>
 
@@ -1056,17 +886,28 @@ export default function Chat() {
                 (!isStreaming &&
                   !input.trim() &&
                   (!attachedFiles || attachedFiles.length === 0)) ||
-                connectionStatus.status === "disconnected"
+                connectionStatus.status === "disconnected" ||
+                isProcessingFiles
               }
               className={`px-4 py-3 rounded-xl transition-colors duration-200 flex items-center justify-center min-w-[52px] ${
                 isStreaming
                   ? "bg-red-500 hover:bg-red-600 text-white animate-pulse shadow-lg shadow-red-500/50"
+                  : isProcessingFiles
+                  ? "bg-yellow-500 text-white cursor-not-allowed"
                   : "bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white"
               }`}
-              title={isStreaming ? "Cancel request" : "Send message"}
+              title={
+                isStreaming
+                  ? "Cancel request"
+                  : isProcessingFiles
+                  ? "Processing files..."
+                  : "Send message"
+              }
             >
               {isStreaming ? (
                 <X className='w-5 h-5' />
+              ) : isProcessingFiles ? (
+                <div className='w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin' />
               ) : (
                 <Send className='w-5 h-5' />
               )}
@@ -1074,7 +915,8 @@ export default function Chat() {
           </form>
           <p className='text-xs text-gray-500 dark:text-gray-400 mt-2 text-center'>
             Press Enter to send, Shift+Enter for new line • Supports images,
-            PDFs, and text files
+            PDFs, and text files (max {MAX_FILE_SIZE_DISPLAY} each) • Images are
+            automatically resized to 896x896px for optimal processing
           </p>
         </div>
       </div>

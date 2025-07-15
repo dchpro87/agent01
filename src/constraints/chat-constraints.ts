@@ -117,6 +117,10 @@ export const THINK_END_TAG = "</think>";
 export const SUPPORTED_FILE_TYPES =
   "image/*,application/pdf,.pdf,.txt,.csv,.json,.docx,.doc";
 
+// File size limits (in bytes)
+export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
+export const MAX_FILE_SIZE_DISPLAY = "10MB"; // Display string
+
 // Chat configuration
 export const MAX_CHAT_STEPS = 3;
 export const DEFAULT_CHAT_STEPS = 1;

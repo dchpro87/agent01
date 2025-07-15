@@ -25,6 +25,7 @@
     "rehype-highlight": "^7.0.2",
     "remark-gfm": "^4.0.1",
     "serpapi": "^2.1.0",
+    "sharp": "^0.34.3",
     "zod": "^3.25.67"
   },
   "devDependencies": {

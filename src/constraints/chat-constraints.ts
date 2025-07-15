@@ -100,26 +100,6 @@ export function getModelsByFamily(family: string): string[] {
   );
 }
 
-// Get recommended models for specific use cases
-export function getRecommendedModels(
-  useCase: "general" | "coding" | "vision" | "embedding" | "lightweight"
-): string[] {
-  switch (useCase) {
-    case "general":
-      return ["llama3.2:3b", "qwen2.5:7b", "mistral:7b"];
-    case "coding":
-      return ["qwen2.5-coder:7b", "codellama:7b", "llama3.2:7b"];
-    case "vision":
-      return ["llama3.2-vision", "llava:7b", "bakllava"];
-    case "embedding":
-      return ["nomic-embed-text", "bge-large-en-v1.5", "all-minilm"];
-    case "lightweight":
-      return ["llama3.2:1b", "qwen3:0.6b", "tinyllama"];
-    default:
-      return ["llama3.2:3b"];
-  }
-}
-
 // Legacy exports for backward compatibility (deprecated - use getModelCapabilities instead)
 export const TOOL_SUPPORTED_MODELS = Object.keys(MODEL_DATABASE).filter(
   (key) => MODEL_DATABASE[key].tools

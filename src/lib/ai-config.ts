@@ -1,25 +1,7 @@
 import { APP_CONFIG } from "@/constraints/app-config";
 import { AppConfig } from "@/types/app-config";
 
-export interface AIConfig {
-  ollama: {
-    baseURL: string;
-    model: string;
-    temperature: number;
-    maxRetries: number;
-    defaultOptions: AppConfig["ollama"]["defaultOptions"];
-  };
-  streaming: {
-    timeout: number;
-    keepAlive: boolean;
-  };
-  logging: {
-    enabled: boolean;
-    logLevel: "debug" | "info" | "warn" | "error";
-  };
-}
-
-export const aiConfig: AIConfig = APP_CONFIG;
+export const aiConfig: AppConfig = APP_CONFIG;
 
 export function validateConfig(): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];
@@ -42,6 +24,12 @@ export function validateConfig(): { isValid: boolean; errors: string[] } {
       aiConfig.ollama.defaultOptions.maxTokens > 32000)
   ) {
     errors.push("maxTokens must be between 1 and 32000");
+  }
+
+  if (aiConfig.serpApi && !aiConfig.serpApi.apiKey) {
+    errors.push(
+      "SerpApi API key is required when SerpApi is configured. Please set SERP_API_KEY environment variable."
+    );
   }
 
   return {

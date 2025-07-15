@@ -1,7 +1,7 @@
-import { getCurrentTime, calculateBMI, searchWeb } from "./tools";
+import { calculateBMI, searchWeb } from "./tools";
 
 export const tools = {
-  getCurrentTime,
+  // getCurrentTime,
   calculateBMI,
   // getWeather,
   searchWeb,

@@ -277,8 +277,14 @@ export async function POST(req: Request) {
       ? DEFAULT_SYSTEM_PROMPTS.WITH_TOOLS
       : DEFAULT_SYSTEM_PROMPTS.WITHOUT_TOOLS(selectedModel);
 
-    const finalSystemPrompt =
+    const baseSystemPrompt =
       systemPrompt && systemPrompt.trim() ? systemPrompt : defaultSystemPrompt;
+
+    // Inject current date and time
+    const now = new Date();
+    const dateTimeString = `The current date and time is ${now.toLocaleTimeString()} on ${now.toLocaleDateString()}`;
+
+    const finalSystemPrompt = `${baseSystemPrompt}\n\n${dateTimeString}`;
 
     // Augment context with ChromaDB if active collections exist
     let finalSystemPromptWithContext = finalSystemPrompt;
@@ -353,6 +359,8 @@ export async function POST(req: Request) {
       compatibility: "compatible",
     });
 
+    console.log("finalOptions:", finalOptions);
+
     // Use AI SDK streamText with proper configuration
     const result = streamText({
       model: ollama(selectedModel),
@@ -361,8 +369,42 @@ export async function POST(req: Request) {
       maxRetries: config.maxRetries,
       abortSignal: abortController.signal,
       temperature: finalOptions.temperature || config.temperature,
+      maxTokens: finalOptions.maxTokens || finalOptions.num_predict,
+      topK: finalOptions.top_k,
+      topP: finalOptions.top_p,
+      presencePenalty: finalOptions.presence_penalty,
+      frequencyPenalty: finalOptions.frequency_penalty,
+      seed: finalOptions.seed,
       maxSteps: shouldUseTools ? MAX_CHAT_STEPS : DEFAULT_CHAT_STEPS,
       ...(shouldUseTools && { tools }),
+      // Ollama-specific parameters passed through provider options
+      experimental_providerMetadata: {
+        ollama: {
+          // Ollama-specific parameters that AI SDK doesn't directly support
+          options: Object.fromEntries(
+            Object.entries({
+              repeat_penalty: finalOptions.repeat_penalty,
+              repeat_last_n: finalOptions.repeat_last_n,
+              num_ctx: finalOptions.num_ctx,
+              num_keep: finalOptions.num_keep,
+              num_batch: finalOptions.num_batch,
+              num_gpu: finalOptions.num_gpu,
+              main_gpu: finalOptions.main_gpu,
+              numa: finalOptions.numa,
+              use_mmap: finalOptions.use_mmap,
+              num_thread: finalOptions.num_thread,
+              tfs_z: finalOptions.tfs_z,
+              mirostat: finalOptions.mirostat,
+              mirostat_tau: finalOptions.mirostat_tau,
+              mirostat_eta: finalOptions.mirostat_eta,
+              penalize_newline: finalOptions.penalize_newline,
+              min_p: finalOptions.min_p,
+              typical_p: finalOptions.typical_p,
+              stop: finalOptions.stop,
+            }).filter(([, value]) => value !== undefined)
+          ) as Record<string, number | boolean | string[]>,
+        },
+      },
       // AI SDK v5 handles experimental_attachments automatically
       // No need for manual processing
       onFinish: (event) => {

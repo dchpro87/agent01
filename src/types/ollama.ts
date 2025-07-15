@@ -126,32 +126,32 @@ export interface OllamaChatResponse {
 // Preset configurations for different use cases
 export const MODEL_PRESETS = {
   balanced: {
-    temperature: 0.5,
-    top_k: 40,
+    temperature: 0.4,
+    top_k: 10,
     top_p: 0, // Use temperature instead
     repeat_penalty: 1.1,
     num_ctx: 4096,
-    maxTokens: 1024, // AI SDK standard
+    maxTokens: 2048, // AI SDK standard
   },
   creative: {
-    temperature: 0.8,
-    top_k: 40,
+    temperature: 0.9,
+    top_k: 50,
     top_p: 0, // Use temperature instead
     repeat_penalty: 1.05,
     num_ctx: 4096,
-    maxTokens: 1024, // AI SDK standard
+    maxTokens: 2048, // AI SDK standard
   },
   precise: {
-    temperature: 0.1,
-    top_k: 20,
+    temperature: 0.0,
+    top_k: 5,
     top_p: 0, // Use temperature instead
-    repeat_penalty: 1.15,
+    repeat_penalty: 1.2,
     num_ctx: 4096,
-    maxTokens: 1024, // AI SDK standard
+    maxTokens: 2048, // AI SDK standard
   },
   coding: {
     temperature: 0.2,
-    top_k: 20,
+    top_k: 5,
     top_p: 0, // Use temperature instead
     repeat_penalty: 1.1,
     num_ctx: 4096,
@@ -159,11 +159,11 @@ export const MODEL_PRESETS = {
   },
   analytical: {
     temperature: 0.4,
-    top_k: 30,
+    top_k: 10,
     top_p: 0, // Use temperature instead
     repeat_penalty: 1.2,
     num_ctx: 4096,
-    maxTokens: 1024, // AI SDK standard
+    maxTokens: 2048, // AI SDK standard
   },
 } as const;
 

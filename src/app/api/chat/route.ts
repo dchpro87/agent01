@@ -8,14 +8,17 @@
  * - Content processing
  */
 
-import { createOpenAI } from "@ai-sdk/openai";
-import { streamText, CoreMessage } from "ai";
-import { AILogger, generateRequestId } from "@/lib/ai-middleware";
-import { aiConfig, validateConfig } from "@/lib/ai-config";
-import { tools } from "@/lib/tools-main";
-import { z } from "zod";
-import { OllamaModelOptions } from "@/types/ollama";
-import { CHROMADB_DEFAULTS } from "@/constraints/chromadb-constraints";
+import { createOpenAI } from '@ai-sdk/openai';
+import { streamText, CoreMessage, experimental_createMCPClient } from 'ai';
+// import { Experimental_StdioMCPTransport } from 'ai/mcp-stdio';
+// import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp';
+
+import { AILogger, generateRequestId } from '@/lib/ai-middleware';
+import { aiConfig, validateConfig } from '@/lib/ai-config';
+import { tools } from '@/lib/tools-main';
+import { z } from 'zod';
+import { OllamaModelOptions } from '@/types/ollama';
+import { CHROMADB_DEFAULTS } from '@/constraints/chromadb-constraints';
 import {
   THINK_START_TAG,
   THINK_END_TAG,
@@ -28,13 +31,42 @@ import {
   DEFAULT_SYSTEM_PROMPTS,
   MAX_CHAT_STEPS,
   DEFAULT_CHAT_STEPS,
-} from "@/constraints/chat-constraints";
+} from '@/constraints/chat-constraints';
+
+// Initialize an MCP client to connect to a `stdio` MCP server:
+// const transport = new Experimental_StdioMCPTransport({
+//   command: 'node',
+//   args: ['src/stdio/dist/server.js'],
+// });
+// const stdioClient = await experimental_createMCPClient({
+//   transport,
+// });
+
+// Alternatively, you can connect to a Server-Sent Events (SSE) MCP server:
+const sseClient = await experimental_createMCPClient({
+  transport: {
+    type: 'sse',
+    url: `https://mcp.firecrawl.dev/${process.env.FIRECRAWL_API_KEY}/sse`,
+  },
+});
+
+// Similarly to the stdio example, you can pass in your own custom transport as long as it implements the `MCPTransport` interface (e.g. `StreamableHTTPClientTransport`):
+// const transport = new StreamableHTTPClientTransport(
+//   new URL('http://localhost:3000/mcp')
+// );
+// const customClient = await experimental_createMCPClient({
+//   transport,
+// });
+
+// const toolSetOne = await stdioClient.tools();
+const toolSetFireCrawl = await sseClient.tools();
+// const toolSetThree = await customClient.tools();
 
 // Function to clean thinking tags from message content
 function cleanThinkingTags(
   content: string | Array<Record<string, unknown>>
 ): string | Array<Record<string, unknown>> {
-  if (typeof content === "string") {
+  if (typeof content === 'string') {
     let result = content;
 
     while (true) {
@@ -57,7 +89,7 @@ function cleanThinkingTags(
 
   if (Array.isArray(content)) {
     return content.map((part) => {
-      if (part.type === "text" && typeof part.text === "string") {
+      if (part.type === 'text' && typeof part.text === 'string') {
         return {
           ...part,
           text: cleanThinkingTags(part.text) as string,
@@ -88,13 +120,13 @@ async function queryActiveCollections(
     // Use the same base URL as the ChromaDB API route
     for (const collectionName of collections) {
       try {
-        const response = await fetch("http://localhost:3000/api/chromadb", {
-          method: "POST",
+        const response = await fetch('http://localhost:3000/api/chromadb', {
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            action: "query_collection",
+            action: 'query_collection',
             collection: collectionName,
             query_texts: [query],
             n_results: chunksToRetrieve, // Use dynamic value
@@ -117,7 +149,7 @@ async function queryActiveCollections(
     // Sort by relevance if available, otherwise just return all results
     return allResults.slice(0, chunksToRetrieve); // Limit total results to user-configured amount
   } catch (error) {
-    console.error("Error querying ChromaDB collections:", error);
+    console.error('Error querying ChromaDB collections:', error);
     return [];
   }
 }
@@ -127,7 +159,7 @@ const RequestSchema = z.object({
   messages: z
     .array(
       z.object({
-        role: z.enum(["user", "assistant", "system", "tool"]),
+        role: z.enum(['user', 'assistant', 'system', 'tool']),
         content: z.union([
           z.string().min(1, ERROR_MESSAGES.MESSAGE_CONTENT_EMPTY),
           z
@@ -182,7 +214,7 @@ export async function POST(req: Request) {
   try {
     const abortController = new AbortController();
 
-    req.signal?.addEventListener("abort", () => {
+    req.signal?.addEventListener('abort', () => {
       console.log(`🚫 Request ${requestId} aborted by client`);
       abortController.abort();
     });
@@ -197,15 +229,15 @@ export async function POST(req: Request) {
         }),
         {
           status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-          headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
+          headers: { 'Content-Type': HTTP_HEADERS.CONTENT_TYPE_JSON },
         }
       );
     }
 
     const requestBody = await req.json();
-    console.log("-------------------------------------------");
+    console.log('-------------------------------------------');
     console.log(
-      "🔍 💥Request body received:",
+      '🔍 💥Request body received:',
       JSON.stringify(requestBody, null, 2)
     );
 
@@ -216,12 +248,12 @@ export async function POST(req: Request) {
         JSON.stringify({
           error: ERROR_MESSAGES.INVALID_REQUEST_FORMAT,
           details: validationResult.error.issues.map(
-            (issue) => `${issue.path.join(".")}: ${issue.message}`
+            (issue) => `${issue.path.join('.')}: ${issue.message}`
           ),
         }),
         {
           status: HTTP_STATUS.BAD_REQUEST,
-          headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
+          headers: { 'Content-Type': HTTP_HEADERS.CONTENT_TYPE_JSON },
         }
       );
     }
@@ -240,17 +272,17 @@ export async function POST(req: Request) {
     const cleanedMessages = messages.map((msg) => ({
       ...msg,
       content:
-        msg.role === "assistant" && typeof msg.content === "string"
+        msg.role === 'assistant' && typeof msg.content === 'string'
           ? cleanThinkingTags(msg.content)
           : msg.content,
     })) as CoreMessage[];
 
-    console.log("\n-------------------------------------------");
+    console.log('\n-------------------------------------------');
     console.log(
-      "📨 Messages to be sent to AI SDK:",
+      '📨 Messages to be sent to AI SDK:',
       JSON.stringify(cleanedMessages, null, 2)
     );
-    console.log("-------------------------------------------");
+    console.log('-------------------------------------------');
 
     const { ollama: config } = aiConfig;
     const selectedModel = requestModel || config.model;
@@ -271,7 +303,7 @@ export async function POST(req: Request) {
         }),
         {
           status: HTTP_STATUS.BAD_REQUEST,
-          headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
+          headers: { 'Content-Type': HTTP_HEADERS.CONTENT_TYPE_JSON },
         }
       );
     }
@@ -293,23 +325,23 @@ export async function POST(req: Request) {
     let finalSystemPromptWithContext = finalSystemPrompt;
     if (shouldUseTools) {
       const toolUseInstruction =
-        "Use any of the available tools paying attention to what parameters are required. After calling a tool and receiving the result, provide a clear and direct answer to the user using the information returned by the tool.";
+        'Use any of the available tools paying attention to what parameters are required. After calling a tool and receiving the result, provide a clear and direct answer to the user using the information returned by the tool.';
       finalSystemPromptWithContext = `${finalSystemPrompt}\n\n${toolUseInstruction}`;
     }
 
     if (activeCollections.length > 0 && cleanedMessages.length > 0) {
       const lastUserMessage = cleanedMessages[cleanedMessages.length - 1];
-      if (lastUserMessage.role === "user") {
+      if (lastUserMessage.role === 'user') {
         try {
           const relevantDocs = await queryActiveCollections(
             activeCollections,
-            typeof lastUserMessage.content === "string"
+            typeof lastUserMessage.content === 'string'
               ? lastUserMessage.content
-              : "search query",
+              : 'search query',
             chunksToRetrieve
           );
 
-          console.log("🧨 Relevant documents found:", relevantDocs);
+          console.log('🧨 Relevant documents found:', relevantDocs);
 
           if (relevantDocs.length > 0) {
             const contextPrompt = `\n\nRelevant context from knowledge base:\n${relevantDocs
@@ -318,13 +350,13 @@ export async function POST(req: Request) {
                   `[${i + 1}] ${doc.document || doc.id}`
               )
               .join(
-                "\n\n"
+                '\n\n'
               )}\n\Always use this context to provide a more informed response.`;
 
             finalSystemPromptWithContext = finalSystemPrompt + contextPrompt;
           }
         } catch (error) {
-          console.error("Failed to query ChromaDB collections:", error);
+          console.error('Failed to query ChromaDB collections:', error);
           // Continue without context augmentation if ChromaDB fails
         }
       }
@@ -352,25 +384,25 @@ export async function POST(req: Request) {
           details:
             connectionError instanceof Error
               ? connectionError.message
-              : "Unknown connection error",
+              : 'Unknown connection error',
         }),
         {
           status: HTTP_STATUS.SERVICE_UNAVAILABLE,
-          headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
+          headers: { 'Content-Type': HTTP_HEADERS.CONTENT_TYPE_JSON },
         }
       );
     }
 
     const ollama = createOpenAI({
       baseURL: `${config.baseURL}/v1`,
-      apiKey: "ollama",
-      compatibility: "compatible",
+      apiKey: 'ollama',
+      compatibility: 'compatible',
     });
 
-    console.log("-------------------------------------------\n");
+    console.log('-------------------------------------------\n');
     console.log(`💥 System Prompt: ${finalSystemPromptWithContext}\n`);
-    console.log("finalOptions:", finalOptions);
-    console.log("-------------------------------------------");
+    console.log('finalOptions:', finalOptions);
+    console.log('-------------------------------------------');
 
     // Use AI SDK streamText with proper configuration
     const result = streamText({
@@ -387,7 +419,9 @@ export async function POST(req: Request) {
       frequencyPenalty: finalOptions.frequency_penalty,
       seed: finalOptions.seed,
       maxSteps: shouldUseTools ? MAX_CHAT_STEPS : DEFAULT_CHAT_STEPS,
-      ...(shouldUseTools && { tools }),
+      // ...(shouldUseTools && { tools: { ...toolSetFireCrawl } }),
+      tools: shouldUseTools ? { ...tools, ...toolSetFireCrawl } : undefined,
+
       // Ollama-specific parameters passed through provider options
       experimental_providerMetadata: {
         ollama: {
@@ -438,14 +472,14 @@ export async function POST(req: Request) {
     // Return proper AI SDK streaming response
     return result.toDataStreamResponse({
       headers: {
-        "Cache-Control": HTTP_HEADERS.CACHE_CONTROL_NO_CACHE,
+        'Cache-Control': HTTP_HEADERS.CACHE_CONTROL_NO_CACHE,
         Connection: HTTP_HEADERS.CONNECTION_KEEP_ALIVE,
-        "X-Request-ID": requestId,
-        "X-Model": selectedModel,
+        'X-Request-ID': requestId,
+        'X-Model': selectedModel,
       },
     });
   } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
+    if (error instanceof Error && error.name === 'AbortError') {
       AILogger.finishRequest(
         requestId,
         undefined,
@@ -460,18 +494,18 @@ export async function POST(req: Request) {
     AILogger.finishRequest(
       requestId,
       undefined,
-      error instanceof Error ? error : new Error("Unknown error")
+      error instanceof Error ? error : new Error('Unknown error')
     );
 
     return new Response(
       JSON.stringify({
         error: ERROR_MESSAGES.CHAT_REQUEST_FAILED,
-        details: error instanceof Error ? error.message : "Unknown error",
+        details: error instanceof Error ? error.message : 'Unknown error',
         requestId,
       }),
       {
         status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
+        headers: { 'Content-Type': HTTP_HEADERS.CONTENT_TYPE_JSON },
       }
     );
   }
@@ -512,7 +546,7 @@ const validateModelOptions = (options: OllamaModelOptions) => {
     ) {
       errors.push(VALIDATION_ERROR_MESSAGES.TOP_P_RANGE);
     }
-    const decimalPlaces = (options.top_p.toString().split(".")[1] || "").length;
+    const decimalPlaces = (options.top_p.toString().split('.')[1] || '').length;
     if (decimalPlaces > VALIDATION_LIMITS.TOP_P_MAX_DECIMALS) {
       errors.push(VALIDATION_ERROR_MESSAGES.TOP_P_DECIMALS);
     }

@@ -289,8 +289,13 @@ export async function POST(req: Request) {
 
     const finalSystemPrompt = `${baseSystemPrompt}\n\n${dateTimeString}`;
 
-    // Augment context with ChromaDB if active collections exist
+    // Append tool-use instruction for selected personalities
     let finalSystemPromptWithContext = finalSystemPrompt;
+    if (shouldUseTools) {
+      const toolUseInstruction =
+        "Use any of the available tools paying attention to what parameters are required. After calling a tool and receiving the result, provide a clear and direct answer to the user using the information returned by the tool.";
+      finalSystemPromptWithContext = `${finalSystemPrompt}\n\n${toolUseInstruction}`;
+    }
 
     if (activeCollections.length > 0 && cleanedMessages.length > 0) {
       const lastUserMessage = cleanedMessages[cleanedMessages.length - 1];

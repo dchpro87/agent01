@@ -203,6 +203,7 @@ export async function POST(req: Request) {
     }
 
     const requestBody = await req.json();
+    console.log("-------------------------------------------");
     console.log(
       "🔍 💥Request body received:",
       JSON.stringify(requestBody, null, 2)
@@ -244,10 +245,12 @@ export async function POST(req: Request) {
           : msg.content,
     })) as CoreMessage[];
 
+    console.log("\n-------------------------------------------");
     console.log(
       "📨 Messages to be sent to AI SDK:",
       JSON.stringify(cleanedMessages, null, 2)
     );
+    console.log("-------------------------------------------");
 
     const { ollama: config } = aiConfig;
     const selectedModel = requestModel || config.model;
@@ -359,7 +362,10 @@ export async function POST(req: Request) {
       compatibility: "compatible",
     });
 
+    console.log("-------------------------------------------\n");
+    console.log(`💥 System Prompt: ${finalSystemPromptWithContext}\n`);
     console.log("finalOptions:", finalOptions);
+    console.log("-------------------------------------------");
 
     // Use AI SDK streamText with proper configuration
     const result = streamText({

@@ -335,7 +335,7 @@ const MessageItem = React.memo(
       <div
         className={`max-w-3xl px-4 py-3 rounded-2xl ${
           message.role === "user"
-            ? "bg-blue-500 text-white ml-12 relative group"
+            ? "bg-blue-500 text-white ml-12 relative"
             : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700"
         }`}
       >
@@ -347,7 +347,7 @@ const MessageItem = React.memo(
             className={`absolute top-2 right-2 p-1 rounded-full transition-all duration-200 ${
               isStreaming
                 ? "bg-blue-400 cursor-not-allowed opacity-50"
-                : "bg-blue-600 hover:bg-blue-700 opacity-0 group-hover:opacity-100"
+                : "bg-blue-600 hover:bg-blue-700 opacity-100"
             } text-white`}
             title={
               isStreaming ? "Cannot resend while streaming" : "Resend message"
@@ -357,7 +357,11 @@ const MessageItem = React.memo(
           </button>
         )}
 
-        <div className='prose prose-sm max-w-none dark:prose-invert'>
+        <div
+          className={`prose prose-sm max-w-none dark:prose-invert ${
+            message.role === "user" && onResend ? "pr-8" : ""
+          }`}
+        >
           {message.role === "assistant" ? (
             <>
               {/* Render content with integrated tool invocations and thinking */}
@@ -432,6 +436,7 @@ export default function Chat() {
     input,
     handleInputChange,
     handleSubmit,
+    append,
     status,
     error,
     stop,
@@ -518,16 +523,29 @@ export default function Chat() {
     stop();
   };
 
-  const handleResend = (message: Message) => {
+  const handleResend = async (message: Message) => {
     // Prevent resending if currently streaming
     if (isStreaming) {
       return;
     }
 
-    // Set the input value to the message content
-    handleInputChange({
-      target: { value: message.content },
-    } as React.ChangeEvent<HTMLTextAreaElement>);
+    // Extract content from the message - AI SDK Message.content is typically a string
+    let messageContent = "";
+    if (typeof message.content === "string") {
+      messageContent = message.content;
+    } else {
+      // For non-string content, convert to string representation
+      messageContent = String(message.content);
+    }
+
+    // If there's no content to resend, show an error
+    if (!messageContent.trim()) {
+      setFileError("Cannot resend message: no text content found.");
+      return;
+    }
+
+    // Clear any existing file error
+    setFileError(null);
 
     // If the message has attachments, show a note about reattaching
     if (
@@ -539,36 +557,16 @@ export default function Chat() {
       );
     }
 
-    // Focus the input
-    if (inputRef.current) {
-      inputRef.current.focus();
+    try {
+      // Use the append method to directly add the message and trigger the API call
+      await append({
+        role: "user",
+        content: messageContent,
+      });
+    } catch (error) {
+      console.error("Failed to resend message:", error);
+      setFileError("Failed to resend message. Please try again.");
     }
-
-    // Create a synthetic form event and submit
-    setTimeout(() => {
-      if (inputRef.current?.closest("form")) {
-        // Create a proper synthetic event object
-        const syntheticEvent = {
-          preventDefault: () => {},
-          stopPropagation: () => {},
-          persist: () => {},
-          target: inputRef.current?.closest("form"),
-          currentTarget: inputRef.current?.closest("form"),
-          nativeEvent: {} as Event,
-          bubbles: true,
-          cancelable: true,
-          defaultPrevented: false,
-          eventPhase: 0,
-          isTrusted: false,
-          timeStamp: Date.now(),
-          type: "submit",
-          isDefaultPrevented: () => false,
-          isPropagationStopped: () => false,
-        } as unknown as React.FormEvent<HTMLFormElement>;
-
-        handleFormSubmit(syntheticEvent);
-      }
-    }, 100);
   };
 
   const isDisabled =

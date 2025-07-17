@@ -2,7 +2,7 @@
 
 import { useChat } from "@ai-sdk/react";
 import type { Message } from "@ai-sdk/react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -617,6 +617,12 @@ export default function Chat() {
   const connectionStatus = useConnectionStatus();
   const preferences = usePersistedPreferences();
 
+  // Memoize collections data
+  const activeCollectionsArray = useMemo(
+    () => Array.from(activeCollections),
+    [activeCollections]
+  );
+
   // Enhanced chat hook usage with proper tool handling
   const {
     messages,
@@ -640,7 +646,7 @@ export default function Chat() {
       systemPrompt: preferences.systemPrompt,
       modelOptions: preferences.modelOptions,
       toolsEnabled: preferences.toolsEnabled,
-      activeCollections: Array.from(activeCollections),
+      activeCollections: activeCollectionsArray,
       chunksToRetrieve: chunksToRetrieve,
     },
     // Handle client-side tools that should be automatically executed
@@ -706,30 +712,48 @@ export default function Chat() {
     }
   }, [status, messages.length]);
 
-  const handleFormSubmit = (e: React.FormEvent) => {
-    connectionStatus.checkConnection();
+  // Memoize expensive calculations
+  const isDisabled = useMemo(
+    () =>
+      status === "streaming" ||
+      status === "submitted" ||
+      connectionStatus.status === "disconnected",
+    [status, connectionStatus.status]
+  );
 
-    // Convert File[] to DataTransfer/FileList format for the API
-    let fileList: FileList | undefined;
-    if (attachedFiles && attachedFiles.length > 0) {
-      const dataTransfer = new DataTransfer();
-      attachedFiles.forEach((file) => dataTransfer.items.add(file));
-      fileList = dataTransfer.files;
-    }
+  const isStreaming = useMemo(
+    () => status === "streaming" || status === "submitted",
+    [status]
+  );
 
-    handleSubmit(e, {
-      experimental_attachments: fileList,
-      allowEmptySubmit: true, // Allow sending files without text
-    });
-    // Clear attachments and file error after sending
-    setAttachedFiles(null);
-    setFileError(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
+  // Use useCallback for event handlers to prevent unnecessary re-renders
+  const handleFormSubmit = useCallback(
+    (e: React.FormEvent) => {
+      connectionStatus.checkConnection();
 
-  const handleReset = () => {
+      // Convert File[] to DataTransfer/FileList format for the API
+      let fileList: FileList | undefined;
+      if (attachedFiles && attachedFiles.length > 0) {
+        const dataTransfer = new DataTransfer();
+        attachedFiles.forEach((file) => dataTransfer.items.add(file));
+        fileList = dataTransfer.files;
+      }
+
+      handleSubmit(e, {
+        experimental_attachments: fileList,
+        allowEmptySubmit: true, // Allow sending files without text
+      });
+      // Clear attachments and file error after sending
+      setAttachedFiles(null);
+      setFileError(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    },
+    [attachedFiles, handleSubmit, connectionStatus]
+  );
+
+  const handleReset = useCallback(() => {
     if (status === "streaming" || status === "submitted") {
       stop();
     }
@@ -740,63 +764,104 @@ export default function Chat() {
       fileInputRef.current.value = "";
     }
     connectionStatus.checkConnection();
-  };
+  }, [status, stop, setMessages, connectionStatus]);
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     stop();
-  };
+  }, [stop]);
 
-  const handleResend = async (message: Message) => {
-    // Prevent resending if currently streaming
-    if (isStreaming) {
-      return;
-    }
+  const handleResend = useCallback(
+    async (message: Message) => {
+      // Prevent resending if currently streaming
+      if (isStreaming) {
+        return;
+      }
 
-    // Extract content from the message - AI SDK Message.content is typically a string
-    let messageContent = "";
-    if (typeof message.content === "string") {
-      messageContent = message.content;
-    } else {
-      // For non-string content, convert to string representation
-      messageContent = String(message.content);
-    }
+      // Extract content from the message - AI SDK Message.content is typically a string
+      let messageContent = "";
+      if (typeof message.content === "string") {
+        messageContent = message.content;
+      } else {
+        // For non-string content, convert to string representation
+        messageContent = String(message.content);
+      }
 
-    // If there's no content to resend, show an error
-    if (!messageContent.trim()) {
-      setFileError("Cannot resend message: no text content found.");
-      return;
-    }
+      // If there's no content to resend, show an error
+      if (!messageContent.trim()) {
+        setFileError("Cannot resend message: no text content found.");
+        return;
+      }
 
-    // Clear any existing file error
+      // Clear any existing file error
+      setFileError(null);
+
+      // If the message has attachments, show a note about reattaching
+      if (
+        message.experimental_attachments &&
+        message.experimental_attachments.length > 0
+      ) {
+        setFileError(
+          "Note: Original attachments cannot be resent automatically. Please reattach files if needed."
+        );
+      }
+
+      try {
+        // Use the append method to directly add the message and trigger the API call
+        await append({
+          role: "user",
+          content: messageContent,
+        });
+      } catch (error) {
+        console.error("Failed to resend message:", error);
+        setFileError("Failed to resend message. Please try again.");
+      }
+    },
+    [isStreaming, append]
+  );
+
+  // Memoize file input handler
+  const handleFileInputChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files.length > 0) {
+        setIsProcessingFiles(true);
+        setFileError(null);
+
+        try {
+          // Process files (resize images)
+          const processedFiles = await processFiles(e.target.files);
+
+          // Validate processed files
+          const validation = validateFiles(processedFiles);
+          if (validation.isValid) {
+            setAttachedFiles(processedFiles);
+            setFileError(null);
+          } else {
+            setFileError(validation.error || "Invalid file");
+            setAttachedFiles(null);
+            // Clear the input so user can try again
+            e.target.value = "";
+          }
+        } catch (error) {
+          console.error("Error processing files:", error);
+          setFileError("Failed to process files. Please try again.");
+          setAttachedFiles(null);
+          e.target.value = "";
+        } finally {
+          setIsProcessingFiles(false);
+        }
+      }
+    },
+    []
+  );
+
+  // Memoize attachment removal handler
+  const handleRemoveAttachments = useCallback(() => {
+    setAttachedFiles(null);
     setFileError(null);
-
-    // If the message has attachments, show a note about reattaching
-    if (
-      message.experimental_attachments &&
-      message.experimental_attachments.length > 0
-    ) {
-      setFileError(
-        "Note: Original attachments cannot be resent automatically. Please reattach files if needed."
-      );
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
-
-    try {
-      // Use the append method to directly add the message and trigger the API call
-      await append({
-        role: "user",
-        content: messageContent,
-      });
-    } catch (error) {
-      console.error("Failed to resend message:", error);
-      setFileError("Failed to resend message. Please try again.");
-    }
-  };
-
-  const isDisabled =
-    status === "streaming" ||
-    status === "submitted" ||
-    connectionStatus.status === "disconnected";
-  const isStreaming = status === "streaming" || status === "submitted";
+  }, []);
 
   return (
     <div className='flex flex-col h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800'>
@@ -1072,13 +1137,7 @@ export default function Chat() {
         <div className='fixed bottom-[140px] left-0 right-0 z-40'>
           <AttachmentPreview
             files={attachedFiles}
-            onRemove={() => {
-              setAttachedFiles(null);
-              setFileError(null);
-              if (fileInputRef.current) {
-                fileInputRef.current.value = "";
-              }
-            }}
+            onRemove={handleRemoveAttachments}
           />
         </div>
       )}
@@ -1090,36 +1149,7 @@ export default function Chat() {
           <input
             type='file'
             ref={fileInputRef}
-            onChange={async (e) => {
-              if (e.target.files && e.target.files.length > 0) {
-                setIsProcessingFiles(true);
-                setFileError(null);
-
-                try {
-                  // Process files (resize images)
-                  const processedFiles = await processFiles(e.target.files);
-
-                  // Validate processed files
-                  const validation = validateFiles(processedFiles);
-                  if (validation.isValid) {
-                    setAttachedFiles(processedFiles);
-                    setFileError(null);
-                  } else {
-                    setFileError(validation.error || "Invalid file");
-                    setAttachedFiles(null);
-                    // Clear the input so user can try again
-                    e.target.value = "";
-                  }
-                } catch (error) {
-                  console.error("Error processing files:", error);
-                  setFileError("Failed to process files. Please try again.");
-                  setAttachedFiles(null);
-                  e.target.value = "";
-                } finally {
-                  setIsProcessingFiles(false);
-                }
-              }
-            }}
+            onChange={handleFileInputChange}
             multiple
             accept={SUPPORTED_FILE_TYPES}
             className='hidden'

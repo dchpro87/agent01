@@ -1,15 +1,15 @@
 import {
-  getCurrentTime,
-  calculateBMI,
-  getWeather,
+  // getCurrentTime,
+  // calculateBMI,
+  // getWeather,
   searchWeb,
   askForConfirmation,
 } from "./tools";
 
 export const tools = {
-  getCurrentTime,
-  calculateBMI,
-  getWeather,
+  // getCurrentTime,
+  // calculateBMI,
+  // getWeather,
   searchWeb,
   askForConfirmation,
 };

@@ -186,6 +186,21 @@ const result = streamText({
   temperature: finalOptions.temperature,   // Runtime temperature control
   maxSteps: supportsTools ? MAX_CHAT_STEPS : DEFAULT_CHAT_STEPS, // Multi-step tool calls (5 steps)
   ...(supportsTools && { tools }),        // Conditional tool integration
+  
+  // Ollama-specific parameters passed through provider options (v4.2+)
+  providerOptions: {
+    ollama: {
+      options: Object.fromEntries(
+        Object.entries({
+          repeat_penalty: finalOptions.repeat_penalty,
+          repeat_last_n: finalOptions.repeat_last_n,
+          num_ctx: finalOptions.num_ctx,
+          // ... other Ollama-specific options
+        }).filter(([, value]) => value !== undefined)
+      ),
+    },
+  },
+  
   onFinish: (event) => {                  // Token usage tracking
     AILogger.finishRequest(requestId, {
       promptTokens: event.usage?.promptTokens,
@@ -296,6 +311,17 @@ const result = streamText({
   // ... other configuration
   maxSteps: shouldUseTools ? MAX_CHAT_STEPS : DEFAULT_CHAT_STEPS, // 5 steps for tools, 1 for regular
   ...(shouldUseTools && { tools }),           // Tools only for capable models
+  
+  // Provider-specific options (replaces experimental_providerMetadata in v4.2+)
+  providerOptions: {
+    ollama: {
+      options: {
+        repeat_penalty: finalOptions.repeat_penalty,
+        num_ctx: finalOptions.num_ctx,
+        // ... other Ollama-specific parameters
+      },
+    },
+  },
 });
 ```
 

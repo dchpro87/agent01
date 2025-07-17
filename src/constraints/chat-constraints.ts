@@ -122,7 +122,7 @@ export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
 export const MAX_FILE_SIZE_DISPLAY = "10MB"; // Display string
 
 // Chat configuration
-export const MAX_CHAT_STEPS = 3;
+export const MAX_CHAT_STEPS = 5;
 export const DEFAULT_CHAT_STEPS = 1;
 
 // API Route constraints
@@ -187,7 +187,7 @@ export const HTTP_STATUS = {
 // Default System Prompts
 export const DEFAULT_SYSTEM_PROMPTS = {
   WITH_TOOLS:
-    "You are a helpful AI assistant. Provide clear, accurate, and helpful responses.",
+    "You are a helpful AI assistant. Provide clear, accurate, and helpful responses. When using tools, always provide a final summary response to the user after the tool execution is complete.",
   WITHOUT_TOOLS: (modelName: string) =>
     `You are a helpful AI assistant. Note: This model (${modelName}) does not support tool/function calling or tools are disabled.`,
 } as const;

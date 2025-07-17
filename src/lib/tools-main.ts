@@ -1,8 +1,15 @@
-import { calculateBMI, searchWeb } from "./tools";
+import {
+  getCurrentTime,
+  calculateBMI,
+  getWeather,
+  searchWeb,
+  askForConfirmation,
+} from "./tools";
 
 export const tools = {
-  // getCurrentTime,
+  getCurrentTime,
   calculateBMI,
-  // getWeather,
+  getWeather,
   searchWeb,
+  askForConfirmation,
 };

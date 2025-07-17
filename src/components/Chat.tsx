@@ -47,6 +47,69 @@ import {
 // Import types
 import type { ToolInvocation, MessagePart } from "@/types/chat";
 
+// Memoized Markdown renderer to reduce expensive operations
+const MemoizedMarkdown = React.memo(({ content }: { content: string }) => (
+  <ReactMarkdown
+    remarkPlugins={[remarkGfm]}
+    rehypePlugins={[rehypeHighlight]}
+    components={markdownComponents}
+  >
+    {content}
+  </ReactMarkdown>
+));
+
+MemoizedMarkdown.displayName = "MemoizedMarkdown";
+
+// Memoized thinking tag parser component
+const MemoizedThinkingParser = React.memo(
+  ({ content }: { content: string }) => {
+    const parts = parseThinkingTags(content);
+    return (
+      <>
+        {parts.map((part, index) => (
+          <div key={index}>
+            {part.type === "think" ? (
+              <div className='mb-3 p-3 border border-purple-200 dark:border-purple-700 rounded-lg bg-purple-50 dark:bg-purple-900/20'>
+                <div className='text-xs font-medium text-purple-600 dark:text-purple-400 mb-1 uppercase tracking-wide flex items-center gap-2'>
+                  <Brain className='w-4 h-4' />
+                  Thinking
+                </div>
+                <div className='text-purple-800 dark:text-purple-200 text-sm'>
+                  <MemoizedMarkdown content={part.text} />
+                </div>
+              </div>
+            ) : (
+              <MemoizedMarkdown content={part.text} />
+            )}
+          </div>
+        ))}
+      </>
+    );
+  }
+);
+
+MemoizedThinkingParser.displayName = "MemoizedThinkingParser";
+
+// Add Message parts type - more comprehensive to match AI SDK
+interface MessagePartType {
+  type:
+    | "text"
+    | "tool-invocation"
+    | "step-start"
+    | "reasoning"
+    | "source"
+    | "file";
+  text?: string;
+  toolInvocation?: {
+    toolCallId: string;
+    toolName: string;
+    args: Record<string, unknown>;
+    state: "partial-call" | "call" | "result";
+    result?: unknown;
+  };
+  reasoning?: string;
+}
+
 // Enhanced assistant message component that handles thinking tags and tool invocations
 const AssistantMessage = React.memo(
   ({
@@ -56,10 +119,9 @@ const AssistantMessage = React.memo(
     content: string;
     toolInvocations?: ToolInvocation[];
   }) => {
-    const parts = parseThinkingTags(content);
-
     // If we have tool invocations, we need to integrate them into the flow
     if (toolInvocations && toolInvocations.length > 0) {
+      const parts = parseThinkingTags(content);
       const integratedParts: MessagePart[] = [];
       let toolIndex = 0;
 
@@ -97,13 +159,7 @@ const AssistantMessage = React.memo(
                     Thinking
                   </div>
                   <div className='text-purple-800 dark:text-purple-200 text-sm'>
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      rehypePlugins={[rehypeHighlight]}
-                      components={markdownComponents}
-                    >
-                      {part.text}
-                    </ReactMarkdown>
+                    <MemoizedMarkdown content={part.text} />
                   </div>
                 </div>
               ) : part.type === "tool" ? (
@@ -137,13 +193,7 @@ const AssistantMessage = React.memo(
                   )}
                 </div>
               ) : (
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeHighlight]}
-                  components={markdownComponents}
-                >
-                  {part.text}
-                </ReactMarkdown>
+                <MemoizedMarkdown content={part.text} />
               )}
             </div>
           ))}
@@ -151,44 +201,173 @@ const AssistantMessage = React.memo(
       );
     }
 
-    // Fallback to original behavior if no tool invocations
+    // Fallback to optimized thinking parser
+    return <MemoizedThinkingParser content={content} />;
+  }
+);
+
+AssistantMessage.displayName = "AssistantMessage";
+
+// Component to render message parts (AI SDK recommended approach)
+const MessageParts = React.memo(
+  ({
+    parts,
+    addToolResult,
+  }: {
+    parts: MessagePartType[];
+    addToolResult: (result: { toolCallId: string; result: string }) => void;
+  }) => {
     return (
       <>
-        {parts.map((part, index) => (
-          <div key={index}>
-            {part.type === "think" ? (
-              <div className='mb-3 p-3 border border-purple-200 dark:border-purple-700 rounded-lg bg-purple-50 dark:bg-purple-900/20'>
-                <div className='text-xs font-medium text-purple-600 dark:text-purple-400 mb-1 uppercase tracking-wide flex items-center gap-2'>
-                  <Brain className='w-4 h-4' />
-                  Thinking
+        {parts.map((part, index) => {
+          switch (part.type) {
+            case "text":
+              // Handle thinking tags in text content with memoized parser
+              return (
+                <div key={index}>
+                  <MemoizedThinkingParser content={part.text || ""} />
                 </div>
-                <div className='text-purple-800 dark:text-purple-200 text-sm'>
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeHighlight]}
-                    components={markdownComponents}
-                  >
-                    {part.text}
-                  </ReactMarkdown>
+              );
+
+            case "tool-invocation":
+              const toolInvocation = part.toolInvocation;
+              if (!toolInvocation) return null;
+
+              return (
+                <div
+                  key={index}
+                  className='mb-3 border border-blue-200 dark:border-blue-700 rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20'
+                >
+                  <div className='text-xs font-medium text-blue-600 dark:text-blue-400 mb-1 uppercase tracking-wide'>
+                    🔧 Tool: {toolInvocation.toolName}
+                  </div>
+
+                  {/* Handle different tool invocation states */}
+                  {toolInvocation.state === "partial-call" && (
+                    <div className='text-xs text-blue-600 dark:text-blue-400'>
+                      <em>Preparing tool call...</em>
+                      {toolInvocation.args &&
+                        Object.keys(toolInvocation.args).length > 0 && (
+                          <div className='mt-1'>
+                            <strong>Arguments (partial):</strong>
+                            <pre className='text-xs bg-blue-100 dark:bg-blue-800 p-1 rounded mt-1'>
+                              {JSON.stringify(toolInvocation.args, null, 2)}
+                            </pre>
+                          </div>
+                        )}
+                    </div>
+                  )}
+
+                  {toolInvocation.state === "call" && (
+                    <div>
+                      {/* Handle interactive confirmation tool */}
+                      {toolInvocation.toolName === "askForConfirmation" && (
+                        <div className='text-sm text-blue-800 dark:text-blue-200'>
+                          <div className='mb-2'>
+                            <strong>Confirmation Required:</strong>
+                          </div>
+                          <div className='mb-2 p-2 bg-blue-100 dark:bg-blue-800 rounded'>
+                            {String(toolInvocation.args.message || "")}
+                          </div>
+                          <div className='text-xs text-blue-600 dark:text-blue-400 mb-2'>
+                            <strong>Action:</strong>{" "}
+                            {String(toolInvocation.args.action || "")}
+                          </div>
+                          <div className='flex gap-2'>
+                            <button
+                              onClick={() =>
+                                addToolResult({
+                                  toolCallId: toolInvocation.toolCallId,
+                                  result: "Yes, confirmed.",
+                                })
+                              }
+                              className='px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-sm'
+                            >
+                              Yes
+                            </button>
+                            <button
+                              onClick={() =>
+                                addToolResult({
+                                  toolCallId: toolInvocation.toolCallId,
+                                  result: "No, denied.",
+                                })
+                              }
+                              className='px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm'
+                            >
+                              No
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Handle other tools in call state */}
+                      {toolInvocation.toolName !== "askForConfirmation" && (
+                        <div className='text-xs text-blue-600 dark:text-blue-400'>
+                          <em>Calling tool...</em>
+                          {toolInvocation.args &&
+                            Object.keys(toolInvocation.args).length > 0 && (
+                              <div className='mt-1'>
+                                <strong>Arguments:</strong>
+                                <pre className='text-xs bg-blue-100 dark:bg-blue-800 p-1 rounded mt-1'>
+                                  {JSON.stringify(toolInvocation.args, null, 2)}
+                                </pre>
+                              </div>
+                            )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {toolInvocation.state === "result" && (
+                    <div className='text-sm text-blue-800 dark:text-blue-200'>
+                      {toolInvocation.args &&
+                        Object.keys(toolInvocation.args).length > 0 && (
+                          <div className='text-xs text-blue-700 dark:text-blue-300 mb-2'>
+                            <strong>Arguments:</strong>
+                            <pre className='text-xs bg-blue-100 dark:bg-blue-800 p-1 rounded mt-1'>
+                              {JSON.stringify(toolInvocation.args, null, 2)}
+                            </pre>
+                          </div>
+                        )}
+                      <div>
+                        <strong>Result:</strong>
+                        <div className='mt-1 p-2 bg-blue-100 dark:bg-blue-800 rounded'>
+                          <MemoizedMarkdown
+                            content={String(toolInvocation.result || "")}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ) : (
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeHighlight]}
-                components={markdownComponents}
-              >
-                {part.text}
-              </ReactMarkdown>
-            )}
-          </div>
-        ))}
+              );
+
+            case "step-start":
+              // Show step boundaries as horizontal lines
+              return index > 0 ? (
+                <div key={index} className='text-gray-500'>
+                  <hr className='my-2 border-gray-300' />
+                </div>
+              ) : null;
+
+            default:
+              // Handle unknown part types
+              return (
+                <div key={index} className='text-gray-500 text-sm'>
+                  <em>Unknown message part type: {part.type}</em>
+                  <pre className='text-xs mt-1 bg-gray-100 p-2 rounded'>
+                    {JSON.stringify(part, null, 2)}
+                  </pre>
+                </div>
+              );
+          }
+        })}
       </>
     );
   }
 );
 
-AssistantMessage.displayName = "AssistantMessage";
+MessageParts.displayName = "MessageParts";
 
 // Component to preview attached files before sending
 const AttachmentPreview = React.memo(
@@ -301,11 +480,13 @@ const MessageItem = React.memo(
     connectionStatus,
     onResend,
     isStreaming,
+    addToolResult,
   }: {
     message: Message;
     connectionStatus: { status: string };
     onResend?: (message: Message) => void;
     isStreaming?: boolean;
+    addToolResult: (result: { toolCallId: string; result: string }) => void;
   }) => (
     <div
       className={`flex gap-4 ${
@@ -364,21 +545,27 @@ const MessageItem = React.memo(
         >
           {message.role === "assistant" ? (
             <>
-              {/* Render content with integrated tool invocations and thinking */}
-              <AssistantMessage
-                content={message.content}
-                toolInvocations={message.toolInvocations}
-              />
+              {/* Render message parts (recommended by AI SDK) */}
+              {message.parts && message.parts.length > 0 ? (
+                <>
+                  <MessageParts
+                    parts={message.parts as MessagePartType[]}
+                    addToolResult={addToolResult}
+                  />
+                </>
+              ) : (
+                /* Fallback to legacy content rendering */
+                <>
+                  <AssistantMessage
+                    content={message.content}
+                    toolInvocations={message.toolInvocations}
+                  />
+                </>
+              )}
             </>
           ) : (
             <>
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeHighlight]}
-                components={markdownComponents}
-              >
-                {message.content}
-              </ReactMarkdown>
+              <MemoizedMarkdown content={message.content} />
               {/* Render user attachments */}
               <MessageAttachments
                 attachments={message.experimental_attachments}
@@ -430,7 +617,7 @@ export default function Chat() {
   const connectionStatus = useConnectionStatus();
   const preferences = usePersistedPreferences();
 
-  // Simplified chat hook usage
+  // Enhanced chat hook usage with proper tool handling
   const {
     messages,
     input,
@@ -441,6 +628,7 @@ export default function Chat() {
     error,
     stop,
     setMessages,
+    addToolResult,
   } = useChat({
     api: "/api/chat",
     maxSteps:
@@ -454,6 +642,41 @@ export default function Chat() {
       toolsEnabled: preferences.toolsEnabled,
       activeCollections: Array.from(activeCollections),
       chunksToRetrieve: chunksToRetrieve,
+    },
+    // Handle client-side tools that should be automatically executed
+    async onToolCall({ toolCall }) {
+      console.log("Client-side tool call:", toolCall);
+
+      // Example: Handle getCurrentTime as a client-side tool
+      if (toolCall.toolName === "getCurrentTime") {
+        const args = toolCall.args as { timezone?: string };
+
+        try {
+          const now = new Date();
+          const options: Intl.DateTimeFormatOptions = {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            weekday: "long",
+            ...(args.timezone && { timeZone: args.timezone }),
+          };
+          const timeString = now.toLocaleString("en-US", options);
+          const timezoneInfo = args.timezone
+            ? ` in ${args.timezone}`
+            : " (local time)";
+          return `The current date and time${timezoneInfo} is: ${timeString}`;
+        } catch (error) {
+          return `Error getting time: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`;
+        }
+      }
+
+      // Return undefined for tools that should be handled server-side
+      return undefined;
     },
     onError: (err) => {
       console.error("💥Chat error:", err);
@@ -765,6 +988,7 @@ export default function Chat() {
                   connectionStatus={connectionStatus}
                   onResend={handleResend}
                   isStreaming={isStreaming}
+                  addToolResult={addToolResult}
                 />
               ))}
 

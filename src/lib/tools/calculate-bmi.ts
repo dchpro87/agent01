@@ -3,7 +3,7 @@ import { z } from "zod";
 /** Calculate Body Mass Index (BMI) */
 export const calculateBMI = {
   description:
-    "Calculate Body Mass Index (BMI) based on height and weight. BMI is calculated as weight (kg) divided by height (m) squared. The result includes BMI value and category classification.",
+    "Calculate Body Mass Index (BMI) based on height and weight. BMI is calculated as weight (kg) divided by height (m) squared. The result includes BMI value and category classification. After calculation, provide a clear explanation of the results to the user.",
   parameters: z.object({
     weight: z.number().positive().describe("Weight in kilograms (kg)"),
     height: z.number().positive().describe("Height in meters (m)"),

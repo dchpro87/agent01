@@ -12,6 +12,7 @@ import {
   Database,
 } from "lucide-react";
 import Message from "./Message";
+import { useDropdownState } from "@/hooks";
 
 interface Model {
   name: string;
@@ -49,7 +50,7 @@ export default function ModelSelector({
   const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
+  const { isOpen, setIsOpen, dropdownRef } = useDropdownState();
 
   useEffect(() => {
     const fetchModels = async () => {
@@ -132,7 +133,7 @@ export default function ModelSelector({
   }
 
   return (
-    <div className='relative'>
+    <div className='relative' ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         disabled={disabled}
@@ -221,11 +222,6 @@ export default function ModelSelector({
             </button>
           ))}
         </div>
-      )}
-
-      {/* Overlay to close dropdown when clicking outside */}
-      {isOpen && (
-        <div className='fixed inset-0 z-40' onClick={() => setIsOpen(false)} />
       )}
     </div>
   );

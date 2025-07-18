@@ -15,6 +15,7 @@ import {
   PREDEFINED_PROMPTS,
   type SystemPrompt,
 } from "@/constraints/predefined-system-prompts";
+import { useDropdownState } from "@/hooks";
 
 interface SystemPromptSelectorProps {
   selectedPrompt: string;
@@ -27,7 +28,6 @@ export default function SystemPromptSelector({
   onPromptChange,
   disabled = false,
 }: SystemPromptSelectorProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const [customPrompts, setCustomPrompts] = useState<SystemPrompt[]>([]);
   const [editingCustom, setEditingCustom] = useState(false);
   const [newPromptName, setNewPromptName] = useState("");
@@ -37,6 +37,14 @@ export default function SystemPromptSelector({
   const [isHydrated, setIsHydrated] = useState(false);
   const [hoveredPrompt, setHoveredPrompt] = useState<SystemPrompt | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const { isOpen, setIsOpen, dropdownRef } = useDropdownState();
+
+  // Clear tooltip when dropdown closes
+  useEffect(() => {
+    if (!isOpen) {
+      setHoveredPrompt(null);
+    }
+  }, [isOpen]);
 
   // Load custom prompts from localStorage on mount
   useEffect(() => {
@@ -149,7 +157,7 @@ export default function SystemPromptSelector({
   const categories = Object.keys(groupedPrompts).sort();
 
   return (
-    <div className='relative'>
+    <div className='relative' ref={dropdownRef}>
       {/* Trigger Button */}
       <button
         onClick={() => {
@@ -343,17 +351,6 @@ export default function SystemPromptSelector({
             ))}
           </div>
         </div>
-      )}
-
-      {/* Overlay to close dropdown */}
-      {isOpen && (
-        <div
-          className='fixed inset-0 z-40'
-          onClick={() => {
-            setIsOpen(false);
-            setHoveredPrompt(null); // Clear tooltip when closing via overlay
-          }}
-        />
       )}
 
       {/* Tooltip Portal - renders outside the modal to prevent clipping */}

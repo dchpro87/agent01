@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Settings, ChevronDown, RotateCcw, X } from "lucide-react";
+import { Settings, ChevronDown, RotateCcw, Check } from "lucide-react";
 import { OllamaModelOptions, MODEL_PRESETS, ModelPreset } from "@/types/ollama";
 import { DEFAULT_OPTIONS, PRESET_INFO } from "@/constraints/model-config";
+import { useDropdownState } from "@/hooks";
 
 interface ModelConfigSelectorProps {
   selectedOptions: OllamaModelOptions;
@@ -32,7 +33,6 @@ export default function ModelConfigSelector({
   onOptionsChange,
   disabled = false,
 }: ModelConfigSelectorProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"presets" | "advanced">("presets");
   const [currentOptions, setCurrentOptions] = useState<OllamaModelOptions>({
     ...DEFAULT_OPTIONS,
@@ -40,6 +40,14 @@ export default function ModelConfigSelector({
   });
   const [hoveredPreset, setHoveredPreset] = useState<ModelPreset | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const { isOpen, setIsOpen, dropdownRef } = useDropdownState();
+
+  // Clear tooltip when dropdown closes
+  useEffect(() => {
+    if (!isOpen) {
+      setHoveredPreset(null);
+    }
+  }, [isOpen]);
 
   // Update local state when props change
   useEffect(() => {
@@ -110,34 +118,32 @@ export default function ModelConfigSelector({
   const currentPreset = getCurrentPreset();
 
   return (
-    <div className='relative'>
+    <div className='relative' ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         disabled={disabled}
-        className={`px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200 ${
-          disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-        }`}
+        className='flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
         title='Model Configuration'
       >
-        <Settings className='w-4 h-4' />
-        <span className='hidden sm:inline'>
+        <Settings className='w-4 h-4 text-gray-500 dark:text-gray-400' />
+        <span className='text-sm text-gray-700 dark:text-gray-300 max-w-32 truncate'>
           {currentPreset
             ? currentPreset.charAt(0).toUpperCase() + currentPreset.slice(1)
             : "Custom"}
         </span>
         <ChevronDown
-          className={`w-4 h-4 transition-transform ${
+          className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${
             isOpen ? "rotate-180" : ""
           }`}
         />
       </button>
 
       {isOpen && (
-        <div className='absolute top-full right-0 mt-2 w-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50'>
-          <div className='p-6'>
-            {/* Header */}
-            <div className='flex items-center justify-between mb-6'>
-              <h3 className='text-lg font-medium text-gray-900 dark:text-white'>
+        <div className='absolute top-full left-0 mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto'>
+          {/* Header */}
+          <div className='p-3 border-b border-gray-200 dark:border-gray-700'>
+            <div className='flex items-center justify-between'>
+              <h3 className='text-sm font-medium text-gray-900 dark:text-white'>
                 Model Configuration
               </h3>
               <div className='flex items-center gap-2'>
@@ -149,369 +155,383 @@ export default function ModelConfigSelector({
                   <RotateCcw className='w-4 h-4' />
                 </button>
                 <button
-                  onClick={() => setIsOpen(false)}
-                  className='p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                  onClick={() =>
+                    setActiveTab(
+                      activeTab === "presets" ? "advanced" : "presets"
+                    )
+                  }
+                  className={`p-1 transition-colors ${
+                    activeTab === "advanced"
+                      ? "text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 rounded"
+                      : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  }`}
+                  title={
+                    activeTab === "presets" ? "Advanced settings" : "Presets"
+                  }
                 >
-                  <X className='w-4 h-4' />
+                  <Settings className='w-4 h-4' />
                 </button>
               </div>
             </div>
+          </div>
 
-            {/* Tabs */}
-            <div className='flex border-b border-gray-200 dark:border-gray-600 mb-6'>
-              <button
-                onClick={() => setActiveTab("presets")}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === "presets"
-                    ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-                }`}
-              >
-                Presets
-              </button>
-              <button
-                onClick={() => setActiveTab("advanced")}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === "advanced"
-                    ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-                }`}
-              >
-                Advanced
-              </button>
-            </div>
-
-            {/* Presets Tab */}
+          {/* Content */}
+          <div className='max-h-80 overflow-y-auto'>
             {activeTab === "presets" && (
-              <div className='space-y-4'>
+              <div>
+                <div className='px-3 py-2 bg-gray-100 dark:bg-gray-700'>
+                  <h4 className='text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide'>
+                    Presets
+                  </h4>
+                </div>
                 {Object.entries(PRESET_INFO).map(([preset, info]) => {
                   const Icon = info.icon;
                   const isSelected = currentPreset === preset;
                   return (
-                    <button
+                    <div
                       key={preset}
+                      className={`group px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-l-2 transition-colors ${
+                        isSelected
+                          ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                          : "border-transparent"
+                      }`}
                       onClick={() => handlePresetSelect(preset as ModelPreset)}
                       onMouseEnter={(e) => {
                         setHoveredPreset(preset as ModelPreset);
                         const rect = e.currentTarget.getBoundingClientRect();
                         setTooltipPosition({
-                          x: rect.left - 250, // Position tooltip to the left of the button
-                          y: rect.top + rect.height / 2 - 50, // Center vertically relative to button
+                          x: rect.left - 170,
+                          y: rect.top + rect.height / 2 - 50,
                         });
                       }}
                       onMouseLeave={() => setHoveredPreset(null)}
-                      className={`w-full p-4 text-left border rounded-lg transition-colors ${
-                        isSelected
-                          ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                          : "border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500"
-                      }`}
                     >
-                      <div className='flex items-center gap-3'>
-                        <Icon className={`w-5 h-5 text-${info.color}-500`} />
-                        <div>
-                          <div className='font-medium text-gray-900 dark:text-white capitalize'>
-                            {preset}
+                      <div className='flex items-start gap-3'>
+                        <div
+                          className={`flex-shrink-0 p-1 rounded ${
+                            isSelected
+                              ? "bg-blue-100 dark:bg-blue-800"
+                              : "bg-gray-100 dark:bg-gray-600"
+                          }`}
+                        >
+                          <Icon className={`w-3 h-3 text-${info.color}-500`} />
+                        </div>
+                        <div className='flex-1 min-w-0'>
+                          <div className='flex items-center justify-between'>
+                            <h5
+                              className={`text-sm font-medium truncate capitalize ${
+                                isSelected
+                                  ? "text-blue-900 dark:text-blue-100"
+                                  : "text-gray-900 dark:text-white"
+                              }`}
+                            >
+                              {preset}
+                              {isSelected && (
+                                <Check className='inline ml-1 w-3 h-3 text-blue-600 dark:text-blue-400' />
+                              )}
+                            </h5>
                           </div>
-                          <div className='text-sm text-gray-500 dark:text-gray-400 mt-1'>
+                          <p
+                            className={`text-xs mt-1 line-clamp-2 ${
+                              isSelected
+                                ? "text-blue-700 dark:text-blue-300"
+                                : "text-gray-500 dark:text-gray-400"
+                            }`}
+                          >
                             {info.description}
-                          </div>
+                          </p>
                         </div>
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
             )}
 
-            {/* Advanced Tab */}
             {activeTab === "advanced" && (
-              <div className='space-y-6 max-h-96 overflow-y-auto pr-4'>
-                {/* Core Parameters */}
-                <div>
-                  <h4 className='text-sm font-medium text-gray-900 dark:text-white mb-4'>
-                    Core Parameters
+              <div>
+                <div className='px-3 py-2 bg-gray-100 dark:bg-gray-700'>
+                  <h4 className='text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide'>
+                    Advanced Parameters
                   </h4>
-                  <div className='space-y-4'>
-                    {/* Temperature */}
-                    <div className='py-1'>
-                      <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-2'>
-                        Temperature
-                        <span className='text-xs text-gray-500'>
-                          {currentOptions.temperature?.toFixed(2)}
-                        </span>
-                      </label>
-                      <input
-                        type='range'
-                        min='0'
-                        max='2'
-                        step='0.01'
-                        value={currentOptions.temperature || 0.7}
-                        onChange={(e) =>
-                          handleOptionChange(
-                            "temperature",
-                            parseFloat(e.target.value)
-                          )
-                        }
-                        className='w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer'
-                      />
-                      <div className='text-xs text-gray-500 mt-2'>
-                        Controls randomness (0 = deterministic, 2 = very random)
-                      </div>
-                    </div>
-
-                    {/* Top K */}
-                    <div className='py-1'>
-                      <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-2'>
-                        Top K
-                        <span className='text-xs text-gray-500'>
-                          {currentOptions.top_k}
-                        </span>
-                      </label>
-                      <input
-                        type='range'
-                        min='1'
-                        max='100'
-                        step='1'
-                        value={currentOptions.top_k || 40}
-                        onChange={(e) =>
-                          handleOptionChange("top_k", parseInt(e.target.value))
-                        }
-                        className='w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer'
-                      />
-                      <div className='text-xs text-gray-500 mt-2'>
-                        Limits vocabulary to top K tokens
-                      </div>
-                    </div>
-
-                    {/* Top P */}
-                    <div className='py-1'>
-                      <div className='flex items-center justify-between mb-3'>
-                        <label className='text-sm text-gray-700 dark:text-gray-300'>
-                          Top P (Nucleus Sampling)
-                        </label>
-                        <div className='flex items-center gap-2'>
-                          <button
-                            onClick={() => {
-                              if (currentOptions.top_p === 0) {
-                                // Enable with default value of 0.7
-                                handleOptionChange("top_p", 0.7);
-                              } else {
-                                // Disable by setting to 0
-                                handleOptionChange("top_p", 0);
-                              }
-                            }}
-                            className={`px-2 py-1 text-xs rounded transition-colors ${
-                              currentOptions.top_p === 0
-                                ? "bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400"
-                                : "bg-blue-500 text-white"
-                            }`}
-                          >
-                            {currentOptions.top_p === 0 ? "Enable" : "Disable"}
-                          </button>
+                </div>
+                <div className='p-3 space-y-6'>
+                  {/* Core Parameters */}
+                  <div>
+                    <h4 className='text-sm font-medium text-gray-900 dark:text-white mb-4'>
+                      Core Parameters
+                    </h4>
+                    <div className='space-y-4'>
+                      {/* Temperature */}
+                      <div className='py-1'>
+                        <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-2'>
+                          Temperature
                           <span className='text-xs text-gray-500'>
-                            {currentOptions.top_p?.toFixed(1) || "0.0"}
+                            {currentOptions.temperature?.toFixed(2)}
                           </span>
+                        </label>
+                        <input
+                          type='range'
+                          min='0'
+                          max='2'
+                          step='0.01'
+                          value={currentOptions.temperature || 0.7}
+                          onChange={(e) =>
+                            handleOptionChange(
+                              "temperature",
+                              parseFloat(e.target.value)
+                            )
+                          }
+                          className='w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer'
+                        />
+                        <div className='text-xs text-gray-500 mt-2'>
+                          Controls randomness (0 = deterministic, 2 = very
+                          random)
                         </div>
                       </div>
-                      <input
-                        type='range'
-                        min='0'
-                        max='1'
-                        step='0.1'
-                        value={currentOptions.top_p || 0}
-                        disabled={currentOptions.top_p === 0}
-                        onChange={(e) =>
-                          handleOptionChange(
-                            "top_p",
-                            parseFloat(e.target.value)
-                          )
-                        }
-                        className={`w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer ${
-                          currentOptions.top_p === 0 ? "opacity-50" : ""
-                        }`}
-                      />
-                      <div className='text-xs text-gray-500 mt-2'>
-                        Controls the diversity of the model&apos;s output by
-                        filtering the probability distribution of possible next
-                        tokens.
-                      </div>
-                      <div className='text-xs text-gray-500 mt-1'>
-                        {currentOptions.top_p === 0
-                          ? " Disabled - using temperature for randomness control"
-                          : " Enabled - overrides temperature setting (0.1-1.0, default 0.7)"}
-                      </div>
-                    </div>
 
-                    {/* Repeat Penalty */}
-                    <div className='py-1'>
-                      <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-2'>
-                        Repeat Penalty
-                        <span className='text-xs text-gray-500'>
-                          {currentOptions.repeat_penalty?.toFixed(2)}
-                        </span>
-                      </label>
-                      <input
-                        type='range'
-                        min='0.8'
-                        max='1.5'
-                        step='0.01'
-                        value={currentOptions.repeat_penalty || 1.1}
-                        onChange={(e) =>
-                          handleOptionChange(
-                            "repeat_penalty",
-                            parseFloat(e.target.value)
-                          )
-                        }
-                        className='w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer'
-                      />
-                      <div className='text-xs text-gray-500 mt-2'>
-                        Penalizes repetition (1.0 = no penalty)
+                      {/* Top K */}
+                      <div className='py-1'>
+                        <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-2'>
+                          Top K
+                          <span className='text-xs text-gray-500'>
+                            {currentOptions.top_k}
+                          </span>
+                        </label>
+                        <input
+                          type='range'
+                          min='1'
+                          max='100'
+                          step='1'
+                          value={currentOptions.top_k || 40}
+                          onChange={(e) =>
+                            handleOptionChange(
+                              "top_k",
+                              parseInt(e.target.value)
+                            )
+                          }
+                          className='w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer'
+                        />
+                        <div className='text-xs text-gray-500 mt-2'>
+                          Limits vocabulary to top K tokens
+                        </div>
+                      </div>
+
+                      {/* Top P */}
+                      <div className='py-1'>
+                        <div className='flex items-center justify-between mb-3'>
+                          <label className='text-sm text-gray-700 dark:text-gray-300'>
+                            Top P (Nucleus Sampling)
+                          </label>
+                          <div className='flex items-center gap-2'>
+                            <button
+                              onClick={() => {
+                                if (currentOptions.top_p === 0) {
+                                  // Enable with default value of 0.7
+                                  handleOptionChange("top_p", 0.7);
+                                } else {
+                                  // Disable by setting to 0
+                                  handleOptionChange("top_p", 0);
+                                }
+                              }}
+                              className={`px-2 py-1 text-xs rounded transition-colors ${
+                                currentOptions.top_p === 0
+                                  ? "bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400"
+                                  : "bg-blue-500 text-white"
+                              }`}
+                            >
+                              {currentOptions.top_p === 0
+                                ? "Enable"
+                                : "Disable"}
+                            </button>
+                            <span className='text-xs text-gray-500'>
+                              {currentOptions.top_p?.toFixed(1) || "0.0"}
+                            </span>
+                          </div>
+                        </div>
+                        <input
+                          type='range'
+                          min='0'
+                          max='1'
+                          step='0.1'
+                          value={currentOptions.top_p || 0}
+                          disabled={currentOptions.top_p === 0}
+                          onChange={(e) =>
+                            handleOptionChange(
+                              "top_p",
+                              parseFloat(e.target.value)
+                            )
+                          }
+                          className={`w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer ${
+                            currentOptions.top_p === 0 ? "opacity-50" : ""
+                          }`}
+                        />
+                        <div className='text-xs text-gray-500 mt-2'>
+                          Controls the diversity of the model&apos;s output by
+                          filtering the probability distribution of possible
+                          next tokens.
+                        </div>
+                        <div className='text-xs text-gray-500 mt-1'>
+                          {currentOptions.top_p === 0
+                            ? " Disabled - using temperature for randomness control"
+                            : " Enabled - overrides temperature setting (0.1-1.0, default 0.7)"}
+                        </div>
+                      </div>
+
+                      {/* Repeat Penalty */}
+                      <div className='py-1'>
+                        <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-2'>
+                          Repeat Penalty
+                          <span className='text-xs text-gray-500'>
+                            {currentOptions.repeat_penalty?.toFixed(2)}
+                          </span>
+                        </label>
+                        <input
+                          type='range'
+                          min='0.8'
+                          max='1.5'
+                          step='0.01'
+                          value={currentOptions.repeat_penalty || 1.1}
+                          onChange={(e) =>
+                            handleOptionChange(
+                              "repeat_penalty",
+                              parseFloat(e.target.value)
+                            )
+                          }
+                          className='w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer'
+                        />
+                        <div className='text-xs text-gray-500 mt-2'>
+                          Penalizes repetition (1.0 = no penalty)
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Token Control */}
-                <div>
-                  <h4 className='text-sm font-medium text-gray-900 dark:text-white mb-4'>
-                    Token Control
-                  </h4>
-                  <div className='space-y-4'>
-                    {/* Context Length */}
-                    <div className='py-1'>
-                      <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-2'>
-                        Context Length (Tokens)
-                        <span className='text-xs text-gray-500'>
-                          {currentOptions.num_ctx}
-                        </span>
-                      </label>
-                      <input
-                        type='range'
-                        min='512'
-                        max='128000'
-                        step='128'
-                        value={currentOptions.num_ctx || 4096}
-                        onChange={(e) =>
-                          handleOptionChange(
-                            "num_ctx",
-                            parseInt(e.target.value)
-                          )
-                        }
-                        className='w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer'
-                      />
-                      <div className='text-xs text-gray-500 mt-2'>
-                        Maximum context window size
+                  {/* Token Control */}
+                  <div>
+                    <h4 className='text-sm font-medium text-gray-900 dark:text-white mb-4'>
+                      Token Control
+                    </h4>
+                    <div className='space-y-4'>
+                      {/* Context Length */}
+                      <div className='py-1'>
+                        <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-2'>
+                          Context Length (Tokens)
+                          <span className='text-xs text-gray-500'>
+                            {currentOptions.num_ctx}
+                          </span>
+                        </label>
+                        <input
+                          type='range'
+                          min='512'
+                          max='128000'
+                          step='128'
+                          value={currentOptions.num_ctx || 4096}
+                          onChange={(e) =>
+                            handleOptionChange(
+                              "num_ctx",
+                              parseInt(e.target.value)
+                            )
+                          }
+                          className='w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer'
+                        />
+                        <div className='text-xs text-gray-500 mt-2'>
+                          Maximum context window size
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Max Tokens */}
-                    <div className='py-1'>
-                      <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-2'>
-                        Max Tokens
-                        <span className='text-xs text-gray-500'>
-                          {currentOptions.maxTokens}
-                        </span>
-                      </label>
-                      <input
-                        type='range'
-                        min='50'
-                        max='128000'
-                        step='10'
-                        value={currentOptions.maxTokens || 1024}
-                        onChange={(e) =>
-                          handleOptionChange(
-                            "maxTokens",
-                            parseInt(e.target.value)
-                          )
-                        }
-                        className='w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer'
-                      />
-                      <div className='text-xs text-gray-500 mt-2'>
-                        Maximum tokens to generate in response
+                      {/* Max Tokens */}
+                      <div className='py-1'>
+                        <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-2'>
+                          Max Tokens
+                          <span className='text-xs text-gray-500'>
+                            {currentOptions.maxTokens}
+                          </span>
+                        </label>
+                        <input
+                          type='range'
+                          min='50'
+                          max='128000'
+                          step='10'
+                          value={currentOptions.maxTokens || 1024}
+                          onChange={(e) =>
+                            handleOptionChange(
+                              "maxTokens",
+                              parseInt(e.target.value)
+                            )
+                          }
+                          className='w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer'
+                        />
+                        <div className='text-xs text-gray-500 mt-2'>
+                          Maximum tokens to generate in response
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Advanced Sampling */}
-                <div>
-                  <h4 className='text-sm font-medium text-gray-900 dark:text-white mb-4'>
-                    Advanced Sampling
-                  </h4>
-                  <div className='space-y-4'>
-                    {/* Min P */}
-                    <div className='py-1'>
-                      <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-2'>
-                        Min P
-                        <span className='text-xs text-gray-500'>
-                          {currentOptions.min_p?.toFixed(3) || "0.000"}
-                        </span>
-                      </label>
-                      <input
-                        type='range'
-                        min='0'
-                        max='0.5'
-                        step='0.001'
-                        value={currentOptions.min_p || 0}
-                        onChange={(e) =>
-                          handleOptionChange(
-                            "min_p",
-                            parseFloat(e.target.value)
-                          )
-                        }
-                        className='w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer'
-                      />
-                      <div className='text-xs text-gray-500 mt-2'>
-                        Minimum probability threshold
+                  {/* Advanced Sampling */}
+                  <div>
+                    <h4 className='text-sm font-medium text-gray-900 dark:text-white mb-4'>
+                      Advanced Sampling
+                    </h4>
+                    <div className='space-y-4'>
+                      {/* Min P */}
+                      <div className='py-1'>
+                        <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-2'>
+                          Min P
+                          <span className='text-xs text-gray-500'>
+                            {currentOptions.min_p?.toFixed(3) || "0.000"}
+                          </span>
+                        </label>
+                        <input
+                          type='range'
+                          min='0'
+                          max='0.5'
+                          step='0.001'
+                          value={currentOptions.min_p || 0}
+                          onChange={(e) =>
+                            handleOptionChange(
+                              "min_p",
+                              parseFloat(e.target.value)
+                            )
+                          }
+                          className='w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer'
+                        />
+                        <div className='text-xs text-gray-500 mt-2'>
+                          Minimum probability threshold
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Seed */}
-                    <div className='py-1'>
-                      <label className='text-sm text-gray-700 dark:text-gray-300 mb-2 block'>
-                        Seed (for reproducibility)
-                      </label>
-                      <input
-                        type='number'
-                        placeholder='Random'
-                        value={currentOptions.seed || ""}
-                        onChange={(e) =>
-                          handleOptionChange(
-                            "seed",
-                            e.target.value
-                              ? parseInt(e.target.value)
-                              : undefined
-                          )
-                        }
-                        className='w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white'
-                      />
-                      <div className='text-xs text-gray-500 mt-2'>
-                        Fixed seed for reproducible outputs
+                      {/* Seed */}
+                      <div className='py-1'>
+                        <label className='text-sm text-gray-700 dark:text-gray-300 mb-2 block'>
+                          Seed (for reproducibility)
+                        </label>
+                        <input
+                          type='number'
+                          placeholder='Random'
+                          value={currentOptions.seed || ""}
+                          onChange={(e) =>
+                            handleOptionChange(
+                              "seed",
+                              e.target.value
+                                ? parseInt(e.target.value)
+                                : undefined
+                            )
+                          }
+                          className='w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white'
+                        />
+                        <div className='text-xs text-gray-500 mt-2'>
+                          Fixed seed for reproducible outputs
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             )}
-
-            {/* Current Configuration Summary */}
-            <div className='mt-6 pt-4 border-t border-gray-200 dark:border-gray-600'>
-              <div className='text-xs text-gray-500 dark:text-gray-400'>
-                <div className='flex justify-between items-center'>
-                  <span>Configuration:</span>
-                  <span className='font-medium'>
-                    {currentPreset ? `${currentPreset} preset` : "Custom"}
-                  </span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
-      )}
-
-      {/* Overlay to close dropdown */}
-      {isOpen && (
-        <div className='fixed inset-0 z-40' onClick={() => setIsOpen(false)} />
       )}
 
       {/* Tooltip Portal - renders outside the modal to prevent clipping */}
@@ -519,7 +539,7 @@ export default function ModelConfigSelector({
         typeof window !== "undefined" &&
         createPortal(
           <div
-            className='fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 shadow-lg z-[9999] max-w-xs'
+            className='fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-xl z-[9999] max-w-xs'
             style={{
               left: `${tooltipPosition.x}px`,
               top: `${tooltipPosition.y}px`,

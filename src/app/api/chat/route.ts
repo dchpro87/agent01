@@ -9,9 +9,7 @@
  */
 
 import { createOpenAI } from "@ai-sdk/openai";
-import { streamText, CoreMessage } from "ai";
-// import { Experimental_StdioMCPTransport } from 'ai/mcp-stdio';
-// import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp';
+import { streamText, CoreMessage, experimental_createMCPClient } from "ai";
 
 import { AILogger, generateRequestId } from "@/lib/ai-middleware";
 import { aiConfig, validateConfig } from "@/lib/ai-config";
@@ -32,6 +30,33 @@ import {
   MAX_CHAT_STEPS,
   DEFAULT_CHAT_STEPS,
 } from "@/constraints/chat-constraints";
+
+// Function to create MCP client and get tools
+async function getMCPTools() {
+  try {
+    const firecrawlApiKey = process.env.FIRECRAWL_API_KEY;
+    if (!firecrawlApiKey) {
+      console.warn("⚠️  FIRECRAWL_API_KEY not found in environment variables");
+      return { tools: {}, clients: [] };
+    }
+
+    const client = await experimental_createMCPClient({
+      transport: {
+        type: "sse",
+        url: `https://mcp.firecrawl.dev/${firecrawlApiKey}/sse`,
+      },
+    });
+
+    const mcpTools = await client.tools();
+
+    console.log("🔧 MCP Tools retrieved:", Object.keys(mcpTools));
+
+    return { tools: mcpTools, clients: [client] };
+  } catch (error) {
+    console.error("❌ Failed to connect to MCP server:", error);
+    return { tools: {}, clients: [] };
+  }
+}
 
 // Function to clean thinking tags from message content
 function cleanThinkingTags(
@@ -181,6 +206,20 @@ const RequestSchema = z.object({
 
 export async function POST(req: Request) {
   const requestId = generateRequestId();
+  let mcpClients: Array<{ close: () => Promise<void> }> = [];
+
+  // Helper function to cleanup MCP clients
+  const cleanupMCPClients = async (context: string) => {
+    if (mcpClients.length > 0) {
+      try {
+        await Promise.all(mcpClients.map((client) => client.close()));
+        console.log(`🧹 MCP clients closed successfully (${context})`);
+        mcpClients = []; // Clear the array to prevent double cleanup
+      } catch (closeError) {
+        console.error(`❌ Error closing MCP clients (${context}):`, closeError);
+      }
+    }
+  };
 
   try {
     const abortController = new AbortController();
@@ -190,10 +229,14 @@ export async function POST(req: Request) {
       abortController.abort();
     });
 
+    // Get MCP tools early in the process
+    const { tools: mcpTools, clients } = await getMCPTools();
+    mcpClients = clients;
+
     // Validate configuration
     const configValidation = validateConfig();
     if (!configValidation.isValid) {
-      return new Response(
+      const response = new Response(
         JSON.stringify({
           error: ERROR_MESSAGES.INVALID_AI_CONFIG,
           details: configValidation.errors,
@@ -203,6 +246,8 @@ export async function POST(req: Request) {
           headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
         }
       );
+      await cleanupMCPClients("config validation error");
+      return response;
     }
 
     const requestBody = await req.json();
@@ -215,7 +260,7 @@ export async function POST(req: Request) {
     // Validate request using AI SDK compatible schema
     const validationResult = RequestSchema.safeParse(requestBody);
     if (!validationResult.success) {
-      return new Response(
+      const response = new Response(
         JSON.stringify({
           error: ERROR_MESSAGES.INVALID_REQUEST_FORMAT,
           details: validationResult.error.issues.map(
@@ -227,6 +272,8 @@ export async function POST(req: Request) {
           headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
         }
       );
+      await cleanupMCPClients("request validation error");
+      return response;
     }
 
     const {
@@ -267,7 +314,7 @@ export async function POST(req: Request) {
 
     const modelOptionsErrors = validateModelOptions(finalOptions);
     if (modelOptionsErrors.length > 0) {
-      return new Response(
+      const response = new Response(
         JSON.stringify({
           error: ERROR_MESSAGES.INVALID_MODEL_OPTIONS,
           details: modelOptionsErrors,
@@ -277,6 +324,8 @@ export async function POST(req: Request) {
           headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
         }
       );
+      await cleanupMCPClients("model validation error");
+      return response;
     }
 
     const defaultSystemPrompt = shouldUseTools
@@ -345,11 +394,12 @@ export async function POST(req: Request) {
       }
     } catch (connectionError) {
       if (abortController.signal.aborted) {
+        await cleanupMCPClients("request aborted");
         return new Response(ERROR_MESSAGES.REQUEST_ABORTED, {
           status: HTTP_STATUS.REQUEST_ABORTED,
         });
       }
-      return new Response(
+      const response = new Response(
         JSON.stringify({
           error: ERROR_MESSAGES.OLLAMA_CONNECTION_FAILED,
           details:
@@ -362,6 +412,8 @@ export async function POST(req: Request) {
           headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
         }
       );
+      await cleanupMCPClients("ollama connection error");
+      return response;
     }
 
     const ollama = createOpenAI({
@@ -374,6 +426,28 @@ export async function POST(req: Request) {
     console.log(`💥 System Prompt: ${finalSystemPromptWithContext}\n`);
     console.log("finalOptions:", finalOptions);
     console.log("-------------------------------------------");
+
+    // Merge local tools with MCP tools
+    const allTools = shouldUseTools ? { ...tools, ...mcpTools } : {};
+
+    if (shouldUseTools) {
+      const localToolNames = Object.keys(tools);
+      const mcpToolNames = Object.keys(mcpTools);
+      const overlapping = localToolNames.filter((name) =>
+        mcpToolNames.includes(name)
+      );
+
+      if (overlapping.length > 0) {
+        console.log(
+          "⚠️  Tool name conflicts (MCP tools will override local):",
+          overlapping
+        );
+      }
+
+      console.log("🛠️  Local tools:", localToolNames);
+      console.log("🌐 MCP tools:", mcpToolNames);
+      console.log("🔧 Total available tools:", Object.keys(allTools));
+    }
 
     // Use AI SDK streamText with proper configuration
     const result = streamText({
@@ -390,7 +464,7 @@ export async function POST(req: Request) {
       frequencyPenalty: finalOptions.frequency_penalty,
       seed: finalOptions.seed,
       maxSteps: shouldUseTools ? MAX_CHAT_STEPS : DEFAULT_CHAT_STEPS,
-      ...(shouldUseTools && { tools }),
+      ...(shouldUseTools && { tools: allTools }),
 
       // Ollama-specific parameters passed through provider options (replaces experimental_providerMetadata in v4.2+)
       providerOptions: {
@@ -422,20 +496,26 @@ export async function POST(req: Request) {
       },
       // AI SDK v5 handles experimental_attachments automatically
       // No need for manual processing
-      onFinish: (event) => {
+      onFinish: async (event) => {
         AILogger.finishRequest(requestId, {
           promptTokens: event.usage?.promptTokens,
           completionTokens: event.usage?.completionTokens,
           totalTokens: event.usage?.totalTokens,
         });
+
+        // Clean up MCP clients after streaming is complete
+        await cleanupMCPClients("onFinish");
       },
-      onError: (error) => {
+      onError: async (error) => {
         console.error(`❌ Streaming error for request ${requestId}:`, error);
         AILogger.finishRequest(
           requestId,
           undefined,
           error instanceof Error ? error : new Error(String(error))
         );
+
+        // Clean up MCP clients on error
+        await cleanupMCPClients("onError");
       },
     });
 
@@ -449,6 +529,8 @@ export async function POST(req: Request) {
       },
     });
   } catch (error) {
+    await cleanupMCPClients("main catch block");
+
     if (error instanceof Error && error.name === "AbortError") {
       AILogger.finishRequest(
         requestId,
@@ -478,6 +560,9 @@ export async function POST(req: Request) {
         headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
       }
     );
+  } finally {
+    // Only clean up MCP clients if there was an error before streaming started
+    // Normal cleanup happens in onFinish/onError callbacks
   }
 }
 

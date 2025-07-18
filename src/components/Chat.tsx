@@ -67,19 +67,21 @@ const MemoizedThinkingParser = React.memo(
     return (
       <>
         {parts.map((part, index) => (
-          <div key={index}>
+          <div key={index} className='transition-all duration-300 ease-out'>
             {part.type === "think" ? (
-              <div className='mb-3 p-3 border border-purple-200 dark:border-purple-700 rounded-lg bg-purple-50 dark:bg-purple-900/20'>
+              <div className='mb-3 p-3 border border-purple-200 dark:border-purple-700 rounded-lg bg-purple-50 dark:bg-purple-900/20 transition-all duration-300 ease-out'>
                 <div className='text-xs font-medium text-purple-600 dark:text-purple-400 mb-1 uppercase tracking-wide flex items-center gap-2'>
                   <Brain className='w-4 h-4' />
                   Thinking
                 </div>
-                <div className='text-purple-800 dark:text-purple-200 text-sm'>
+                <div className='text-purple-800 dark:text-purple-200 text-sm transition-all duration-300 ease-out'>
                   <MemoizedMarkdown content={part.text} />
                 </div>
               </div>
             ) : (
-              <MemoizedMarkdown content={part.text} />
+              <div className='transition-all duration-300 ease-out'>
+                <MemoizedMarkdown content={part.text} />
+              </div>
             )}
           </div>
         ))}
@@ -151,19 +153,19 @@ const AssistantMessage = React.memo(
       return (
         <>
           {integratedParts.map((part, index) => (
-            <div key={index}>
+            <div key={index} className='transition-all duration-300 ease-out'>
               {part.type === "think" ? (
-                <div className='mb-3 p-3 border border-purple-200 dark:border-purple-700 rounded-lg bg-purple-50 dark:bg-purple-900/20'>
+                <div className='mb-3 p-3 border border-purple-200 dark:border-purple-700 rounded-lg bg-purple-50 dark:bg-purple-900/20 transition-all duration-300 ease-out'>
                   <div className='text-xs font-medium text-purple-600 dark:text-purple-400 mb-1 uppercase tracking-wide flex items-center gap-2'>
                     <Brain className='w-4 h-4' />
                     Thinking
                   </div>
-                  <div className='text-purple-800 dark:text-purple-200 text-sm'>
+                  <div className='text-purple-800 dark:text-purple-200 text-sm transition-all duration-300 ease-out'>
                     <MemoizedMarkdown content={part.text} />
                   </div>
                 </div>
               ) : part.type === "tool" ? (
-                <div className='mb-3 border border-blue-200 dark:border-blue-700 rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20'>
+                <div className='mb-3 border border-blue-200 dark:border-blue-700 rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20 transition-all duration-300 ease-out'>
                   <div className='text-xs font-medium text-blue-600 dark:text-blue-400 mb-1 uppercase tracking-wide'>
                     🔧 Tool: {part.toolInvocation.toolName}
                   </div>
@@ -193,7 +195,9 @@ const AssistantMessage = React.memo(
                   )}
                 </div>
               ) : (
-                <MemoizedMarkdown content={part.text} />
+                <div className='transition-all duration-300 ease-out'>
+                  <MemoizedMarkdown content={part.text} />
+                </div>
               )}
             </div>
           ))}
@@ -202,7 +206,11 @@ const AssistantMessage = React.memo(
     }
 
     // Fallback to optimized thinking parser
-    return <MemoizedThinkingParser content={content} />;
+    return (
+      <div className='transition-all duration-300 ease-out'>
+        <MemoizedThinkingParser content={content} />
+      </div>
+    );
   }
 );
 
@@ -224,7 +232,10 @@ const MessageParts = React.memo(
             case "text":
               // Handle thinking tags in text content with memoized parser
               return (
-                <div key={index}>
+                <div
+                  key={index}
+                  className='transition-all duration-300 ease-out'
+                >
                   <MemoizedThinkingParser content={part.text || ""} />
                 </div>
               );
@@ -236,7 +247,7 @@ const MessageParts = React.memo(
               return (
                 <div
                   key={index}
-                  className='mb-3 border border-blue-200 dark:border-blue-700 rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20'
+                  className='mb-3 border border-blue-200 dark:border-blue-700 rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20 transition-all duration-300 ease-out'
                 >
                   <div className='text-xs font-medium text-blue-600 dark:text-blue-400 mb-1 uppercase tracking-wide'>
                     🔧 Tool: {toolInvocation.toolName}
@@ -343,12 +354,8 @@ const MessageParts = React.memo(
               );
 
             case "step-start":
-              // Show step boundaries as horizontal lines
-              return index > 0 ? (
-                <div key={index} className='text-gray-500'>
-                  <hr className='my-2 border-gray-300' />
-                </div>
-              ) : null;
+              // Step boundaries without visual separator
+              return null;
 
             default:
               // Handle unknown part types
@@ -514,7 +521,7 @@ const MessageItem = React.memo(
       )}
 
       <div
-        className={`max-w-3xl px-4 py-3 rounded-2xl ${
+        className={`max-w-3xl px-4 py-3 rounded-2xl transition-all duration-300 ease-out ${
           message.role === "user"
             ? "bg-blue-500 text-white ml-12 relative"
             : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700"
@@ -531,7 +538,7 @@ const MessageItem = React.memo(
                 : "bg-blue-600 hover:bg-blue-700 opacity-100"
             } text-white`}
             title={
-              isStreaming ? "Cannot resend while streaming" : "Resend message"
+              isStreaming ? "Cannot resend while streaming" : "Edit message"
             }
           >
             <RotateCw className='w-4 h-4' />
@@ -539,7 +546,7 @@ const MessageItem = React.memo(
         )}
 
         <div
-          className={`prose prose-sm max-w-none dark:prose-invert ${
+          className={`prose prose-sm max-w-none dark:prose-invert transition-all duration-300 ease-out ${
             message.role === "user" && onResend ? "pr-8" : ""
           }`}
         >
@@ -629,7 +636,6 @@ export default function Chat() {
     input,
     handleInputChange,
     handleSubmit,
-    append,
     status,
     error,
     stop,
@@ -771,7 +777,7 @@ export default function Chat() {
   }, [stop]);
 
   const handleResend = useCallback(
-    async (message: Message) => {
+    (message: Message) => {
       // Prevent resending if currently streaming
       if (isStreaming) {
         return;
@@ -805,18 +811,17 @@ export default function Chat() {
         );
       }
 
-      try {
-        // Use the append method to directly add the message and trigger the API call
-        await append({
-          role: "user",
-          content: messageContent,
-        });
-      } catch (error) {
-        console.error("Failed to resend message:", error);
-        setFileError("Failed to resend message. Please try again.");
-      }
+      // Populate the input field with the message content
+      // Use the handleInputChange function to update the input state
+      const syntheticEvent = {
+        target: { value: messageContent },
+      } as React.ChangeEvent<HTMLTextAreaElement>;
+      handleInputChange(syntheticEvent);
+
+      // Focus the input field
+      setTimeout(() => inputRef.current?.focus(), 100);
     },
-    [isStreaming, append]
+    [isStreaming, handleInputChange]
   );
 
   // Memoize file input handler
@@ -1079,7 +1084,7 @@ export default function Chat() {
                         />
                       </div>
                     </div>
-                    <div className='max-w-3xl px-4 py-3 rounded-2xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700'>
+                    <div className='max-w-3xl px-4 py-3 rounded-2xl transition-all duration-300 ease-out bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700'>
                       <div className='flex items-center gap-2'>
                         <div className='flex space-x-1'>
                           <div className='w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]'></div>

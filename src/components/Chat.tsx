@@ -64,27 +64,41 @@ MemoizedMarkdown.displayName = "MemoizedMarkdown";
 const MemoizedThinkingParser = React.memo(
   ({ content }: { content: string }) => {
     const parts = parseThinkingTags(content);
+    const hasThinkingParts = parts.some((part) => part.type === "think");
+
     return (
       <>
-        {parts.map((part, index) => (
-          <div key={index} className='transition-all duration-300 ease-out'>
-            {part.type === "think" ? (
-              <div className='mb-3 p-3 border border-purple-200 dark:border-purple-700 rounded-lg bg-purple-50 dark:bg-purple-900/20 transition-all duration-300 ease-out'>
-                <div className='text-xs font-medium text-purple-600 dark:text-purple-400 mb-1 uppercase tracking-wide flex items-center gap-2'>
-                  <Brain className='w-4 h-4' />
-                  Thinking
+        {parts.map((part, index) => {
+          const isLastContentPart =
+            part.type === "content" && index === parts.length - 1;
+          const shouldShowHr =
+            hasThinkingParts && isLastContentPart && index > 0;
+
+          return (
+            <div key={index} className='transition-all duration-300 ease-out'>
+              {part.type === "think" ? (
+                <div className='mb-3 p-3 border border-purple-200 dark:border-purple-700 rounded-lg bg-purple-50 dark:bg-purple-900/20 transition-all duration-300 ease-out'>
+                  <div className='text-xs font-medium text-purple-600 dark:text-purple-400 mb-1 uppercase tracking-wide flex items-center gap-2'>
+                    <Brain className='w-4 h-4' />
+                    Thinking
+                  </div>
+                  <div className='text-purple-800 dark:text-purple-200 text-sm transition-all duration-300 ease-out'>
+                    <MemoizedMarkdown content={part.text} />
+                  </div>
                 </div>
-                <div className='text-purple-800 dark:text-purple-200 text-sm transition-all duration-300 ease-out'>
-                  <MemoizedMarkdown content={part.text} />
-                </div>
-              </div>
-            ) : (
-              <div className='transition-all duration-300 ease-out'>
-                <MemoizedMarkdown content={part.text} />
-              </div>
-            )}
-          </div>
-        ))}
+              ) : (
+                <>
+                  {shouldShowHr && (
+                    <hr className='my-4 border-gray-300 dark:border-gray-600' />
+                  )}
+                  <div className='transition-all duration-300 ease-out'>
+                    <MemoizedMarkdown content={part.text} />
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })}
       </>
     );
   }
@@ -152,55 +166,70 @@ const AssistantMessage = React.memo(
 
       return (
         <>
-          {integratedParts.map((part, index) => (
-            <div key={index} className='transition-all duration-300 ease-out'>
-              {part.type === "think" ? (
-                <div className='mb-3 p-3 border border-purple-200 dark:border-purple-700 rounded-lg bg-purple-50 dark:bg-purple-900/20 transition-all duration-300 ease-out'>
-                  <div className='text-xs font-medium text-purple-600 dark:text-purple-400 mb-1 uppercase tracking-wide flex items-center gap-2'>
-                    <Brain className='w-4 h-4' />
-                    Thinking
+          {integratedParts.map((part, index) => {
+            const isLastContentPart =
+              part.type === "content" && index === integratedParts.length - 1;
+            const hasThinkingOrToolParts = integratedParts.some(
+              (p) => p.type === "think" || p.type === "tool"
+            );
+            const shouldShowHr =
+              hasThinkingOrToolParts && isLastContentPart && index > 0;
+
+            return (
+              <div key={index} className='transition-all duration-300 ease-out'>
+                {part.type === "think" ? (
+                  <div className='mb-3 p-3 border border-purple-200 dark:border-purple-700 rounded-lg bg-purple-50 dark:bg-purple-900/20 transition-all duration-300 ease-out'>
+                    <div className='text-xs font-medium text-purple-600 dark:text-purple-400 mb-1 uppercase tracking-wide flex items-center gap-2'>
+                      <Brain className='w-4 h-4' />
+                      Thinking
+                    </div>
+                    <div className='text-purple-800 dark:text-purple-200 text-sm transition-all duration-300 ease-out'>
+                      <MemoizedMarkdown content={part.text} />
+                    </div>
                   </div>
-                  <div className='text-purple-800 dark:text-purple-200 text-sm transition-all duration-300 ease-out'>
-                    <MemoizedMarkdown content={part.text} />
-                  </div>
-                </div>
-              ) : part.type === "tool" ? (
-                <div className='mb-3 border border-blue-200 dark:border-blue-700 rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20 transition-all duration-300 ease-out'>
-                  <div className='text-xs font-medium text-blue-600 dark:text-blue-400 mb-1 uppercase tracking-wide'>
-                    🔧 Tool: {part.toolInvocation.toolName}
-                  </div>
-                  {part.toolInvocation.args &&
-                    Object.keys(part.toolInvocation.args).length > 0 && (
-                      <div className='text-xs text-blue-700 dark:text-blue-300 mb-2'>
-                        <strong>Arguments:</strong>{" "}
-                        {JSON.stringify(part.toolInvocation.args, null, 2)}
+                ) : part.type === "tool" ? (
+                  <div className='mb-3 border border-blue-200 dark:border-blue-700 rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20 transition-all duration-300 ease-out'>
+                    <div className='text-xs font-medium text-blue-600 dark:text-blue-400 mb-1 uppercase tracking-wide'>
+                      🔧 Tool: {part.toolInvocation.toolName}
+                    </div>
+                    {part.toolInvocation.args &&
+                      Object.keys(part.toolInvocation.args).length > 0 && (
+                        <div className='text-xs text-blue-700 dark:text-blue-300 mb-2'>
+                          <strong>Arguments:</strong>{" "}
+                          {JSON.stringify(part.toolInvocation.args, null, 2)}
+                        </div>
+                      )}
+                    {part.toolInvocation.state === "result" &&
+                      "result" in part.toolInvocation && (
+                        <div className='text-sm text-blue-800 dark:text-blue-200'>
+                          <strong>Result:</strong>{" "}
+                          {String(part.toolInvocation.result)}
+                        </div>
+                      )}
+                    {part.toolInvocation.state === "call" && (
+                      <div className='text-xs text-blue-600 dark:text-blue-400'>
+                        <em>Calling tool...</em>
                       </div>
                     )}
-                  {part.toolInvocation.state === "result" &&
-                    "result" in part.toolInvocation && (
-                      <div className='text-sm text-blue-800 dark:text-blue-200'>
-                        <strong>Result:</strong>{" "}
-                        {String(part.toolInvocation.result)}
+                    {part.toolInvocation.state === "partial-call" && (
+                      <div className='text-xs text-blue-600 dark:text-blue-400'>
+                        <em>Preparing tool call...</em>
                       </div>
                     )}
-                  {part.toolInvocation.state === "call" && (
-                    <div className='text-xs text-blue-600 dark:text-blue-400'>
-                      <em>Calling tool...</em>
+                  </div>
+                ) : (
+                  <>
+                    {shouldShowHr && (
+                      <hr className='my-4 border-gray-300 dark:border-gray-600' />
+                    )}
+                    <div className='transition-all duration-300 ease-out'>
+                      <MemoizedMarkdown content={part.text} />
                     </div>
-                  )}
-                  {part.toolInvocation.state === "partial-call" && (
-                    <div className='text-xs text-blue-600 dark:text-blue-400'>
-                      <em>Preparing tool call...</em>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className='transition-all duration-300 ease-out'>
-                  <MemoizedMarkdown content={part.text} />
-                </div>
-              )}
-            </div>
-          ))}
+                  </>
+                )}
+              </div>
+            );
+          })}
         </>
       );
     }
@@ -225,17 +254,41 @@ const MessageParts = React.memo(
     parts: MessagePartType[];
     addToolResult: (result: { toolCallId: string; result: string }) => void;
   }) => {
+    // Check if there are any thinking or tool parts to determine if HR should be shown
+    const hasThinkingOrToolParts = parts.some((part) => {
+      if (part.type === "tool-invocation") return true;
+      if (part.type === "text" && part.text) {
+        const textParts = parseThinkingTags(part.text);
+        return textParts.some((textPart) => textPart.type === "think");
+      }
+      return false;
+    });
+
     return (
       <>
         {parts.map((part, index) => {
           switch (part.type) {
             case "text":
               // Handle thinking tags in text content with memoized parser
+              const isLastTextPart = index === parts.length - 1;
+              const textParts = parseThinkingTags(part.text || "");
+              const hasThinkingInText = textParts.some(
+                (textPart) => textPart.type === "think"
+              );
+              const shouldShowHrForText =
+                hasThinkingOrToolParts &&
+                isLastTextPart &&
+                index > 0 &&
+                !hasThinkingInText;
+
               return (
                 <div
                   key={index}
                   className='transition-all duration-300 ease-out'
                 >
+                  {shouldShowHrForText && (
+                    <hr className='my-4 border-gray-300 dark:border-gray-600' />
+                  )}
                   <MemoizedThinkingParser content={part.text || ""} />
                 </div>
               );

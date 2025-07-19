@@ -40,6 +40,7 @@ async function getMCPTools() {
       return { tools: {}, clients: [] };
     }
 
+    console.log("🔄 Creating MCP client...");
     const client = await experimental_createMCPClient({
       transport: {
         type: "sse",
@@ -47,13 +48,101 @@ async function getMCPTools() {
       },
     });
 
-    const mcpTools = await client.tools();
+    console.log("🔄 Fetching MCP tools with explicit schemas...");
+    // Use explicit schema definition for better reliability
+    const mcpTools = await client.tools({
+      schemas: {
+        firecrawl_scrape: {
+          parameters: z.object({
+            url: z.string().describe("The URL to scrape"),
+            formats: z
+              .array(z.string())
+              .optional()
+              .describe('Output formats, e.g., ["markdown"]'),
+            onlyMainContent: z
+              .boolean()
+              .optional()
+              .describe("Extract only main content"),
+            waitFor: z
+              .number()
+              .optional()
+              .describe("Time to wait before scraping (ms)"),
+            timeout: z.number().optional().describe("Request timeout (ms)"),
+            mobile: z.boolean().optional().describe("Use mobile user agent"),
+            includeTags: z
+              .array(z.string())
+              .optional()
+              .describe("HTML tags to include"),
+            excludeTags: z
+              .array(z.string())
+              .optional()
+              .describe("HTML tags to exclude"),
+            skipTlsVerification: z
+              .boolean()
+              .optional()
+              .describe("Skip TLS verification"),
+          }),
+        },
+        firecrawl_search: {
+          parameters: z.object({
+            query: z.string().describe("Search query"),
+            limit: z.number().optional().describe("Number of results"),
+            lang: z.string().optional().describe("Language code"),
+            country: z.string().optional().describe("Country code"),
+            scrapeOptions: z
+              .object({
+                formats: z.array(z.string()).optional(),
+                onlyMainContent: z.boolean().optional(),
+              })
+              .optional()
+              .describe("Additional scraping options"),
+          }),
+        },
+        firecrawl_batch_scrape: {
+          parameters: z.object({
+            urls: z.array(z.string()).describe("Array of URLs to scrape"),
+            options: z
+              .object({
+                formats: z.array(z.string()).optional(),
+                onlyMainContent: z.boolean().optional(),
+              })
+              .optional()
+              .describe("Scraping options"),
+          }),
+        },
+      },
+    });
 
     console.log("🔧 MCP Tools retrieved:", Object.keys(mcpTools));
+
+    // Add logging wrapper to track tool execution
+    for (const [name, tool] of Object.entries(mcpTools)) {
+      if (tool.execute) {
+        const originalExecute = tool.execute;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        tool.execute = async (args: any, context?: any) => {
+          console.log(`🚀 Executing MCP tool: ${name}`, args);
+          try {
+            const result = await originalExecute(args, context);
+            console.log(`✅ MCP tool ${name} completed successfully`);
+            return result;
+          } catch (error) {
+            console.error(`❌ MCP tool ${name} failed:`, error);
+            throw error;
+          }
+        };
+      }
+    }
+
+    // Test tool execution context
+    for (const [name, tool] of Object.entries(mcpTools)) {
+      console.log(`🧪 Tool ${name}: execute=${typeof tool.execute}`);
+    }
 
     return { tools: mcpTools, clients: [client] };
   } catch (error) {
     console.error("❌ Failed to connect to MCP server:", error);
+    console.error("Error details:", error);
     return { tools: {}, clients: [] };
   }
 }
@@ -207,6 +296,19 @@ const RequestSchema = z.object({
 export async function POST(req: Request) {
   const requestId = generateRequestId();
   let mcpClients: Array<{ close: () => Promise<void> }> = [];
+
+  // Function to safely close MCP clients
+  const closeMCPClients = async (reason: string) => {
+    if (mcpClients.length > 0) {
+      try {
+        await Promise.all(mcpClients.map((client) => client.close()));
+        console.log(`🧹 MCP clients closed successfully: ${reason}`);
+        mcpClients = []; // Clear the array to prevent double-closing
+      } catch (closeError) {
+        console.error(`❌ Error closing MCP clients (${reason}):`, closeError);
+      }
+    }
+  };
 
   try {
     const abortController = new AbortController();
@@ -474,28 +576,19 @@ export async function POST(req: Request) {
       },
       // AI SDK v5 handles experimental_attachments automatically
       // No need for manual processing
-      onFinish: (event) => {
+      onFinish: async (event) => {
         AILogger.finishRequest(requestId, {
           promptTokens: event.usage?.promptTokens,
           completionTokens: event.usage?.completionTokens,
           totalTokens: event.usage?.totalTokens,
         });
 
-        // Close MCP clients after streaming is complete
-        if (mcpClients.length > 0) {
-          Promise.all(mcpClients.map((client) => client.close()))
-            .then(() =>
-              console.log("🧹 MCP clients closed successfully after streaming")
-            )
-            .catch((closeError) =>
-              console.error(
-                "❌ Error closing MCP clients after streaming:",
-                closeError
-              )
-            );
-        }
+        console.log("🏁 Streaming finished for request", requestId);
+
+        // Close MCP clients after streaming finishes - this is the safe time
+        await closeMCPClients("streaming finished");
       },
-      onError: (error) => {
+      onError: async (error) => {
         console.error(`❌ Streaming error for request ${requestId}:`, error);
         AILogger.finishRequest(
           requestId,
@@ -503,19 +596,8 @@ export async function POST(req: Request) {
           error instanceof Error ? error : new Error(String(error))
         );
 
-        // Close MCP clients on error as well
-        if (mcpClients.length > 0) {
-          Promise.all(mcpClients.map((client) => client.close()))
-            .then(() =>
-              console.log("🧹 MCP clients closed successfully after error")
-            )
-            .catch((closeError) =>
-              console.error(
-                "❌ Error closing MCP clients after error:",
-                closeError
-              )
-            );
-        }
+        // Close MCP clients on error
+        await closeMCPClients("error occurred");
       },
     });
 
@@ -530,17 +612,7 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     // Close MCP clients on early failure (before streaming starts)
-    if (mcpClients.length > 0) {
-      try {
-        await Promise.all(mcpClients.map((client) => client.close()));
-        console.log("🧹 MCP clients closed successfully after early failure");
-      } catch (closeError) {
-        console.error(
-          "❌ Error closing MCP clients after early failure:",
-          closeError
-        );
-      }
-    }
+    await closeMCPClients("early failure");
 
     if (error instanceof Error && error.name === "AbortError") {
       AILogger.finishRequest(
@@ -573,7 +645,7 @@ export async function POST(req: Request) {
     );
   } finally {
     // MCP clients are now closed in onFinish/onError callbacks
-    // to avoid closing them while tools might still be executing
+    console.log(`🏁 Request ${requestId} processing completed`);
   }
 }
 

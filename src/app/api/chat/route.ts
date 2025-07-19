@@ -208,19 +208,6 @@ export async function POST(req: Request) {
   const requestId = generateRequestId();
   let mcpClients: Array<{ close: () => Promise<void> }> = [];
 
-  // Helper function to cleanup MCP clients
-  const cleanupMCPClients = async (context: string) => {
-    if (mcpClients.length > 0) {
-      try {
-        await Promise.all(mcpClients.map((client) => client.close()));
-        console.log(`🧹 MCP clients closed successfully (${context})`);
-        mcpClients = []; // Clear the array to prevent double cleanup
-      } catch (closeError) {
-        console.error(`❌ Error closing MCP clients (${context}):`, closeError);
-      }
-    }
-  };
-
   try {
     const abortController = new AbortController();
 
@@ -236,7 +223,7 @@ export async function POST(req: Request) {
     // Validate configuration
     const configValidation = validateConfig();
     if (!configValidation.isValid) {
-      const response = new Response(
+      return new Response(
         JSON.stringify({
           error: ERROR_MESSAGES.INVALID_AI_CONFIG,
           details: configValidation.errors,
@@ -246,8 +233,6 @@ export async function POST(req: Request) {
           headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
         }
       );
-      await cleanupMCPClients("config validation error");
-      return response;
     }
 
     const requestBody = await req.json();
@@ -260,7 +245,7 @@ export async function POST(req: Request) {
     // Validate request using AI SDK compatible schema
     const validationResult = RequestSchema.safeParse(requestBody);
     if (!validationResult.success) {
-      const response = new Response(
+      return new Response(
         JSON.stringify({
           error: ERROR_MESSAGES.INVALID_REQUEST_FORMAT,
           details: validationResult.error.issues.map(
@@ -272,8 +257,6 @@ export async function POST(req: Request) {
           headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
         }
       );
-      await cleanupMCPClients("request validation error");
-      return response;
     }
 
     const {
@@ -314,7 +297,7 @@ export async function POST(req: Request) {
 
     const modelOptionsErrors = validateModelOptions(finalOptions);
     if (modelOptionsErrors.length > 0) {
-      const response = new Response(
+      return new Response(
         JSON.stringify({
           error: ERROR_MESSAGES.INVALID_MODEL_OPTIONS,
           details: modelOptionsErrors,
@@ -324,8 +307,6 @@ export async function POST(req: Request) {
           headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
         }
       );
-      await cleanupMCPClients("model validation error");
-      return response;
     }
 
     const defaultSystemPrompt = shouldUseTools
@@ -394,12 +375,11 @@ export async function POST(req: Request) {
       }
     } catch (connectionError) {
       if (abortController.signal.aborted) {
-        await cleanupMCPClients("request aborted");
         return new Response(ERROR_MESSAGES.REQUEST_ABORTED, {
           status: HTTP_STATUS.REQUEST_ABORTED,
         });
       }
-      const response = new Response(
+      return new Response(
         JSON.stringify({
           error: ERROR_MESSAGES.OLLAMA_CONNECTION_FAILED,
           details:
@@ -412,8 +392,6 @@ export async function POST(req: Request) {
           headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
         }
       );
-      await cleanupMCPClients("ollama connection error");
-      return response;
     }
 
     const ollama = createOpenAI({
@@ -496,17 +474,28 @@ export async function POST(req: Request) {
       },
       // AI SDK v5 handles experimental_attachments automatically
       // No need for manual processing
-      onFinish: async (event) => {
+      onFinish: (event) => {
         AILogger.finishRequest(requestId, {
           promptTokens: event.usage?.promptTokens,
           completionTokens: event.usage?.completionTokens,
           totalTokens: event.usage?.totalTokens,
         });
 
-        // Clean up MCP clients after streaming is complete
-        await cleanupMCPClients("onFinish");
+        // Close MCP clients after streaming is complete
+        if (mcpClients.length > 0) {
+          Promise.all(mcpClients.map((client) => client.close()))
+            .then(() =>
+              console.log("🧹 MCP clients closed successfully after streaming")
+            )
+            .catch((closeError) =>
+              console.error(
+                "❌ Error closing MCP clients after streaming:",
+                closeError
+              )
+            );
+        }
       },
-      onError: async (error) => {
+      onError: (error) => {
         console.error(`❌ Streaming error for request ${requestId}:`, error);
         AILogger.finishRequest(
           requestId,
@@ -514,8 +503,19 @@ export async function POST(req: Request) {
           error instanceof Error ? error : new Error(String(error))
         );
 
-        // Clean up MCP clients on error
-        await cleanupMCPClients("onError");
+        // Close MCP clients on error as well
+        if (mcpClients.length > 0) {
+          Promise.all(mcpClients.map((client) => client.close()))
+            .then(() =>
+              console.log("🧹 MCP clients closed successfully after error")
+            )
+            .catch((closeError) =>
+              console.error(
+                "❌ Error closing MCP clients after error:",
+                closeError
+              )
+            );
+        }
       },
     });
 
@@ -529,7 +529,18 @@ export async function POST(req: Request) {
       },
     });
   } catch (error) {
-    await cleanupMCPClients("main catch block");
+    // Close MCP clients on early failure (before streaming starts)
+    if (mcpClients.length > 0) {
+      try {
+        await Promise.all(mcpClients.map((client) => client.close()));
+        console.log("🧹 MCP clients closed successfully after early failure");
+      } catch (closeError) {
+        console.error(
+          "❌ Error closing MCP clients after early failure:",
+          closeError
+        );
+      }
+    }
 
     if (error instanceof Error && error.name === "AbortError") {
       AILogger.finishRequest(
@@ -561,8 +572,8 @@ export async function POST(req: Request) {
       }
     );
   } finally {
-    // Only clean up MCP clients if there was an error before streaming started
-    // Normal cleanup happens in onFinish/onError callbacks
+    // MCP clients are now closed in onFinish/onError callbacks
+    // to avoid closing them while tools might still be executing
   }
 }
 

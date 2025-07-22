@@ -20,7 +20,7 @@ import {
   RotateCcw,
   X,
   Brain,
-  Paperclip,
+  ImagePlus,
   Database,
   RotateCw,
 } from "lucide-react";
@@ -1142,7 +1142,7 @@ export default function Chat() {
                         <div className='flex space-x-1'>
                           <div className='w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]'></div>
                           <div className='w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce [animation-delay:-0.15s]'></div>
-                          <div className='w-2 h-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce'></div>
+                          <div className='w-2 h- bg-gray-400 dark:bg-gray-500 rounded-full animate-bounce'></div>
                         </div>
                       </div>
                     </div>
@@ -1243,13 +1243,13 @@ export default function Chat() {
                 disabled={isDisabled || isProcessingFiles}
                 className='absolute right-12 top-1/2 transform -translate-y-1/2 p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
                 title={
-                  isProcessingFiles ? "Processing files..." : "Attach files"
+                  isProcessingFiles ? "Processing files..." : "Attach image"
                 }
               >
                 {isProcessingFiles ? (
                   <div className='w-5 h-5 border-2 border-gray-500 border-t-transparent rounded-full animate-spin' />
                 ) : (
-                  <Paperclip className='w-5 h-5' />
+                  <ImagePlus className='w-5 h-5' />
                 )}
               </button>
             </div>
@@ -1289,9 +1289,8 @@ export default function Chat() {
             </button>
           </form>
           <p className='text-xs text-gray-500 dark:text-gray-400 mt-2 text-center'>
-            Press Enter to send, Shift+Enter for new line • Supports images,
-            PDFs, and text files • Images are automatically resized to 896x896px
-            for optimal processing
+            Press Enter to send, Shift+Enter for new line • Supports images •
+            Images are automatically resized to 896x896px for optimal processing
           </p>
         </div>
       </div>

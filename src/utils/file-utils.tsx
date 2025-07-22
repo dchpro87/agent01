@@ -114,18 +114,39 @@ export const validateFiles = (
   files: File[]
 ): { isValid: boolean; error?: string } => {
   const oversizedFiles: string[] = [];
+  const nonImageFiles: string[] = [];
 
   for (const file of files) {
+    // Check if file is an image
+    if (!file.type.startsWith("image/")) {
+      nonImageFiles.push(file.name);
+      continue;
+    }
+
     if (file.size > MAX_FILE_SIZE) {
       oversizedFiles.push(file.name);
     }
   }
 
+  // First check for non-image files
+  if (nonImageFiles.length > 0) {
+    const fileList = nonImageFiles.join(", ");
+    return {
+      isValid: false,
+      error: `Only image files are supported. The following file${
+        nonImageFiles.length > 1 ? "s are" : " is"
+      } not image${nonImageFiles.length > 1 ? "s" : ""}: ${fileList}`,
+    };
+  }
+
+  // Then check for oversized files
   if (oversizedFiles.length > 0) {
     const fileList = oversizedFiles.join(", ");
     return {
       isValid: false,
-      error: `The following file${oversizedFiles.length > 1 ? "s" : ""} exceed${
+      error: `The following image${
+        oversizedFiles.length > 1 ? "s" : ""
+      } exceed${
         oversizedFiles.length === 1 ? "s" : ""
       } the ${MAX_FILE_SIZE_DISPLAY} limit: ${fileList}`,
     };

@@ -3,7 +3,7 @@ import {
   // calculateBMI,
   // getWeather,
   searchWeb,
-  askForConfirmation,
+  // askForConfirmation,
 } from "./tools";
 
 export const tools = {
@@ -11,5 +11,5 @@ export const tools = {
   // calculateBMI,
   // getWeather,
   searchWeb,
-  askForConfirmation,
+  // askForConfirmation,
 };

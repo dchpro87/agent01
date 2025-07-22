@@ -314,6 +314,9 @@ export async function POST(req: Request) {
     if (shouldUseTools) {
       finalSystemPrompt +=
         "\n\nUse any of the available tools paying attention to what parameters are required. After calling a tool and receiving the result, you MUST provide a clear and direct answer to the user using the information returned by the tool. Do not end the conversation after tool execution - always provide a final response summarizing the results.";
+    } else {
+      finalSystemPrompt +=
+        "\n\nThe Assistant has NO access to tools of any kind. User should enable Tools icon in the top right of the UI.";
     }
 
     // Add ChromaDB context if available
@@ -393,7 +396,7 @@ export async function POST(req: Request) {
 
     if (shouldUseTools) {
       const localToolNames = Object.keys(tools);
-      console.log("🛠️  Available tools:", localToolNames);
+      console.log("🛠️  Available local tools:", localToolNames);
     }
 
     // Create streamText configuration following AI SDK best practices
@@ -416,6 +419,7 @@ export async function POST(req: Request) {
 
       // Add tools only if supported
       ...(shouldUseTools && { tools }),
+      toolChoice: shouldUseTools ? ("auto" as const) : ("none" as const),
 
       // Simplified Ollama-specific options
       experimental_providerMetadata: {

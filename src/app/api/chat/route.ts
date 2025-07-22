@@ -9,7 +9,7 @@
  */
 
 import { createOpenAI } from "@ai-sdk/openai";
-import { streamText, CoreMessage, experimental_createMCPClient } from "ai";
+import { streamText, CoreMessage } from "ai";
 
 import { AILogger, generateRequestId } from "@/lib/ai-middleware";
 import { aiConfig, validateConfig } from "@/lib/ai-config";
@@ -31,145 +31,51 @@ import {
   DEFAULT_CHAT_STEPS,
 } from "@/constraints/chat-constraints";
 
-// Function to create MCP client and get tools
-async function getMCPTools() {
-  try {
-    const firecrawlApiKey = process.env.FIRECRAWL_API_KEY;
-    if (!firecrawlApiKey) {
-      console.warn("⚠️  FIRECRAWL_API_KEY not found in environment variables");
-      return { tools: {}, clients: [] };
+// Helper function to create Ollama-specific options
+function createOllamaOptions(finalOptions: OllamaModelOptions) {
+  const ollamaOptions: Record<string, number | boolean | string[]> = {};
+
+  // Map only defined options to avoid undefined values
+  const optionMapping = {
+    repeat_penalty: finalOptions.repeat_penalty,
+    repeat_last_n: finalOptions.repeat_last_n,
+    num_ctx: finalOptions.num_ctx,
+    num_keep: finalOptions.num_keep,
+    num_batch: finalOptions.num_batch,
+    num_gpu: finalOptions.num_gpu,
+    main_gpu: finalOptions.main_gpu,
+    numa: finalOptions.numa,
+    use_mmap: finalOptions.use_mmap,
+    num_thread: finalOptions.num_thread,
+    tfs_z: finalOptions.tfs_z,
+    mirostat: finalOptions.mirostat,
+    mirostat_tau: finalOptions.mirostat_tau,
+    mirostat_eta: finalOptions.mirostat_eta,
+    penalize_newline: finalOptions.penalize_newline,
+    min_p: finalOptions.min_p,
+    typical_p: finalOptions.typical_p,
+    stop: finalOptions.stop,
+  };
+
+  // Only include defined values
+  Object.entries(optionMapping).forEach(([key, value]) => {
+    if (value !== undefined) {
+      ollamaOptions[key] = value;
     }
+  });
 
-    console.log("🔄 Creating MCP client...");
-    const client = await experimental_createMCPClient({
-      transport: {
-        type: "sse",
-        url: `https://mcp.firecrawl.dev/${firecrawlApiKey}/sse`,
-      },
-    });
-
-    console.log("🔄 Fetching MCP tools with explicit schemas...");
-    // Use explicit schema definition for better reliability
-    const mcpTools = await client.tools({
-      schemas: {
-        firecrawl_scrape: {
-          parameters: z.object({
-            url: z.string().describe("The URL to scrape"),
-            formats: z
-              .array(z.string())
-              .optional()
-              .describe('Output formats, e.g., ["markdown"]'),
-            onlyMainContent: z
-              .boolean()
-              .optional()
-              .describe("Extract only main content"),
-            waitFor: z
-              .number()
-              .optional()
-              .describe("Time to wait before scraping (ms)"),
-            timeout: z.number().optional().describe("Request timeout (ms)"),
-            mobile: z.boolean().optional().describe("Use mobile user agent"),
-            includeTags: z
-              .array(z.string())
-              .optional()
-              .describe("HTML tags to include"),
-            excludeTags: z
-              .array(z.string())
-              .optional()
-              .describe("HTML tags to exclude"),
-            skipTlsVerification: z
-              .boolean()
-              .optional()
-              .describe("Skip TLS verification"),
-          }),
-        },
-        firecrawl_search: {
-          parameters: z.object({
-            query: z.string().describe("Search query"),
-            limit: z.number().optional().describe("Number of results"),
-            lang: z.string().optional().describe("Language code"),
-            country: z.string().optional().describe("Country code"),
-            scrapeOptions: z
-              .object({
-                formats: z.array(z.string()).optional(),
-                onlyMainContent: z.boolean().optional(),
-              })
-              .optional()
-              .describe("Additional scraping options"),
-          }),
-        },
-        firecrawl_batch_scrape: {
-          parameters: z.object({
-            urls: z.array(z.string()).describe("Array of URLs to scrape"),
-            options: z
-              .object({
-                formats: z.array(z.string()).optional(),
-                onlyMainContent: z.boolean().optional(),
-              })
-              .optional()
-              .describe("Scraping options"),
-          }),
-        },
-      },
-    });
-
-    console.log("🔧 MCP Tools retrieved:", Object.keys(mcpTools));
-
-    // Add logging wrapper to track tool execution
-    for (const [name, tool] of Object.entries(mcpTools)) {
-      if (tool.execute) {
-        const originalExecute = tool.execute;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        tool.execute = async (args: any, context?: any) => {
-          console.log(`🚀 Executing MCP tool: ${name}`, args);
-          try {
-            const result = await originalExecute(args, context);
-            console.log(`✅ MCP tool ${name} completed successfully`);
-            return result;
-          } catch (error) {
-            console.error(`❌ MCP tool ${name} failed:`, error);
-            throw error;
-          }
-        };
-      }
-    }
-
-    // Test tool execution context
-    for (const [name, tool] of Object.entries(mcpTools)) {
-      console.log(`🧪 Tool ${name}: execute=${typeof tool.execute}`);
-    }
-
-    return { tools: mcpTools, clients: [client] };
-  } catch (error) {
-    console.error("❌ Failed to connect to MCP server:", error);
-    console.error("Error details:", error);
-    return { tools: {}, clients: [] };
-  }
+  return { options: ollamaOptions };
 }
 
-// Function to clean thinking tags from message content
+// Simplified function to clean thinking tags from message content
 function cleanThinkingTags(
   content: string | Array<Record<string, unknown>>
 ): string | Array<Record<string, unknown>> {
   if (typeof content === "string") {
-    let result = content;
-
-    while (true) {
-      const thinkStart = result.indexOf(THINK_START_TAG);
-      if (thinkStart === -1) break;
-
-      const thinkEnd = result.indexOf(
-        THINK_END_TAG,
-        thinkStart + THINK_START_TAG.length
-      );
-      if (thinkEnd === -1) break;
-
-      result =
-        result.slice(0, thinkStart) +
-        result.slice(thinkEnd + THINK_END_TAG.length);
-    }
-
-    return result.trim();
+    // Use regex for more efficient cleaning
+    return content
+      .replace(new RegExp(`${THINK_START_TAG}.*?${THINK_END_TAG}`, "gs"), "")
+      .trim();
   }
 
   if (Array.isArray(content)) {
@@ -187,7 +93,7 @@ function cleanThinkingTags(
   return content;
 }
 
-// Function to query active ChromaDB collections
+// Simplified function to query active ChromaDB collections
 async function queryActiveCollections(
   collections: string[],
   query: string,
@@ -195,44 +101,42 @@ async function queryActiveCollections(
 ): Promise<
   Array<{ id: string; document?: string; metadata?: Record<string, unknown> }>
 > {
+  if (!collections.length) return [];
+
   const allResults: Array<{
     id: string;
     document?: string;
     metadata?: Record<string, unknown>;
   }> = [];
 
-  try {
-    // Use the same base URL as the ChromaDB API route
-    for (const collectionName of collections) {
-      try {
-        const response = await fetch("http://localhost:3000/api/chromadb", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            action: "query_collection",
-            collection: collectionName,
-            query_texts: [query],
-            n_results: chunksToRetrieve, // Use dynamic value
-            generate_ollama_embeddings: true, // Use our custom embedding function
-          }),
-        });
+  const queryPromises = collections.map(async (collectionName) => {
+    try {
+      const response = await fetch("http://localhost:3000/api/chromadb", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "query_collection",
+          collection: collectionName,
+          query_texts: [query],
+          n_results: chunksToRetrieve,
+          generate_ollama_embeddings: true,
+        }),
+      });
 
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.results) {
-            allResults.push(...data.results);
-          }
-        }
-      } catch (error) {
-        console.error(`Failed to query collection ${collectionName}:`, error);
-        // Continue with other collections
+      if (response.ok) {
+        const data = await response.json();
+        return data.success && data.results ? data.results : [];
       }
+    } catch (error) {
+      console.error(`Failed to query collection ${collectionName}:`, error);
     }
+    return [];
+  });
 
-    // Sort by relevance if available, otherwise just return all results
-    return allResults.slice(0, chunksToRetrieve); // Limit total results to user-configured amount
+  try {
+    const results = await Promise.all(queryPromises);
+    results.forEach((result) => allResults.push(...result));
+    return allResults.slice(0, chunksToRetrieve);
   } catch (error) {
     console.error("Error querying ChromaDB collections:", error);
     return [];
@@ -295,20 +199,6 @@ const RequestSchema = z.object({
 
 export async function POST(req: Request) {
   const requestId = generateRequestId();
-  let mcpClients: Array<{ close: () => Promise<void> }> = [];
-
-  // Function to safely close MCP clients
-  const closeMCPClients = async (reason: string) => {
-    if (mcpClients.length > 0) {
-      try {
-        await Promise.all(mcpClients.map((client) => client.close()));
-        console.log(`🧹 MCP clients closed successfully: ${reason}`);
-        mcpClients = []; // Clear the array to prevent double-closing
-      } catch (closeError) {
-        console.error(`❌ Error closing MCP clients (${reason}):`, closeError);
-      }
-    }
-  };
 
   try {
     const abortController = new AbortController();
@@ -317,10 +207,6 @@ export async function POST(req: Request) {
       console.log(`🚫 Request ${requestId} aborted by client`);
       abortController.abort();
     });
-
-    // Get MCP tools early in the process
-    const { tools: mcpTools, clients } = await getMCPTools();
-    mcpClients = clients;
 
     // Validate configuration
     const configValidation = validateConfig();
@@ -411,56 +297,54 @@ export async function POST(req: Request) {
       );
     }
 
-    const defaultSystemPrompt = shouldUseTools
-      ? DEFAULT_SYSTEM_PROMPTS.WITH_TOOLS
-      : DEFAULT_SYSTEM_PROMPTS.WITHOUT_TOOLS(selectedModel);
-
+    // Build system prompt with context
     const baseSystemPrompt =
-      systemPrompt && systemPrompt.trim() ? systemPrompt : defaultSystemPrompt;
+      systemPrompt?.trim() ||
+      (shouldUseTools
+        ? DEFAULT_SYSTEM_PROMPTS.WITH_TOOLS
+        : DEFAULT_SYSTEM_PROMPTS.WITHOUT_TOOLS(selectedModel));
 
-    // Inject current date and time
+    // Add current timestamp
     const now = new Date();
-    const dateTimeString = `The current date and time is ${now.toLocaleTimeString()} on ${now.toLocaleDateString()}`;
+    const timestamp = `The current date and time is ${now.toLocaleTimeString()} on ${now.toLocaleDateString()}`;
 
-    const finalSystemPrompt = `${baseSystemPrompt}\n\n${dateTimeString}`;
+    let finalSystemPrompt = `${baseSystemPrompt}\n\n${timestamp}`;
 
-    // Append tool-use instruction for selected personalities
-    let finalSystemPromptWithContext = finalSystemPrompt;
+    // Add tool instruction if tools are enabled
     if (shouldUseTools) {
-      const toolUseInstruction =
-        "Use any of the available tools paying attention to what parameters are required. After calling a tool and receiving the result, you MUST provide a clear and direct answer to the user using the information returned by the tool. Do not end the conversation after tool execution - always provide a final response summarizing the results.";
-      finalSystemPromptWithContext = `${finalSystemPrompt}\n\n${toolUseInstruction}`;
+      finalSystemPrompt +=
+        "\n\nUse any of the available tools paying attention to what parameters are required. After calling a tool and receiving the result, you MUST provide a clear and direct answer to the user using the information returned by the tool. Do not end the conversation after tool execution - always provide a final response summarizing the results.";
     }
 
+    // Add ChromaDB context if available
     if (activeCollections.length > 0 && cleanedMessages.length > 0) {
       const lastUserMessage = cleanedMessages[cleanedMessages.length - 1];
       if (lastUserMessage.role === "user") {
         try {
-          const relevantDocs = await queryActiveCollections(
-            activeCollections,
+          const query =
             typeof lastUserMessage.content === "string"
               ? lastUserMessage.content
-              : "search query",
+              : "search query";
+
+          const relevantDocs = await queryActiveCollections(
+            activeCollections,
+            query,
             chunksToRetrieve
           );
-
           console.log("🧨 Relevant documents found:", relevantDocs);
 
           if (relevantDocs.length > 0) {
             const contextPrompt = `\n\nRelevant context from knowledge base:\n${relevantDocs
-              .map(
-                (doc: { id: string; document?: string }, i: number) =>
-                  `[${i + 1}] ${doc.document || doc.id}`
-              )
+              .map((doc, i) => `[${i + 1}] ${doc.document || doc.id}`)
               .join(
                 "\n\n"
-              )}\n\Always use this context to provide a more informed response.`;
+              )}\n\nAlways use this context to provide a more informed response.`;
 
-            finalSystemPromptWithContext = finalSystemPrompt + contextPrompt;
+            finalSystemPrompt += contextPrompt;
           }
         } catch (error) {
           console.error("Failed to query ChromaDB collections:", error);
-          // Continue without context augmentation if ChromaDB fails
+          // Continue without context if ChromaDB fails
         }
       }
     }
@@ -503,39 +387,24 @@ export async function POST(req: Request) {
     });
 
     console.log("-------------------------------------------\n");
-    console.log(`💥 System Prompt: ${finalSystemPromptWithContext}\n`);
+    console.log(`💥 System Prompt: ${finalSystemPrompt}\n`);
     console.log("finalOptions:", finalOptions);
     console.log("-------------------------------------------");
 
-    // Merge local tools with MCP tools
-    const allTools = shouldUseTools ? { ...tools, ...mcpTools } : {};
-
     if (shouldUseTools) {
       const localToolNames = Object.keys(tools);
-      const mcpToolNames = Object.keys(mcpTools);
-      const overlapping = localToolNames.filter((name) =>
-        mcpToolNames.includes(name)
-      );
-
-      if (overlapping.length > 0) {
-        console.log(
-          "⚠️  Tool name conflicts (MCP tools will override local):",
-          overlapping
-        );
-      }
-
-      console.log("🛠️  Local tools:", localToolNames);
-      console.log("🌐 MCP tools:", mcpToolNames);
-      console.log("🔧 Total available tools:", Object.keys(allTools));
+      console.log("🛠️  Available tools:", localToolNames);
     }
 
-    // Use AI SDK streamText with proper configuration
-    const result = streamText({
+    // Create streamText configuration following AI SDK best practices
+    const streamConfig = {
       model: ollama(selectedModel),
       messages: cleanedMessages,
-      system: finalSystemPromptWithContext,
+      system: finalSystemPrompt,
       maxRetries: config.maxRetries,
       abortSignal: abortController.signal,
+
+      // Core AI SDK parameters (simplified)
       temperature: finalOptions.temperature || config.temperature,
       maxTokens: finalOptions.maxTokens || finalOptions.num_predict,
       topK: finalOptions.top_k,
@@ -544,64 +413,45 @@ export async function POST(req: Request) {
       frequencyPenalty: finalOptions.frequency_penalty,
       seed: finalOptions.seed,
       maxSteps: shouldUseTools ? MAX_CHAT_STEPS : DEFAULT_CHAT_STEPS,
-      ...(shouldUseTools && { tools: allTools }),
 
-      // Ollama-specific parameters passed through provider options (replaces experimental_providerMetadata in v4.2+)
-      providerOptions: {
-        ollama: {
-          // Ollama-specific parameters that AI SDK doesn't directly support
-          options: Object.fromEntries(
-            Object.entries({
-              repeat_penalty: finalOptions.repeat_penalty,
-              repeat_last_n: finalOptions.repeat_last_n,
-              num_ctx: finalOptions.num_ctx,
-              num_keep: finalOptions.num_keep,
-              num_batch: finalOptions.num_batch,
-              num_gpu: finalOptions.num_gpu,
-              main_gpu: finalOptions.main_gpu,
-              numa: finalOptions.numa,
-              use_mmap: finalOptions.use_mmap,
-              num_thread: finalOptions.num_thread,
-              tfs_z: finalOptions.tfs_z,
-              mirostat: finalOptions.mirostat,
-              mirostat_tau: finalOptions.mirostat_tau,
-              mirostat_eta: finalOptions.mirostat_eta,
-              penalize_newline: finalOptions.penalize_newline,
-              min_p: finalOptions.min_p,
-              typical_p: finalOptions.typical_p,
-              stop: finalOptions.stop,
-            }).filter(([, value]) => value !== undefined)
-          ) as Record<string, number | boolean | string[]>,
-        },
+      // Add tools only if supported
+      ...(shouldUseTools && { tools }),
+
+      // Simplified Ollama-specific options
+      experimental_providerMetadata: {
+        ollama: createOllamaOptions(finalOptions),
       },
-      // AI SDK v5 handles experimental_attachments automatically
-      // No need for manual processing
-      onFinish: async (event) => {
+
+      // Streamlined callbacks
+      onFinish: (event: {
+        usage?: {
+          promptTokens?: number;
+          completionTokens?: number;
+          totalTokens?: number;
+        };
+      }) => {
         AILogger.finishRequest(requestId, {
           promptTokens: event.usage?.promptTokens,
           completionTokens: event.usage?.completionTokens,
           totalTokens: event.usage?.totalTokens,
         });
-
-        console.log("🏁 Streaming finished for request", requestId);
-
-        // Close MCP clients after streaming finishes - this is the safe time
-        await closeMCPClients("streaming finished");
+        console.log("🏁 Request completed:", requestId, event.usage);
       },
-      onError: async (error) => {
-        console.error(`❌ Streaming error for request ${requestId}:`, error);
+
+      onError: (error: unknown) => {
+        console.error(`❌ Error in request ${requestId}:`, error);
         AILogger.finishRequest(
           requestId,
           undefined,
           error instanceof Error ? error : new Error(String(error))
         );
-
-        // Close MCP clients on error
-        await closeMCPClients("error occurred");
       },
-    });
+    };
 
-    // Return proper AI SDK streaming response
+    // Use AI SDK streamText with clean configuration
+    const result = streamText(streamConfig);
+
+    // Return AI SDK streaming response with clean configuration
     return result.toDataStreamResponse({
       headers: {
         "Cache-Control": HTTP_HEADERS.CACHE_CONTROL_NO_CACHE,
@@ -611,9 +461,6 @@ export async function POST(req: Request) {
       },
     });
   } catch (error) {
-    // Close MCP clients on early failure (before streaming starts)
-    await closeMCPClients("early failure");
-
     if (error instanceof Error && error.name === "AbortError") {
       AILogger.finishRequest(
         requestId,
@@ -644,7 +491,6 @@ export async function POST(req: Request) {
       }
     );
   } finally {
-    // MCP clients are now closed in onFinish/onError callbacks
     console.log(`🏁 Request ${requestId} processing completed`);
   }
 }

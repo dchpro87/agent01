@@ -114,12 +114,17 @@ export const validateFiles = (
   files: File[]
 ): { isValid: boolean; error?: string } => {
   const oversizedFiles: string[] = [];
-  const nonImageFiles: string[] = [];
+  const unsupportedFiles: string[] = [];
 
   for (const file of files) {
-    // Check if file is an image
-    if (!file.type.startsWith("image/")) {
-      nonImageFiles.push(file.name);
+    // Check if file is an image or PDF
+    const isImage = file.type.startsWith("image/");
+    const isPdf =
+      file.type === "application/pdf" ||
+      file.name.toLowerCase().endsWith(".pdf");
+
+    if (!isImage && !isPdf) {
+      unsupportedFiles.push(file.name);
       continue;
     }
 
@@ -128,14 +133,14 @@ export const validateFiles = (
     }
   }
 
-  // First check for non-image files
-  if (nonImageFiles.length > 0) {
-    const fileList = nonImageFiles.join(", ");
+  // First check for unsupported files
+  if (unsupportedFiles.length > 0) {
+    const fileList = unsupportedFiles.join(", ");
     return {
       isValid: false,
-      error: `Only image files are supported. The following file${
-        nonImageFiles.length > 1 ? "s are" : " is"
-      } not image${nonImageFiles.length > 1 ? "s" : ""}: ${fileList}`,
+      error: `Only image and PDF files are supported. The following file${
+        unsupportedFiles.length > 1 ? "s are" : " is"
+      } not supported: ${fileList}`,
     };
   }
 
@@ -144,9 +149,7 @@ export const validateFiles = (
     const fileList = oversizedFiles.join(", ");
     return {
       isValid: false,
-      error: `The following image${
-        oversizedFiles.length > 1 ? "s" : ""
-      } exceed${
+      error: `The following file${oversizedFiles.length > 1 ? "s" : ""} exceed${
         oversizedFiles.length === 1 ? "s" : ""
       } the ${MAX_FILE_SIZE_DISPLAY} limit: ${fileList}`,
     };

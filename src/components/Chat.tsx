@@ -20,7 +20,7 @@ import {
   RotateCcw,
   X,
   Brain,
-  ImagePlus,
+  Paperclip,
   Database,
   RotateCw,
 } from "lucide-react";
@@ -1243,13 +1243,15 @@ export default function Chat() {
                 disabled={isDisabled || isProcessingFiles}
                 className='absolute right-12 top-1/2 transform -translate-y-1/2 p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
                 title={
-                  isProcessingFiles ? "Processing files..." : "Attach image"
+                  isProcessingFiles
+                    ? "Processing files..."
+                    : "Attach files (images, PDFs)"
                 }
               >
                 {isProcessingFiles ? (
                   <div className='w-5 h-5 border-2 border-gray-500 border-t-transparent rounded-full animate-spin' />
                 ) : (
-                  <ImagePlus className='w-5 h-5' />
+                  <Paperclip className='w-5 h-5' />
                 )}
               </button>
             </div>
@@ -1289,8 +1291,9 @@ export default function Chat() {
             </button>
           </form>
           <p className='text-xs text-gray-500 dark:text-gray-400 mt-2 text-center'>
-            Press Enter to send, Shift+Enter for new line • Supports images •
-            Images are automatically resized to 896x896px for optimal processing
+            Press Enter to send, Shift+Enter for new line • Supports images &
+            PDFs • Images are automatically resized to 896x896px for optimal
+            processing
           </p>
         </div>
       </div>

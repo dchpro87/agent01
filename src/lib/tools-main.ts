@@ -4,6 +4,7 @@ import {
   // getWeather,
   searchWeb,
   // askForConfirmation,
+  doocumentSummarizer,
 } from "./tools";
 
 export const tools = {
@@ -11,5 +12,6 @@ export const tools = {
   // calculateBMI,
   // getWeather,
   searchWeb,
+  doocumentSummarizer,
   // askForConfirmation,
 };

@@ -114,7 +114,7 @@ export const THINK_START_TAG = "<think>";
 export const THINK_END_TAG = "</think>";
 
 // File upload configuration
-export const SUPPORTED_FILE_TYPES = "image/*";
+export const SUPPORTED_FILE_TYPES = "image/*,.pdf,application/pdf";
 
 // File size limits (in bytes)
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes

@@ -226,8 +226,8 @@ export async function POST(req: Request) {
     const requestBody = await req.json();
     console.log("-------------------------------------------");
     console.log(
-      "🔍 💥Request body received:",
-      JSON.stringify(requestBody, null, 2)
+      "🔍 💥Request body received:"
+      // JSON.stringify(requestBody, null, 2)
     );
 
     // Validate request using AI SDK compatible schema
@@ -391,6 +391,7 @@ export async function POST(req: Request) {
 
     console.log("-------------------------------------------\n");
     console.log(`💥 System Prompt: ${finalSystemPrompt}\n`);
+    console.log("-------------------------------------------\n");
     console.log("finalOptions:", finalOptions);
     console.log("-------------------------------------------");
 

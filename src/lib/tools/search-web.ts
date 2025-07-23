@@ -1,11 +1,12 @@
 import { z } from "zod";
+import { tool } from "ai";
 import { getJson } from "serpapi";
 import { APP_CONFIG } from "@/constraints/app-config";
 import { formatSearchResults } from "@/utils/search-formatter";
 import type { SearchParams } from "@/types";
 
 /** Web search tool using SerpApi to search across multiple search engines */
-export const searchWeb = {
+export const searchWeb = tool({
   description:
     "When requiring additional information, search the web across various search engines (Google, Bing, Yahoo, etc.) using SerpApi. This tool can perform web searches, find specific information, get search results, news, images, shopping results, and more. Useful for finding current information, research, competitive analysis, and content discovery.",
   parameters: z.object({
@@ -62,14 +63,6 @@ export const searchWeb = {
     language,
     safeSearch = "moderate",
     timeframe,
-  }: {
-    query: string;
-    engine?: string;
-    location?: string;
-    resultsCount?: number;
-    language?: string;
-    safeSearch?: "active" | "moderate" | "off";
-    timeframe?: "hour" | "day" | "week" | "month" | "year";
   }) => {
     console.log("🔧 searchWeb tool called with:", {
       query,
@@ -134,22 +127,24 @@ export const searchWeb = {
       // Format the response based on the engine type
       const formattedResults = formatSearchResults(response, engine);
 
-      const result = `🔍 Web Search Results for "${query}" using ${engine.toUpperCase()}:
+      // Return structured data for better streaming support
+      const result = {
+        query,
+        engine: engine.toUpperCase(),
+        location: location || "Global",
+        resultsCount,
+        searchId: response.search_metadata?.id || "N/A",
+        processingTime: response.search_metadata?.processing_time_ms || "N/A",
+        timestamp: new Date().toLocaleString(),
+        results: formattedResults,
+        metadata: {
+          totalResults: response.search_information?.total_results || "N/A",
+          searchTime:
+            response.search_information?.time_taken_displayed || "N/A",
+        },
+      };
 
-${formattedResults}
-
-📊 Search Metadata:
-• Engine: ${engine}
-• Query: ${query}
-• Location: ${location || "Global"}
-• Results: ${resultsCount}
-• Search ID: ${response.search_metadata?.id || "N/A"}
-• Processing Time: ${response.search_metadata?.processing_time_ms || "N/A"}ms
-• Timestamp: ${new Date().toLocaleString()}
-
-Powered by SerpApi`;
-
-      console.log("🔧 searchWeb tool result length:", result.length);
+      console.log("🔧 searchWeb tool result processed");
       return result;
     } catch (error) {
       const errorResult = `Error performing web search: ${
@@ -159,4 +154,4 @@ Powered by SerpApi`;
       return errorResult;
     }
   },
-};
+});

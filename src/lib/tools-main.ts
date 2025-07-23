@@ -1,17 +1,13 @@
 import {
-  // getCurrentTime,
-  // calculateBMI,
-  // getWeather,
-  searchWeb,
   // askForConfirmation,
-  doocumentSummarizer,
+  // calculateBMI,
+  documentSummarizer,
+  searchWeb,
 } from "./tools";
 
 export const tools = {
-  // getCurrentTime,
-  // calculateBMI,
-  // getWeather,
-  searchWeb,
-  doocumentSummarizer,
   // askForConfirmation,
+  // calculateBMI,
+  documentSummarizer,
+  searchWeb,
 };

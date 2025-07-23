@@ -1,5 +1,5 @@
 /*
- * Chat API Route - Supports multimodal content following AI SDK v5 patterns
+ * Chat API Route - Supports multimodal content following AI SDK v4 patterns
  *
  * This implementation follows the official AI SDK documentation patterns for:
  * - Multimodal message handling
@@ -29,41 +29,12 @@ import {
   DEFAULT_CHAT_STEPS,
 } from "@/constraints/chat-constraints";
 
-// Helper function to create Ollama-specific options
-function createOllamaOptions(finalOptions: OllamaModelOptions) {
-  const ollamaOptions: Record<string, number | boolean | string[]> = {};
-
-  // Map only defined options to avoid undefined values
-  const optionMapping = {
-    repeat_penalty: finalOptions.repeat_penalty,
-    repeat_last_n: finalOptions.repeat_last_n,
-    num_ctx: finalOptions.num_ctx,
-    num_keep: finalOptions.num_keep,
-    num_batch: finalOptions.num_batch,
-    num_gpu: finalOptions.num_gpu,
-    main_gpu: finalOptions.main_gpu,
-    numa: finalOptions.numa,
-    use_mmap: finalOptions.use_mmap,
-    num_thread: finalOptions.num_thread,
-    tfs_z: finalOptions.tfs_z,
-    mirostat: finalOptions.mirostat,
-    mirostat_tau: finalOptions.mirostat_tau,
-    mirostat_eta: finalOptions.mirostat_eta,
-    penalize_newline: finalOptions.penalize_newline,
-    min_p: finalOptions.min_p,
-    typical_p: finalOptions.typical_p,
-    stop: finalOptions.stop,
-  };
-
-  // Only include defined values
-  Object.entries(optionMapping).forEach(([key, value]) => {
-    if (value !== undefined) {
-      ollamaOptions[key] = value;
-    }
-  });
-
-  return { options: ollamaOptions };
-}
+// Create configured OpenAI provider instance for Ollama compatibility
+const openai = createOpenAI({
+  baseURL: aiConfig.ollama.baseURL + "/v1",
+  apiKey: "ollama", // Ollama doesn't require a real API key
+  compatibility: "compatible", // Use compatible mode for 3rd party providers
+});
 
 // Simplified function to pass through message content (thinking functionality removed)
 function cleanThinkingTags(
@@ -156,13 +127,13 @@ const RequestSchema = z.object({
             )
             .min(1, ERROR_MESSAGES.CONTENT_PARTS_EMPTY),
         ]),
-        // AI SDK v5 handles experimental_attachments automatically
+        // AI SDK v4 handles experimental_attachments automatically
         experimental_attachments: z
           .array(
             z.object({
               name: z.string(),
               contentType: z.string(),
-              url: z.string(),
+              url: z.string().url(), // Ensure valid URL format (including data URLs)
             })
           )
           .optional(),
@@ -204,11 +175,39 @@ export async function POST(req: Request) {
     }
 
     const requestBody = await req.json();
-    console.log("-------------------------------------------");
-    console.log(
-      "🔍 💥Request body received:"
-      // JSON.stringify(requestBody, null, 2)
+    console.log("---------------💥💥💥💥-------------------");
+    console.log("🔍 Request body received:");
+    console.log("- Messages count:", requestBody.messages?.length || 0);
+
+    // Check for attachments in messages
+    const hasAttachments = requestBody.messages?.some(
+      (m: { experimental_attachments?: unknown[] }) =>
+        m.experimental_attachments && m.experimental_attachments.length > 0
     );
+    console.log("- Has attachments:", !!hasAttachments);
+
+    if (hasAttachments) {
+      const attachments = requestBody.messages.flatMap(
+        (m: {
+          experimental_attachments?: Array<{
+            name: string;
+            contentType: string;
+            url: string;
+          }>;
+        }) => m.experimental_attachments || []
+      );
+      console.log(
+        "- Attachment details:",
+        attachments.map(
+          (a: { name: string; contentType: string; url: string }) => ({
+            name: a.name,
+            contentType: a.contentType,
+            urlLength: a.url?.length || 0,
+            urlStart: a.url?.substring(0, 50) + "...",
+          })
+        )
+      );
+    }
 
     // Validate request using AI SDK compatible schema
     const validationResult = RequestSchema.safeParse(requestBody);
@@ -334,9 +333,9 @@ export async function POST(req: Request) {
 
     AILogger.startRequest(requestId, selectedModel);
 
-    // Test Ollama connection
+    // Test Ollama connection using OpenAI-compatible endpoint
     try {
-      const testResponse = await fetch(`${config.baseURL}/api/tags`, {
+      const testResponse = await fetch(`${config.baseURL}/v1/models`, {
         signal: abortController.signal,
       });
       if (!testResponse.ok) {
@@ -363,12 +362,6 @@ export async function POST(req: Request) {
       );
     }
 
-    const ollama = createOpenAI({
-      baseURL: `${config.baseURL}/v1`,
-      apiKey: "ollama",
-      compatibility: "compatible",
-    });
-
     console.log("-------------------------------------------\n");
     console.log(`💥 System Prompt: ${finalSystemPrompt}\n`);
     console.log("-------------------------------------------\n");
@@ -380,39 +373,86 @@ export async function POST(req: Request) {
       console.log("🛠️  Available local tools:", localToolNames);
     }
 
-    // Create streamText configuration following AI SDK best practices
+    // Create streamText configuration following AI SDK v4 best practices
     const streamConfig = {
-      model: ollama(selectedModel),
+      model: openai(selectedModel),
       messages: cleanedMessages,
       system: finalSystemPrompt,
       maxRetries: config.maxRetries,
       abortSignal: abortController.signal,
 
-      // Core AI SDK parameters (simplified)
+      // Core AI SDK v4 parameters
       temperature: finalOptions.temperature || config.temperature,
       maxTokens: finalOptions.maxTokens || finalOptions.num_predict,
       topK: finalOptions.top_k,
       topP: finalOptions.top_p,
-      presencePenalty: finalOptions.presence_penalty,
-      frequencyPenalty: finalOptions.frequency_penalty,
+      presencePenalty: finalOptions.repeat_penalty,
+      // frequencyPenalty: finalOptions.repeat_penalty,
       seed: finalOptions.seed,
       maxSteps: shouldUseTools ? MAX_CHAT_STEPS : DEFAULT_CHAT_STEPS,
+      stopSequences: finalOptions.stop,
 
       // Add tools only if supported
       ...(shouldUseTools && { tools }),
       toolChoice: shouldUseTools ? ("auto" as const) : ("none" as const),
 
-      // Simplified Ollama-specific options
-      experimental_providerMetadata: {
-        ollama: createOllamaOptions(finalOptions),
+      // Provider-specific options for Ollama
+      providerOptions: {
+        openai: {
+          // Map Ollama-specific options to OpenAI provider format
+          ...(finalOptions.num_ctx && {
+            // Pass num_ctx as context_length in the request body
+            extra_body: {
+              num_ctx: finalOptions.num_ctx,
+            },
+          }),
+        },
       },
 
-      // Streamlined callbacks
+      // Enhanced callbacks for better tool handling
+      onStepFinish: ({
+        text,
+        toolCalls,
+        toolResults,
+      }: {
+        text?: string;
+        toolCalls?: Array<{ toolName: string; args: Record<string, unknown> }>;
+        toolResults?: Array<{ toolName: string; result: unknown }>;
+        usage?: Record<string, unknown>;
+      }) => {
+        console.log(`📡 Step finished - Text: ${text?.substring(0, 100)}...`);
+        console.log(`📡 Tool calls: ${toolCalls?.length || 0}`);
+        console.log(`📡 Tool results: ${toolResults?.length || 0}`);
+        if (toolCalls && toolCalls.length > 0) {
+          console.log(
+            "📡 Tool calls:",
+            toolCalls.map(
+              (tc: { toolName: string; args: Record<string, unknown> }) => ({
+                name: tc.toolName,
+                args: tc.args,
+              })
+            )
+          );
+        }
+        if (toolResults && toolResults.length > 0) {
+          console.log(
+            "📡 Tool results:",
+            toolResults.map((tr: { toolName: string; result: unknown }) => ({
+              name: tr.toolName,
+              resultLength: JSON.stringify(tr.result).length,
+            }))
+          );
+        }
+      },
+
       onFinish: (event: {
         usage?: {
           promptTokens?: number;
           completionTokens?: number;
           totalTokens?: number;
+        };
+        response?: {
+          messages?: Array<unknown>;
         };
       }) => {
         AILogger.finishRequest(requestId, {
@@ -421,6 +461,12 @@ export async function POST(req: Request) {
           totalTokens: event.usage?.totalTokens,
         });
         console.log("🏁 Request completed:", requestId, event.usage);
+        if (event.response?.messages) {
+          console.log(
+            "🏁 Final response messages:",
+            event.response.messages.length
+          );
+        }
       },
 
       onError: (error: unknown) => {

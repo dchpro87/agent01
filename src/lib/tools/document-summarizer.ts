@@ -1,11 +1,12 @@
 import { z } from "zod";
+import { tool } from "ai";
 
-export const doocumentSummarizer = {
+export const documentSummarizer = tool({
   description: "Summarize the attached PDF document.",
   parameters: z.object({
     pdf: z.instanceof(File).describe("PDF document to summarize"),
   }),
-  execute: async ({ pdf }: { pdf: File }) => {
+  execute: async ({ pdf }) => {
     console.log("🔧 agentSummarizer tool called with:", { pdf });
 
     try {
@@ -18,4 +19,4 @@ export const doocumentSummarizer = {
       throw new Error("Failed to summarize the PDF document.");
     }
   },
-};
+});

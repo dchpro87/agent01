@@ -63,7 +63,7 @@ export default function Chat() {
     [activeCollections]
   );
 
-  // Enhanced chat hook usage with proper tool handling
+  // Enhanced chat hook usage with proper tool and attachment handling
   const {
     messages,
     input,
@@ -91,6 +91,8 @@ export default function Chat() {
     onError: (err) => {
       console.error("💥Chat error:", err);
       connectionStatus.checkConnection();
+      // Clear file processing state on error
+      setIsProcessingFiles(false);
     },
     onFinish: () => {
       connectionStatus.checkConnection();
@@ -132,21 +134,50 @@ export default function Chat() {
 
   // Use useCallback for event handlers to prevent unnecessary re-renders
   const handleFormSubmit = useCallback(
-    (e: React.FormEvent) => {
+    async (e: React.FormEvent) => {
       connectionStatus.checkConnection();
 
-      // Convert File[] to DataTransfer/FileList format for the API
-      let fileList: FileList | undefined;
+      // Convert File[] to Attachment[] format for AI SDK v4
+      let attachments:
+        | Array<{ name: string; contentType: string; url: string }>
+        | undefined;
+
       if (attachedFiles && attachedFiles.length > 0) {
-        const dataTransfer = new DataTransfer();
-        attachedFiles.forEach((file) => dataTransfer.items.add(file));
-        fileList = dataTransfer.files;
+        try {
+          // Convert files to data URLs for AI SDK
+          attachments = await Promise.all(
+            attachedFiles.map(async (file) => {
+              return new Promise<{
+                name: string;
+                contentType: string;
+                url: string;
+              }>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                  resolve({
+                    name: file.name,
+                    contentType: file.type,
+                    url: reader.result as string, // This will be a data URL
+                  });
+                };
+                reader.onerror = () =>
+                  reject(new Error(`Failed to read file: ${file.name}`));
+                reader.readAsDataURL(file);
+              });
+            })
+          );
+        } catch (error) {
+          console.error("Error processing attachments:", error);
+          setFileError("Failed to process attachments. Please try again.");
+          return;
+        }
       }
 
       handleSubmit(e, {
-        experimental_attachments: fileList,
+        experimental_attachments: attachments,
         allowEmptySubmit: true, // Allow sending files without text
       });
+
       // Clear attachments and file error after sending
       setAttachedFiles(null);
       setFileError(null);

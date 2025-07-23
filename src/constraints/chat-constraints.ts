@@ -44,11 +44,6 @@ export function checkModelSupportsEmbedding(modelName: string): boolean {
   return capabilities?.embedding ?? false;
 }
 
-export function checkModelSupportsThinking(modelName: string): boolean {
-  const capabilities = getModelCapabilities(modelName);
-  return capabilities?.thinking ?? false;
-}
-
 export function getModelContextSize(modelName: string): number {
   const capabilities = getModelCapabilities(modelName);
   return capabilities?.contextSize ?? 4096; // Default context size
@@ -88,11 +83,6 @@ export function getEmbeddingModels(): string[] {
   return getModelsByCapability("embedding");
 }
 
-// Get thinking-capable models
-export function getThinkingModels(): string[] {
-  return getModelsByCapability("thinking");
-}
-
 // Get models by family
 export function getModelsByFamily(family: string): string[] {
   return Object.keys(MODEL_DATABASE).filter(
@@ -108,10 +98,6 @@ export const TOOL_SUPPORTED_MODELS = Object.keys(MODEL_DATABASE).filter(
 export const NO_TOOL_SUPPORT_MODELS = Object.keys(MODEL_DATABASE).filter(
   (key) => !MODEL_DATABASE[key].tools
 );
-
-// Thinking tags for parsing
-export const THINK_START_TAG = "<think>";
-export const THINK_END_TAG = "</think>";
 
 // File upload configuration
 export const SUPPORTED_FILE_TYPES = "image/*,.pdf,application/pdf";

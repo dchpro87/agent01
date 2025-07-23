@@ -13,14 +13,9 @@ export type ContentPart = {
   text: string;
 };
 
-export type ThinkPart = {
-  type: "think";
-  text: string;
-};
-
 export type ToolPart = {
   type: "tool";
   toolInvocation: ToolInvocation;
 };
 
-export type MessagePart = ContentPart | ThinkPart | ToolPart;
+export type MessagePart = ContentPart | ToolPart;

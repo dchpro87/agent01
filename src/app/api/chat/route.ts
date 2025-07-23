@@ -18,8 +18,6 @@ import { z } from "zod";
 import { OllamaModelOptions } from "@/types/ollama";
 import { CHROMADB_DEFAULTS } from "@/constraints/chromadb-constraints";
 import {
-  THINK_START_TAG,
-  THINK_END_TAG,
   checkModelSupportsTools,
   ERROR_MESSAGES,
   VALIDATION_LIMITS,
@@ -67,29 +65,11 @@ function createOllamaOptions(finalOptions: OllamaModelOptions) {
   return { options: ollamaOptions };
 }
 
-// Simplified function to clean thinking tags from message content
+// Simplified function to pass through message content (thinking functionality removed)
 function cleanThinkingTags(
   content: string | Array<Record<string, unknown>>
 ): string | Array<Record<string, unknown>> {
-  if (typeof content === "string") {
-    // Use regex for more efficient cleaning
-    return content
-      .replace(new RegExp(`${THINK_START_TAG}.*?${THINK_END_TAG}`, "gs"), "")
-      .trim();
-  }
-
-  if (Array.isArray(content)) {
-    return content.map((part) => {
-      if (part.type === "text" && typeof part.text === "string") {
-        return {
-          ...part,
-          text: cleanThinkingTags(part.text) as string,
-        };
-      }
-      return part;
-    });
-  }
-
+  // Simply return content as-is since thinking functionality has been removed
   return content;
 }
 

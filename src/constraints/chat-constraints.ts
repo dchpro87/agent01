@@ -193,7 +193,7 @@ export const HTTP_STATUS = {
 // Default System Prompts
 export const DEFAULT_SYSTEM_PROMPTS = {
   WITH_TOOLS:
-    "You are a helpful AI assistant. Provide clear, accurate, and helpful responses. When using tools, always provide a final summary response to the user after the tool execution is complete.",
+    "You are a helpful AI assistant. Provide clear, accurate, and helpful responses. When using tools, always provide a final summary response to the user after the tool execution is complete. For complex reasoning or problem-solving, you may wrap your thinking process in <think></think> tags to show your thought process.",
   WITHOUT_TOOLS: (modelName: string) =>
-    `You are a helpful AI assistant. Note: This model (${modelName}) does not support tool/function calling or tools are disabled.`,
+    `You are a helpful AI assistant. Note: This model (${modelName}) does not support tool/function calling or tools are disabled. For complex reasoning or problem-solving, you may wrap your thinking process in <think></think> tags to show your thought process.`,
 } as const;

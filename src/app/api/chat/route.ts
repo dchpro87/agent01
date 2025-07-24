@@ -9,7 +9,12 @@
  */
 
 import { createOpenAI } from "@ai-sdk/openai";
-import { streamText, CoreMessage } from "ai";
+import {
+  streamText,
+  CoreMessage,
+  wrapLanguageModel,
+  extractReasoningMiddleware,
+} from "ai";
 
 import { AILogger, generateRequestId } from "@/lib/ai-middleware";
 import { aiConfig, validateConfig } from "@/lib/ai-config";
@@ -36,15 +41,22 @@ const openai = createOpenAI({
   compatibility: "compatible", // Use compatible mode for 3rd party providers
 });
 
-// Simplified function to pass through message content (thinking functionality removed)
-function cleanThinkingTags(
-  content: string | Array<Record<string, unknown>>
-): string | Array<Record<string, unknown>> {
-  // Simply return content as-is since thinking functionality has been removed
-  return content;
+// Create a function to get wrapped model with reasoning extraction
+function getModelWithReasoning(modelName: string) {
+  const baseModel = openai(modelName);
+
+  // Wrap the model with reasoning extraction middleware for thinking tags
+  return wrapLanguageModel({
+    model: baseModel,
+    middleware: extractReasoningMiddleware({
+      tagName: "think",
+      // Set to true if you want the model to start responses with thinking
+      startWithReasoning: false,
+    }),
+  });
 }
 
-// Simplified function to query active ChromaDB collections
+// Function to query active ChromaDB collections
 async function queryActiveCollections(
   collections: string[],
   query: string,
@@ -236,14 +248,8 @@ export async function POST(req: Request) {
       chunksToRetrieve = CHROMADB_DEFAULTS.CHUNKS_TO_RETRIEVE,
     } = validationResult.data;
 
-    // Clean thinking tags from assistant messages only
-    const cleanedMessages = messages.map((msg) => ({
-      ...msg,
-      content:
-        msg.role === "assistant" && typeof msg.content === "string"
-          ? cleanThinkingTags(msg.content)
-          : msg.content,
-    })) as CoreMessage[];
+    // Pass messages through directly - reasoning will be extracted by middleware
+    const cleanedMessages = messages as CoreMessage[];
 
     console.log("\n-------------------------------------------");
     console.log(
@@ -375,7 +381,7 @@ export async function POST(req: Request) {
 
     // Create streamText configuration following AI SDK v4 best practices
     const streamConfig = {
-      model: openai(selectedModel),
+      model: getModelWithReasoning(selectedModel),
       messages: cleanedMessages,
       system: finalSystemPrompt,
       maxRetries: config.maxRetries,
@@ -490,6 +496,10 @@ export async function POST(req: Request) {
         "X-Request-ID": requestId,
         "X-Model": selectedModel,
       },
+      // Enable sending reasoning parts in the stream
+      sendReasoning: true,
+      // Also enable sources if needed
+      sendSources: true,
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {

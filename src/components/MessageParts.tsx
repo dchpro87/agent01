@@ -4,12 +4,16 @@ import React from "react";
 interface MessagePartType {
   type:
     | "text"
+    | "text-delta"
     | "tool-invocation"
+    | "tool-call"
+    | "tool-result"
     | "step-start"
     | "reasoning"
     | "source"
     | "file";
   text?: string;
+  textDelta?: string; // For streaming text deltas
   toolInvocation?: {
     toolCallId: string;
     toolName: string;
@@ -17,7 +21,17 @@ interface MessagePartType {
     state: "partial-call" | "call" | "result";
     result?: unknown;
   };
+  // AI SDK tool call format
+  toolCallId?: string;
+  toolName?: string;
+  args?: Record<string, unknown>;
+  result?: unknown;
   reasoning?: string;
+  source?: unknown;
+  // File content
+  base64?: string;
+  uint8Array?: Uint8Array;
+  mimeType?: string;
 }
 
 interface MessagePartsProps {
@@ -345,10 +359,70 @@ export default function MessageParts({
       {parts.map((part, index) => {
         switch (part.type) {
           case "text":
+          case "text-delta":
             return (
               <div key={index} className='transition-all duration-300 ease-out'>
                 <div className='whitespace-pre-wrap break-words'>
-                  {part.text || ""}
+                  {part.text || part.textDelta || ""}
+                </div>
+              </div>
+            );
+
+          case "reasoning":
+            return (
+              <div
+                key={index}
+                className='mb-3 border border-amber-200 dark:border-amber-700 rounded-lg p-3 bg-amber-50 dark:bg-amber-900/20 transition-all duration-300 ease-out'
+              >
+                <div className='text-xs font-medium text-amber-600 dark:text-amber-400 mb-2 uppercase tracking-wide flex items-center gap-1'>
+                  💭 Thinking
+                </div>
+                <div className='text-sm text-amber-800 dark:text-amber-200 leading-relaxed'>
+                  <div className='whitespace-pre-wrap break-words font-mono text-xs bg-amber-100 dark:bg-amber-800/50 p-2 rounded italic'>
+                    {part.text || part.textDelta || part.reasoning || ""}
+                  </div>
+                </div>
+              </div>
+            );
+
+          case "tool-call":
+            return (
+              <div
+                key={index}
+                className='mb-3 border border-blue-200 dark:border-blue-700 rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20 transition-all duration-300 ease-out'
+              >
+                <div className='text-xs font-medium text-blue-600 dark:text-blue-400 mb-2 uppercase tracking-wide'>
+                  🔧 Tool Call: {part.toolName}
+                </div>
+                <div className='text-sm text-blue-800 dark:text-blue-200'>
+                  {part.args && Object.keys(part.args).length > 0 && (
+                    <div className='mb-2'>
+                      <strong>Arguments:</strong>
+                      <pre className='text-xs bg-blue-100 dark:bg-blue-800 p-1 rounded mt-1'>
+                        {JSON.stringify(part.args, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+
+          case "tool-result":
+            return (
+              <div
+                key={index}
+                className='mb-3 border border-blue-200 dark:border-blue-700 rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20 transition-all duration-300 ease-out'
+              >
+                <div className='text-xs font-medium text-blue-600 dark:text-blue-400 mb-2 uppercase tracking-wide'>
+                  🔧 Tool Result: {part.toolName}
+                </div>
+                <div className='text-sm text-blue-800 dark:text-blue-200'>
+                  <div>
+                    <strong>Result:</strong>
+                    <div className='mt-1 p-2 bg-blue-100 dark:bg-blue-800 rounded'>
+                      {renderToolResult(part.result, part.toolName || "")}
+                    </div>
+                  </div>
                 </div>
               </div>
             );
@@ -464,6 +538,40 @@ export default function MessageParts({
                     </div>
                   </div>
                 )}
+              </div>
+            );
+
+          case "source":
+            return (
+              <div
+                key={index}
+                className='mb-3 border border-green-200 dark:border-green-700 rounded-lg p-3 bg-green-50 dark:bg-green-900/20 transition-all duration-300 ease-out'
+              >
+                <div className='text-xs font-medium text-green-600 dark:text-green-400 mb-2 uppercase tracking-wide flex items-center gap-1'>
+                  📄 Source
+                </div>
+                <div className='text-sm text-green-800 dark:text-green-200'>
+                  <div className='whitespace-pre-wrap break-words'>
+                    {part.text || JSON.stringify(part, null, 2)}
+                  </div>
+                </div>
+              </div>
+            );
+
+          case "file":
+            return (
+              <div
+                key={index}
+                className='mb-3 border border-orange-200 dark:border-orange-700 rounded-lg p-3 bg-orange-50 dark:bg-orange-900/20 transition-all duration-300 ease-out'
+              >
+                <div className='text-xs font-medium text-orange-600 dark:text-orange-400 mb-2 uppercase tracking-wide flex items-center gap-1'>
+                  📁 File
+                </div>
+                <div className='text-sm text-orange-800 dark:text-orange-200'>
+                  <div className='whitespace-pre-wrap break-words'>
+                    {part.text || JSON.stringify(part, null, 2)}
+                  </div>
+                </div>
               </div>
             );
 

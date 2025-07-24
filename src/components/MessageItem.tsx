@@ -8,12 +8,16 @@ import MessageAttachments from "./MessageAttachments";
 interface MessagePartType {
   type:
     | "text"
+    | "text-delta"
     | "tool-invocation"
+    | "tool-call"
+    | "tool-result"
     | "step-start"
     | "reasoning"
     | "source"
     | "file";
   text?: string;
+  textDelta?: string; // For streaming text deltas
   toolInvocation?: {
     toolCallId: string;
     toolName: string;
@@ -21,7 +25,17 @@ interface MessagePartType {
     state: "partial-call" | "call" | "result";
     result?: unknown;
   };
+  // AI SDK tool call format
+  toolCallId?: string;
+  toolName?: string;
+  args?: Record<string, unknown>;
+  result?: unknown;
   reasoning?: string;
+  source?: unknown;
+  // File content
+  base64?: string;
+  uint8Array?: Uint8Array;
+  mimeType?: string;
 }
 
 interface MessageItemProps {

@@ -364,6 +364,7 @@ export default function Chat() {
                 disabled={isDisabled}
                 modelSupportsTools={preferences.modelSupportsTools}
               />
+
               {/* Context Window Icon */}
               <div className='relative flex items-center gap-1'>
                 <button

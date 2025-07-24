@@ -567,5 +567,29 @@ const validateModelOptions = (options: OllamaModelOptions) => {
     }
   }
 
+  if (
+    options.top_k &&
+    (options.top_k < VALIDATION_LIMITS.TOP_K_MIN ||
+      options.top_k > VALIDATION_LIMITS.TOP_K_MAX)
+  ) {
+    errors.push(VALIDATION_ERROR_MESSAGES.TOP_K_RANGE);
+  }
+
+  if (
+    options.repeat_penalty &&
+    (options.repeat_penalty < VALIDATION_LIMITS.REPEAT_PENALTY_MIN ||
+      options.repeat_penalty > VALIDATION_LIMITS.REPEAT_PENALTY_MAX)
+  ) {
+    errors.push(VALIDATION_ERROR_MESSAGES.REPEAT_PENALTY_RANGE);
+  }
+
+  if (
+    options.min_p !== undefined &&
+    (options.min_p < VALIDATION_LIMITS.MIN_P_MIN ||
+      options.min_p > VALIDATION_LIMITS.MIN_P_MAX)
+  ) {
+    errors.push(VALIDATION_ERROR_MESSAGES.MIN_P_RANGE);
+  }
+
   return errors;
 };

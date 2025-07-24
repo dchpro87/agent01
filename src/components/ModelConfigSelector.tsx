@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Settings, ChevronDown, RotateCcw, Check } from "lucide-react";
 import { OllamaModelOptions, MODEL_PRESETS, ModelPreset } from "@/types/ollama";
 import { DEFAULT_OPTIONS, PRESET_INFO } from "@/constraints/model-config";
+import { VALIDATION_LIMITS } from "@/constraints/chat-constraints";
 import { useDropdownState } from "@/hooks";
 
 interface ModelConfigSelectorProps {
@@ -272,8 +273,8 @@ export default function ModelConfigSelector({
                         </label>
                         <input
                           type='range'
-                          min='0'
-                          max='2'
+                          min={VALIDATION_LIMITS.TEMPERATURE_MIN}
+                          max={VALIDATION_LIMITS.TEMPERATURE_MAX}
                           step='0.01'
                           value={currentOptions.temperature || 0.7}
                           onChange={(e) =>
@@ -300,8 +301,8 @@ export default function ModelConfigSelector({
                         </label>
                         <input
                           type='range'
-                          min='1'
-                          max='100'
+                          min={VALIDATION_LIMITS.TOP_K_MIN}
+                          max={VALIDATION_LIMITS.TOP_K_MAX}
                           step='1'
                           value={currentOptions.top_k || 40}
                           onChange={(e) =>
@@ -351,8 +352,8 @@ export default function ModelConfigSelector({
                         </div>
                         <input
                           type='range'
-                          min='0'
-                          max='1'
+                          min={VALIDATION_LIMITS.TOP_P_MIN}
+                          max={VALIDATION_LIMITS.TOP_P_MAX}
                           step='0.1'
                           value={currentOptions.top_p || 0}
                           disabled={currentOptions.top_p === 0}
@@ -388,8 +389,8 @@ export default function ModelConfigSelector({
                         </label>
                         <input
                           type='range'
-                          min='0.8'
-                          max='1.5'
+                          min={VALIDATION_LIMITS.REPEAT_PENALTY_MIN}
+                          max={VALIDATION_LIMITS.REPEAT_PENALTY_MAX}
                           step='0.01'
                           value={currentOptions.repeat_penalty || 1.1}
                           onChange={(e) =>
@@ -423,8 +424,8 @@ export default function ModelConfigSelector({
                         </label>
                         <input
                           type='range'
-                          min='512'
-                          max='128000'
+                          min={VALIDATION_LIMITS.NUM_CTX_MIN}
+                          max={VALIDATION_LIMITS.NUM_CTX_MAX}
                           step='128'
                           value={currentOptions.num_ctx || 4096}
                           onChange={(e) =>
@@ -450,8 +451,8 @@ export default function ModelConfigSelector({
                         </label>
                         <input
                           type='range'
-                          min='50'
-                          max='128000'
+                          min={VALIDATION_LIMITS.MAX_TOKENS_MIN}
+                          max={VALIDATION_LIMITS.MAX_TOKENS_MAX}
                           step='10'
                           value={currentOptions.maxTokens || 1024}
                           onChange={(e) =>
@@ -485,8 +486,8 @@ export default function ModelConfigSelector({
                         </label>
                         <input
                           type='range'
-                          min='0'
-                          max='0.5'
+                          min={VALIDATION_LIMITS.MIN_P_MIN}
+                          max={VALIDATION_LIMITS.MIN_P_MAX}
                           step='0.001'
                           value={currentOptions.min_p || 0}
                           onChange={(e) =>

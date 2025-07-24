@@ -8,7 +8,7 @@ import {
   AlertTriangle,
   Wrench,
   Eye,
-  Lightbulb,
+  Brain,
   Database,
 } from "lucide-react";
 import Message from "./Message";
@@ -21,7 +21,7 @@ interface Model {
   supportsTools: boolean;
   supportsVision: boolean;
   supportsEmbedding: boolean;
-  supportsThinking: boolean;
+  supportsReasoning: boolean;
   contextSize: number;
   family: string;
   description: string;
@@ -29,7 +29,7 @@ interface Model {
     tools: boolean;
     vision: boolean;
     embedding: boolean;
-    thinking: boolean;
+    reasoning: boolean;
     contextSize: number;
     family: string;
     description?: string;
@@ -185,15 +185,15 @@ export default function ModelSelector({
                           <Database className='w-3 h-3 text-purple-500' />
                         </span>
                       )}
-                      {model.supportsThinking && (
-                        <span title='Supports thinking/reasoning'>
-                          <Lightbulb className='w-3 h-3 text-yellow-500' />
+                      {model.supportsReasoning && (
+                        <span title='Supports reasoning'>
+                          <Brain className='w-3 h-3 text-orange-500' />
                         </span>
                       )}
                       {!model.supportsTools &&
                         !model.supportsVision &&
                         !model.supportsEmbedding &&
-                        !model.supportsThinking && (
+                        !model.supportsReasoning && (
                           <span title='Basic text-only model'>
                             <AlertTriangle className='w-3 h-3 text-amber-500' />
                           </span>

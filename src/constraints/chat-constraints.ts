@@ -44,6 +44,11 @@ export function checkModelSupportsEmbedding(modelName: string): boolean {
   return capabilities?.embedding ?? false;
 }
 
+export function checkModelSupportsReasoning(modelName: string): boolean {
+  const capabilities = getModelCapabilities(modelName);
+  return capabilities?.reasoning ?? false;
+}
+
 export function getModelContextSize(modelName: string): number {
   const capabilities = getModelCapabilities(modelName);
   return capabilities?.contextSize ?? 4096; // Default context size
@@ -81,6 +86,11 @@ export function getVisionSupportedModels(): string[] {
 // Get embedding models
 export function getEmbeddingModels(): string[] {
   return getModelsByCapability("embedding");
+}
+
+// Get reasoning models
+export function getReasoningModels(): string[] {
+  return getModelsByCapability("reasoning");
 }
 
 // Get models by family
@@ -134,13 +144,21 @@ export const ERROR_MESSAGES = {
 export const VALIDATION_LIMITS = {
   MAX_TOKENS_MIN: 1,
   MAX_TOKENS_MAX: 32000,
+  MAX_TOKENS_UI_MIN: 50, // More practical minimum for UI slider
   NUM_CTX_MIN: 1,
   NUM_CTX_MAX: 128000,
+  NUM_CTX_UI_MIN: 512, // More practical minimum for UI slider
   TEMPERATURE_MIN: 0,
   TEMPERATURE_MAX: 2,
   TOP_P_MIN: 0,
   TOP_P_MAX: 1,
   TOP_P_MAX_DECIMALS: 1,
+  TOP_K_MIN: 1,
+  TOP_K_MAX: 100,
+  REPEAT_PENALTY_MIN: 0.8,
+  REPEAT_PENALTY_MAX: 1.5,
+  MIN_P_MIN: 0,
+  MIN_P_MAX: 0.5,
 } as const;
 
 // Validation Error Messages
@@ -150,6 +168,9 @@ export const VALIDATION_ERROR_MESSAGES = {
   TEMPERATURE_RANGE: "temperature must be between 0 and 2",
   TOP_P_RANGE: "top_p must be between 0 and 1",
   TOP_P_DECIMALS: "top_p can only have 1 decimal place",
+  TOP_K_RANGE: "top_k must be between 1 and 100",
+  REPEAT_PENALTY_RANGE: "repeat_penalty must be between 0.8 and 1.5",
+  MIN_P_RANGE: "min_p must be between 0 and 0.5",
 } as const;
 
 // HTTP Headers

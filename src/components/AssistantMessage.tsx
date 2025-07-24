@@ -1,4 +1,6 @@
 import React from "react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { ToolInvocation } from "@/types/chat";
 
 interface AssistantMessageProps {
@@ -27,7 +29,11 @@ const renderToolResult = (
 
   // If result is a string, display it directly
   if (typeof result === "string") {
-    return <div className='whitespace-pre-wrap break-words'>{result}</div>;
+    return (
+      <div className='prose prose-sm dark:prose-invert max-w-none'>
+        <Markdown remarkPlugins={[remarkGfm]}>{result}</Markdown>
+      </div>
+    );
   }
 
   // If result is an object, handle it based on the tool type
@@ -196,14 +202,18 @@ const renderToolResult = (
     } catch {
       // Fallback to string representation if JSON parsing fails
       return (
-        <div className='whitespace-pre-wrap break-words'>{String(result)}</div>
+        <div className='prose prose-sm dark:prose-invert max-w-none'>
+          <Markdown remarkPlugins={[remarkGfm]}>{String(result)}</Markdown>
+        </div>
       );
     }
   }
 
   // For other types (number, boolean, etc.), convert to string
   return (
-    <div className='whitespace-pre-wrap break-words'>{String(result)}</div>
+    <div className='prose prose-sm dark:prose-invert max-w-none'>
+      <Markdown remarkPlugins={[remarkGfm]}>{String(result)}</Markdown>
+    </div>
   );
 };
 
@@ -215,7 +225,9 @@ export default function AssistantMessage({
     <>
       {/* Render content */}
       <div className='transition-all duration-300 ease-out'>
-        <div className='whitespace-pre-wrap break-words'>{content}</div>
+        <div className='prose prose-sm dark:prose-invert max-w-none'>
+          <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
+        </div>
       </div>
 
       {/* Render tool invocations if any */}

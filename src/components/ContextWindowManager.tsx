@@ -289,10 +289,10 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
 
         <button
           onClick={onClose}
-          className='p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors'
+          className='px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors'
           aria-label='Close context manager'
         >
-          <X className='w-5 h-5 text-gray-500 dark:text-gray-400' />
+          Done
         </button>
       </div>
 

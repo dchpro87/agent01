@@ -1,5 +1,7 @@
 import type { Message } from "@ai-sdk/react";
 import { User, RotateCw } from "lucide-react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import AssistantMessage from "./AssistantMessage";
 import MessageParts from "./MessageParts";
 import MessageAttachments from "./MessageAttachments";
@@ -131,8 +133,10 @@ export default function MessageItem({
             </>
           ) : (
             <>
-              <div className='whitespace-pre-wrap break-words'>
-                {message.content}
+              <div className='prose prose-sm dark:prose-invert max-w-none'>
+                <Markdown remarkPlugins={[remarkGfm]}>
+                  {message.content}
+                </Markdown>
               </div>
               {/* Render user attachments */}
               <MessageAttachments

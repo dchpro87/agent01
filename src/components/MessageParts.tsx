@@ -1,4 +1,6 @@
 import React from "react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 // Add Message parts type - more comprehensive to match AI SDK
 interface MessagePartType {
@@ -50,7 +52,11 @@ const renderToolResult = (
 
   // If result is a string, display it directly
   if (typeof result === "string") {
-    return <div className='whitespace-pre-wrap break-words'>{result}</div>;
+    return (
+      <div className='prose prose-sm dark:prose-invert max-w-none'>
+        <Markdown remarkPlugins={[remarkGfm]}>{result}</Markdown>
+      </div>
+    );
   }
 
   // If result is an object, handle it based on the tool type
@@ -103,109 +109,11 @@ const renderToolResult = (
             {searchResult.results && (
               <div className='space-y-2'>
                 {typeof searchResult.results === "string" ? (
-                  // Render formatted string results with proper markdown-like styling
+                  // Render formatted string results using Markdown
                   <div className='prose prose-sm dark:prose-invert max-w-none'>
-                    <div
-                      className='whitespace-pre-wrap text-sm leading-relaxed'
-                      style={{
-                        fontFamily: "system-ui, -apple-system, sans-serif",
-                      }}
-                    >
-                      {searchResult.results.split("\n").map((line, index) => {
-                        // Handle bold markdown-like formatting
-                        if (line.includes("**") && line.includes("**")) {
-                          const parts = line.split(/(\*\*.*?\*\*)/);
-                          return (
-                            <div key={index} className='mb-1'>
-                              {parts.map((part, partIndex) => {
-                                if (
-                                  part.startsWith("**") &&
-                                  part.endsWith("**")
-                                ) {
-                                  return (
-                                    <strong
-                                      key={partIndex}
-                                      className='text-blue-800 dark:text-blue-200'
-                                    >
-                                      {part.slice(2, -2)}
-                                    </strong>
-                                  );
-                                }
-                                return <span key={partIndex}>{part}</span>;
-                              })}
-                            </div>
-                          );
-                        }
-                        // Handle links
-                        if (line.includes("🔗 http")) {
-                          const urlMatch = line.match(/(https?:\/\/[^\s]+)/);
-                          if (urlMatch) {
-                            return (
-                              <div key={index} className='mb-1'>
-                                <span className='text-xs text-blue-500 dark:text-blue-400'>
-                                  🔗{" "}
-                                  <a
-                                    href={urlMatch[1]}
-                                    target='_blank'
-                                    rel='noopener noreferrer'
-                                    className='hover:underline break-all'
-                                  >
-                                    {urlMatch[1]}
-                                  </a>
-                                </span>
-                              </div>
-                            );
-                          }
-                        }
-                        // Handle section headers
-                        if (
-                          line.includes("🌐 **") ||
-                          line.includes("📰 **") ||
-                          line.includes("❓ **")
-                        ) {
-                          return (
-                            <div
-                              key={index}
-                              className='font-semibold text-blue-700 dark:text-blue-300 mt-3 mb-2'
-                            >
-                              {line.replace(/\*\*/g, "")}
-                            </div>
-                          );
-                        }
-                        // Handle numbered results
-                        if (/^\d+\.\s/.test(line.trim())) {
-                          return (
-                            <div
-                              key={index}
-                              className='font-medium text-gray-800 dark:text-gray-200 mt-2 mb-1'
-                            >
-                              {line}
-                            </div>
-                          );
-                        }
-                        // Handle regular content lines with indentation
-                        if (line.trim() && line.startsWith("   ")) {
-                          return (
-                            <div
-                              key={index}
-                              className='text-sm text-gray-600 dark:text-gray-300 ml-3 mb-1'
-                            >
-                              {line.trim()}
-                            </div>
-                          );
-                        }
-                        // Handle empty lines for spacing
-                        if (!line.trim()) {
-                          return <div key={index} className='h-1'></div>;
-                        }
-                        // Default case
-                        return (
-                          <div key={index} className='mb-1'>
-                            {line}
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <Markdown remarkPlugins={[remarkGfm]}>
+                      {searchResult.results}
+                    </Markdown>
                   </div>
                 ) : (
                   // Handle array results (for structured data)
@@ -339,14 +247,18 @@ const renderToolResult = (
     } catch {
       // Fallback to string representation if JSON parsing fails
       return (
-        <div className='whitespace-pre-wrap break-words'>{String(result)}</div>
+        <div className='prose prose-sm dark:prose-invert max-w-none'>
+          <Markdown remarkPlugins={[remarkGfm]}>{String(result)}</Markdown>
+        </div>
       );
     }
   }
 
   // For other types (number, boolean, etc.), convert to string
   return (
-    <div className='whitespace-pre-wrap break-words'>{String(result)}</div>
+    <div className='prose prose-sm dark:prose-invert max-w-none'>
+      <Markdown remarkPlugins={[remarkGfm]}>{String(result)}</Markdown>
+    </div>
   );
 };
 
@@ -362,8 +274,10 @@ export default function MessageParts({
           case "text-delta":
             return (
               <div key={index} className='transition-all duration-300 ease-out'>
-                <div className='whitespace-pre-wrap break-words'>
-                  {part.text || part.textDelta || ""}
+                <div className='prose prose-sm dark:prose-invert max-w-none'>
+                  <Markdown remarkPlugins={[remarkGfm]}>
+                    {part.text || part.textDelta || ""}
+                  </Markdown>
                 </div>
               </div>
             );
@@ -378,8 +292,10 @@ export default function MessageParts({
                   💭 Thinking
                 </div>
                 <div className='text-sm text-amber-800 dark:text-amber-200 leading-relaxed'>
-                  <div className='whitespace-pre-wrap break-words font-mono text-xs bg-amber-100 dark:bg-amber-800/50 p-2 rounded italic'>
-                    {part.text || part.textDelta || part.reasoning || ""}
+                  <div className='prose prose-sm dark:prose-invert max-w-none font-mono text-xs bg-amber-100 dark:bg-amber-800/50 p-2 rounded italic'>
+                    <Markdown remarkPlugins={[remarkGfm]}>
+                      {part.text || part.textDelta || part.reasoning || ""}
+                    </Markdown>
                   </div>
                 </div>
               </div>
@@ -551,8 +467,10 @@ export default function MessageParts({
                   📄 Source
                 </div>
                 <div className='text-sm text-green-800 dark:text-green-200'>
-                  <div className='whitespace-pre-wrap break-words'>
-                    {part.text || JSON.stringify(part, null, 2)}
+                  <div className='prose prose-sm dark:prose-invert max-w-none'>
+                    <Markdown remarkPlugins={[remarkGfm]}>
+                      {part.text || JSON.stringify(part, null, 2)}
+                    </Markdown>
                   </div>
                 </div>
               </div>
@@ -568,8 +486,10 @@ export default function MessageParts({
                   📁 File
                 </div>
                 <div className='text-sm text-orange-800 dark:text-orange-200'>
-                  <div className='whitespace-pre-wrap break-words'>
-                    {part.text || JSON.stringify(part, null, 2)}
+                  <div className='prose prose-sm dark:prose-invert max-w-none'>
+                    <Markdown remarkPlugins={[remarkGfm]}>
+                      {part.text || JSON.stringify(part, null, 2)}
+                    </Markdown>
                   </div>
                 </div>
               </div>

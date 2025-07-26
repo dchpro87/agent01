@@ -221,6 +221,43 @@ export async function POST(req: Request) {
       );
     }
 
+    //remove any pdf attachments from experimental_attachments and put them into a separate array
+    const pdfAttachments: Array<{
+      name: string;
+      contentType: string;
+      url: string;
+    }> = [];
+    requestBody.messages.forEach(
+      (message: {
+        experimental_attachments?: Array<{
+          name: string;
+          contentType: string;
+          url: string;
+        }>;
+      }) => {
+        if (message.experimental_attachments) {
+          message.experimental_attachments =
+            message.experimental_attachments.filter(
+              (attachment: {
+                name: string;
+                contentType: string;
+                url: string;
+              }) => {
+                if (attachment.contentType === "application/pdf") {
+                  pdfAttachments.push(attachment);
+                  return false; // Remove PDF attachments from messages
+                }
+                return true; // Keep other attachments
+              }
+            );
+        }
+      }
+    );
+    console.log(
+      "- PDF attachments removed from messages:",
+      pdfAttachments.length
+    );
+
     // Validate request using AI SDK compatible schema
     const validationResult = RequestSchema.safeParse(requestBody);
     if (!validationResult.success) {

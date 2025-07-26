@@ -175,7 +175,6 @@ export default function Chat() {
 
       handleSubmit(e, {
         experimental_attachments: attachments,
-        allowEmptySubmit: true, // Allow sending files without text
       });
 
       // Clear attachments and file error after sending
@@ -637,9 +636,7 @@ export default function Chat() {
               type={isStreaming ? "button" : "submit"}
               onClick={isStreaming ? handleCancel : undefined}
               disabled={
-                (!isStreaming &&
-                  !input.trim() &&
-                  (!attachedFiles || attachedFiles.length === 0)) ||
+                (!isStreaming && !input.trim()) ||
                 connectionStatus.status === "disconnected" ||
                 isProcessingFiles
               }

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { tool } from "ai";
 
-export const documentSummarizer = tool({
+export const document_summarizer = tool({
   description: "Summarize the attached PDF document.",
   parameters: z.object({
     pdf: z.instanceof(File).describe("PDF document to summarize"),

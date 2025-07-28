@@ -6,7 +6,7 @@ import { formatSearchResults } from "@/utils/search-formatter";
 import type { SearchParams } from "@/types";
 
 /** Web search tool using SerpApi to search across multiple search engines */
-export const searchWeb = tool({
+export const search_web = tool({
   description:
     "When requiring additional information, search the web across various search engines (Google, Bing, Yahoo, etc.) using SerpApi. This tool can perform web searches, find specific information, get search results, news, images, shopping results, and more. Useful for finding current information, research, competitive analysis, and content discovery.",
   parameters: z.object({
@@ -31,6 +31,7 @@ export const searchWeb = tool({
     location: z
       .string()
       .optional()
+      .default("Global")
       .describe(
         "Location for localized search results (e.g., 'Austin, Texas', 'London, UK')"
       ),
@@ -79,7 +80,7 @@ export const searchWeb = tool({
 
       if (!apiKey) {
         const errorResult =
-          "SerpApi API key not found. Please add SERP_API_KEY to your environment variables or update the app configuration.";
+          "SerpApi API key not found. Please add SERP_API_KEY to your environment variables.";
         console.log("🔧 searchWeb tool error:", errorResult);
         return errorResult;
       }

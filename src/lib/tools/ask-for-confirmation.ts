@@ -1,7 +1,8 @@
 import { z } from "zod";
+import { tool } from "ai";
 
 /** Ask user for confirmation - example of a client-side interactive tool */
-export const askForConfirmation = {
+export const ask_for_confirmation = tool({
   description:
     "Ask the user for confirmation before performing a potentially sensitive action",
   parameters: z.object({
@@ -12,4 +13,4 @@ export const askForConfirmation = {
   }),
   // Note: This tool doesn't have an execute function because it requires user interaction
   // It will be handled in the UI with addToolResult
-};
+});

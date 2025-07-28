@@ -419,27 +419,19 @@ export async function POST(req: Request) {
     // Create streamText configuration following AI SDK v4 best practices
     const streamConfig = {
       model: getModelWithReasoning(selectedModel),
-      messages: cleanedMessages,
       system: finalSystemPrompt,
-      maxRetries: config.maxRetries,
-      abortSignal: abortController.signal,
-
-      // Core AI SDK v4 parameters
-      temperature: finalOptions.temperature || config.temperature,
-      maxTokens: finalOptions.maxTokens || finalOptions.num_predict,
-      topK: finalOptions.top_k,
-      topP: finalOptions.top_p,
-      presencePenalty: finalOptions.repeat_penalty,
-      // frequencyPenalty: finalOptions.repeat_penalty,
-      seed: finalOptions.seed,
-      maxSteps: shouldUseTools ? MAX_CHAT_STEPS : DEFAULT_CHAT_STEPS,
-      stopSequences: finalOptions.stop,
-
-      // Add tools only if supported
+      messages: cleanedMessages,
       ...(shouldUseTools && { tools }),
       toolChoice: shouldUseTools ? ("auto" as const) : ("none" as const),
-
-      // Provider-specific options for Ollama
+      maxTokens: finalOptions.maxTokens || finalOptions.num_predict,
+      temperature: finalOptions.temperature || config.temperature,
+      topP: finalOptions.top_p,
+      topK: finalOptions.top_k,
+      presencePenalty: finalOptions.repeat_penalty,
+      maxRetries: config.maxRetries,
+      abortSignal: abortController.signal,
+      maxSteps: shouldUseTools ? MAX_CHAT_STEPS : DEFAULT_CHAT_STEPS,
+      seed: finalOptions.seed,
       providerOptions: {
         openai: {
           // Map Ollama-specific options to OpenAI provider format
@@ -448,6 +440,9 @@ export async function POST(req: Request) {
             extra_body: {
               num_ctx: finalOptions.num_ctx,
             },
+          }),
+          ...(finalOptions.stop && {
+            stop: finalOptions.stop,
           }),
         },
       },

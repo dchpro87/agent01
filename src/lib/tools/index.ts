@@ -1,4 +1,3 @@
-export { askForConfirmation } from "./ask-for-confirmation";
-export { calculateBMI } from "./calculate-bmi";
-export { searchWeb } from "./search-web";
-export { documentSummarizer } from "./document-summarizer";
+export { ask_for_confirmation } from "./ask-for-confirmation";
+export { document_summarizer } from "./document-summarizer";
+export { search_web } from "./search-web";

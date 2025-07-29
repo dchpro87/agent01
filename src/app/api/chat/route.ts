@@ -198,8 +198,50 @@ export async function POST(req: Request) {
     );
     console.log("- Has attachments:", !!hasAttachments);
 
+    const pdfAttachments: Array<{
+      name: string;
+      contentType: string;
+      url: string;
+    }> = [];
+
     if (hasAttachments) {
-      const attachments = requestBody.messages.flatMap(
+      // Process each message to separate PDF attachments from other attachments
+      requestBody.messages.forEach(
+        (message: {
+          experimental_attachments?: Array<{
+            name: string;
+            contentType: string;
+            url: string;
+          }>;
+        }) => {
+          if (message.experimental_attachments) {
+            const nonPdfAttachments: Array<{
+              name: string;
+              contentType: string;
+              url: string;
+            }> = [];
+
+            message.experimental_attachments.forEach((attachment) => {
+              if (
+                attachment.contentType === "application/pdf" ||
+                (attachment.name &&
+                  attachment.name.toLowerCase().endsWith(".pdf"))
+              ) {
+                // This is a PDF attachment, move it to pdfAttachments
+                pdfAttachments.push(attachment);
+              } else {
+                // Keep non-PDF attachments in experimental_attachments
+                nonPdfAttachments.push(attachment);
+              }
+            });
+
+            // Update the message with only non-PDF attachments
+            message.experimental_attachments = nonPdfAttachments;
+          }
+        }
+      );
+
+      const allAttachments = requestBody.messages.flatMap(
         (m: {
           experimental_attachments?: Array<{
             name: string;
@@ -208,14 +250,26 @@ export async function POST(req: Request) {
           }>;
         }) => m.experimental_attachments || []
       );
+
       console.log(
-        "- Attachment details:",
-        attachments.map(
+        "- Non-PDF attachment details:",
+        allAttachments.map(
           (a: { name: string; contentType: string; url: string }) => ({
             name: a.name,
             contentType: a.contentType,
             urlLength: a.url?.length || 0,
             urlStart: a.url?.substring(0, 50) + "...",
+          })
+        )
+      );
+
+      console.log(
+        "- PDF attachments found:",
+        pdfAttachments.map(
+          (a: { name: string; contentType: string; url: string }) => ({
+            name: a.name,
+            contentType: a.contentType,
+            urlLength: a.url?.length || 0,
           })
         )
       );

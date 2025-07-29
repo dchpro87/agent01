@@ -2,7 +2,7 @@
 
 import { useChat } from "@ai-sdk/react";
 import type { Message } from "@ai-sdk/react";
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 
 import { CHROMADB_DEFAULTS } from "@/constraints/chromadb-constraints";
 import {
@@ -80,6 +80,7 @@ export default function Chat() {
       preferences.toolsEnabled && preferences.modelSupportsTools
         ? MAX_CHAT_STEPS
         : DEFAULT_CHAT_STEPS, // Allow for tool calls and follow-up responses only if tools are enabled
+    sendExtraMessageFields: true, // Enable sending experimental_attachments and other extra fields
     body: {
       model: preferences.selectedModel,
       systemPrompt: preferences.systemPrompt,
@@ -132,63 +133,7 @@ export default function Chat() {
     [status]
   );
 
-  // Use useCallback for event handlers to prevent unnecessary re-renders
-  const handleFormSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      connectionStatus.checkConnection();
-
-      // Convert File[] to Attachment[] format for AI SDK v4
-      let attachments:
-        | Array<{ name: string; contentType: string; url: string }>
-        | undefined;
-
-      if (attachedFiles && attachedFiles.length > 0) {
-        try {
-          // Convert files to data URLs for AI SDK
-          attachments = await Promise.all(
-            attachedFiles.map(async (file) => {
-              return new Promise<{
-                name: string;
-                contentType: string;
-                url: string;
-              }>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => {
-                  resolve({
-                    name: file.name,
-                    contentType: file.type,
-                    url: reader.result as string, // This will be a data URL
-                  });
-                };
-                reader.onerror = () =>
-                  reject(new Error(`Failed to read file: ${file.name}`));
-                reader.readAsDataURL(file);
-              });
-            })
-          );
-        } catch (error) {
-          console.error("Error processing attachments:", error);
-          setFileError("Failed to process attachments. Please try again.");
-          return;
-        }
-      }
-
-      handleSubmit(e, {
-        experimental_attachments: attachments,
-        allowEmptySubmit: true, // Allow sending files without text
-      });
-
-      // Clear attachments and file error after sending
-      setAttachedFiles(null);
-      setFileError(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    },
-    [attachedFiles, handleSubmit, connectionStatus]
-  );
-
-  const handleReset = useCallback(() => {
+  const handleReset = () => {
     if (status === "streaming" || status === "submitted") {
       stop();
     }
@@ -199,103 +144,162 @@ export default function Chat() {
       fileInputRef.current.value = "";
     }
     connectionStatus.checkConnection();
-  }, [status, stop, setMessages, connectionStatus]);
+  };
 
-  const handleCancel = useCallback(() => {
+  const handleCancel = () => {
     stop();
-  }, [stop]);
+  };
 
-  const handleResend = useCallback(
-    (message: Message) => {
-      // Prevent resending if currently streaming
-      if (isStreaming) {
-        return;
-      }
+  const handleResend = (message: Message) => {
+    // Prevent resending if currently streaming
+    if (isStreaming) {
+      return;
+    }
 
-      // Extract content from the message - AI SDK Message.content is typically a string
-      let messageContent = "";
-      if (typeof message.content === "string") {
-        messageContent = message.content;
-      } else {
-        // For non-string content, convert to string representation
-        messageContent = String(message.content);
-      }
+    // Extract content from the message - AI SDK Message.content is typically a string
+    let messageContent = "";
+    if (typeof message.content === "string") {
+      messageContent = message.content;
+    } else {
+      // For non-string content, convert to string representation
+      messageContent = String(message.content);
+    }
 
-      // If there's no content to resend, show an error
-      if (!messageContent.trim()) {
-        setFileError("Cannot resend message: no text content found.");
-        return;
-      }
+    // If there's no content to resend, show an error
+    if (!messageContent.trim()) {
+      setFileError("Cannot resend message: no text content found.");
+      return;
+    }
 
-      // Clear any existing file error
-      setFileError(null);
+    // Clear any existing file error
+    setFileError(null);
 
-      // If the message has attachments, show a note about reattaching
-      if (
-        message.experimental_attachments &&
-        message.experimental_attachments.length > 0
-      ) {
-        setFileError(
-          "Note: Original attachments cannot be resent automatically. Please reattach files if needed."
-        );
-      }
+    // If the message has attachments, show a note about reattaching
+    if (
+      message.experimental_attachments &&
+      message.experimental_attachments.length > 0
+    ) {
+      setFileError(
+        "Note: Original attachments cannot be resent automatically. Please reattach files if needed."
+      );
+    }
 
-      // Populate the input field with the message content
-      // Use the handleInputChange function to update the input state
-      const syntheticEvent = {
-        target: { value: messageContent },
-      } as React.ChangeEvent<HTMLTextAreaElement>;
-      handleInputChange(syntheticEvent);
+    // Populate the input field with the message content
+    // Use the handleInputChange function to update the input state
+    const syntheticEvent = {
+      target: { value: messageContent },
+    } as React.ChangeEvent<HTMLTextAreaElement>;
+    handleInputChange(syntheticEvent);
 
-      // Focus the input field
-      setTimeout(() => inputRef.current?.focus(), 100);
-    },
-    [isStreaming, handleInputChange]
-  );
+    // Focus the input field
+    setTimeout(() => inputRef.current?.focus(), 100);
+  };
 
   // Memoize file input handler
-  const handleFileInputChange = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.files && e.target.files.length > 0) {
-        setIsProcessingFiles(true);
-        setFileError(null);
+  const handleFileInputChange = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setIsProcessingFiles(true);
+      setFileError(null);
 
-        try {
-          // Process files (resize images)
-          const processedFiles = await processFiles(e.target.files);
+      try {
+        // Process files (resize images)
+        const processedFiles = await processFiles(e.target.files);
 
-          // Validate processed files
-          const validation = validateFiles(processedFiles);
-          if (validation.isValid) {
-            setAttachedFiles(processedFiles);
-            setFileError(null);
-          } else {
-            setFileError(validation.error || "Invalid file");
-            setAttachedFiles(null);
-            // Clear the input so user can try again
-            e.target.value = "";
-          }
-        } catch (error) {
-          console.error("Error processing files:", error);
-          setFileError("Failed to process files. Please try again.");
+        // Validate processed files
+        const validation = validateFiles(processedFiles);
+        if (validation.isValid) {
+          setAttachedFiles(processedFiles);
+          setFileError(null);
+        } else {
+          setFileError(validation.error || "Invalid file");
           setAttachedFiles(null);
+          // Clear the input so user can try again
           e.target.value = "";
-        } finally {
-          setIsProcessingFiles(false);
         }
+      } catch (error) {
+        console.error("Error processing files:", error);
+        setFileError("Failed to process files. Please try again.");
+        setAttachedFiles(null);
+        e.target.value = "";
+      } finally {
+        setIsProcessingFiles(false);
       }
-    },
-    []
-  );
+    }
+  };
 
-  // Memoize attachment removal handler
-  const handleRemoveAttachments = useCallback(() => {
+  // Attachment removal handler
+  const handleRemoveAttachments = () => {
     setAttachedFiles(null);
     setFileError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-  }, []);
+  };
+
+  // Convert files to attachment format for AI SDK
+  const convertFilesToAttachments = async (files: File[]) => {
+    const attachments = await Promise.all(
+      files.map(async (file) => {
+        // Create a data URL for the file
+        const dataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+
+        return {
+          name: file.name,
+          contentType: file.type,
+          url: dataUrl,
+        };
+      })
+    );
+    return attachments;
+  };
+
+  // Enhanced form submission handler with attachments
+  const handleFormSubmit = async (e?: React.FormEvent<HTMLFormElement>) => {
+    if (e) {
+      e.preventDefault();
+    }
+
+    if (isStreaming) {
+      handleCancel();
+      return;
+    }
+
+    // Check if we have input or attachments
+    if (!input.trim() && (!attachedFiles || attachedFiles.length === 0)) {
+      return;
+    }
+
+    try {
+      // Prepare attachments if any
+      let attachments:
+        | Array<{ name: string; contentType: string; url: string }>
+        | undefined;
+      if (attachedFiles && attachedFiles.length > 0) {
+        attachments = await convertFilesToAttachments(attachedFiles);
+      }
+
+      // Submit with attachments
+      await handleSubmit(e || new Event("submit"), {
+        experimental_attachments: attachments,
+      });
+
+      // Clear attachments after successful submission
+      setAttachedFiles(null);
+      setFileError(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } catch (error) {
+      console.error("Error submitting with attachments:", error);
+      setFileError("Failed to submit message with attachments");
+    }
+  };
 
   return (
     <div className='flex flex-col h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800'>
@@ -607,7 +611,7 @@ export default function Chat() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
-                    handleFormSubmit(e);
+                    handleFormSubmit();
                   }
                 }}
                 disabled={isDisabled}

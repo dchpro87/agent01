@@ -1,13 +1,11 @@
 import {
-  // askForConfirmation,
-  // calculateBMI,
-  documentSummarizer,
-  searchWeb,
+  // ask_ror_confirmation,
+  document_summarizer,
+  search_web,
 } from "./tools";
 
 export const tools = {
-  // askForConfirmation,
-  // calculateBMI,
-  documentSummarizer,
-  searchWeb,
+  // ask_ror_confirmation,
+  document_summarizer,
+  search_web,
 };

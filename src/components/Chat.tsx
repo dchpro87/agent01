@@ -34,6 +34,11 @@ export default function Chat() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Generate a unique chat ID that persists across component re-renders
+  const [chatId] = useState(
+    () => `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  );
+
   // File attachment state
   const [attachedFiles, setAttachedFiles] = useState<File[] | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -75,6 +80,7 @@ export default function Chat() {
     setMessages,
     addToolResult,
   } = useChat({
+    id: chatId, // Use unique chat ID for this chat session
     api: "/api/chat",
     maxSteps:
       preferences.toolsEnabled && preferences.modelSupportsTools
@@ -88,6 +94,7 @@ export default function Chat() {
       toolsEnabled: preferences.toolsEnabled,
       activeCollections: activeCollectionsArray,
       chunksToRetrieve: chunksToRetrieve,
+      chatId: chatId, // Pass the chat ID to the API
     },
     onError: (err) => {
       console.error("💥Chat error:", err);
@@ -133,7 +140,7 @@ export default function Chat() {
     [status]
   );
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (status === "streaming" || status === "submitted") {
       stop();
     }
@@ -144,6 +151,30 @@ export default function Chat() {
       fileInputRef.current.value = "";
     }
     connectionStatus.checkConnection();
+
+    // Clear PDF attachments associated with this chat ID
+    try {
+      console.log(`🗑️ Clearing PDF attachments for chat ID: ${chatId}`);
+      const response = await fetch("/api/clear-pdf-attachments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          chatId: chatId,
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        console.log("✅ PDF attachments cleared successfully:", result.message);
+      } else {
+        console.error("❌ Failed to clear PDF attachments:", result.error);
+      }
+    } catch (error) {
+      console.error("❌ Error clearing PDF attachments:", error);
+      // Don't show user error for this background operation
+    }
   };
 
   const handleCancel = () => {

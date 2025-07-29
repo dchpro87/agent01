@@ -19,6 +19,7 @@ import {
 import { AILogger, generateRequestId } from "@/lib/ai-middleware";
 import { aiConfig, validateConfig } from "@/lib/ai-config";
 import { tools } from "@/lib/tools-main";
+import { pdfAttachmentStore } from "@/lib/pdf-attachment-store";
 import { z } from "zod";
 import { OllamaModelOptions } from "@/types/ollama";
 import { CHROMADB_DEFAULTS } from "@/constraints/chromadb-constraints";
@@ -158,6 +159,7 @@ const RequestSchema = z.object({
   toolsEnabled: z.boolean().optional(),
   activeCollections: z.array(z.string()).optional(),
   chunksToRetrieve: z.number().min(1).max(30).optional(),
+  chatId: z.string().optional(), // Add chatId to the schema
 });
 
 export async function POST(req: Request) {
@@ -300,7 +302,41 @@ export async function POST(req: Request) {
       toolsEnabled = true,
       activeCollections = [],
       chunksToRetrieve = CHROMADB_DEFAULTS.CHUNKS_TO_RETRIEVE,
+      chatId,
     } = validationResult.data;
+
+    // Store PDF attachments globally for tool access (after we have chatId)
+    if (pdfAttachments.length > 0) {
+      console.log("📄 Storing PDF attachments globally for tool access...");
+      try {
+        const storePromises = pdfAttachments.map(async (pdfAttachment) => {
+          const attachmentId = await pdfAttachmentStore.storePDFAttachment(
+            pdfAttachment,
+            chatId // Pass the chat ID when storing PDF attachments
+          );
+          console.log(
+            `✅ Stored PDF "${pdfAttachment.name}" with ID: ${attachmentId}${
+              chatId ? ` for chat: ${chatId}` : ""
+            }`
+          );
+          return attachmentId;
+        });
+
+        const storedIds = await Promise.all(storePromises);
+        console.log(
+          `📄 Successfully stored ${storedIds.length} PDF attachments globally`
+        );
+
+        // Log current store stats
+        const stats = pdfAttachmentStore.getStats();
+        console.log(
+          `📊 PDF Store Stats: ${stats.count} files, ${stats.totalSizeMB}MB total`
+        );
+      } catch (error) {
+        console.error("❌ Failed to store PDF attachments globally:", error);
+        // Continue processing even if PDF storage fails
+      }
+    }
 
     // Pass messages through directly - reasoning will be extracted by middleware
     const cleanedMessages = messages as CoreMessage[];
@@ -389,6 +425,34 @@ export async function POST(req: Request) {
           // Continue without context if ChromaDB fails
         }
       }
+    }
+
+    // Add PDF attachment instructions if PDFs are available in the global store
+    const availablePDFs = chatId
+      ? pdfAttachmentStore.getPDFAttachmentsByChatId(chatId)
+      : pdfAttachmentStore.getAllPDFAttachments();
+
+    if (availablePDFs.length > 0) {
+      const pdfNames = availablePDFs.map((pdf) => pdf.name).join(", ");
+      const pdfInstructions = `\n\nIMPORTANT: PDF Documents Available for Analysis
+You have access to ${availablePDFs.length} PDF document(s)${
+        chatId ? ` for this chat session` : ` in the global attachment store`
+      }: ${pdfNames}
+
+These PDFs have been uploaded by the user and are available for analysis through the document-summarizer tool. You can:
+- Summarize the content of any PDF by referencing it by name
+- Answer questions about the PDF content
+- Extract specific information from the documents
+- Compare information across multiple PDFs if available
+
+When the user asks questions that could be answered using these PDF documents, use the document-summarizer tool to analyze the relevant files and provide informed responses based on their content.`;
+
+      finalSystemPrompt += pdfInstructions;
+      console.log(
+        `📄 Added PDF attachment instructions for ${
+          availablePDFs.length
+        } documents${chatId ? ` (chat: ${chatId})` : ""}: ${pdfNames}`
+      );
     }
 
     AILogger.startRequest(requestId, selectedModel);

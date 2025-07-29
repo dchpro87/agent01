@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /** Ask user for confirmation - example of a client-side interactive tool */
-export const askForConfirmation = {
+export const ask_for_confirmation = {
   description:
     "Ask the user for confirmation before performing a potentially sensitive action",
   parameters: z.object({

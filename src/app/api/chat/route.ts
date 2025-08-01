@@ -439,13 +439,7 @@ You have access to ${availablePDFs.length} PDF document(s)${
         chatId ? ` for this chat session` : ` in the global attachment store`
       }: ${pdfNames}
 
-These PDFs have been uploaded by the user and are available for analysis through the document-summarizer tool. You can:
-- Summarize the content of any PDF by referencing it by name
-- Answer questions about the PDF content
-- Extract specific information from the documents
-- Compare information across multiple PDFs if available
-
-When the user asks questions that could be answered using these PDF documents, use the document-summarizer tool to analyze the relevant files and provide informed responses based on their content.`;
+These PDFs have been uploaded by the user and are available for analysis through the document_summarizer tool and the ocr_pdf_agent tool.`;
 
       finalSystemPrompt += pdfInstructions;
       console.log(

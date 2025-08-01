@@ -113,8 +113,8 @@ export const NO_TOOL_SUPPORT_MODELS = Object.keys(MODEL_DATABASE).filter(
 export const SUPPORTED_FILE_TYPES = "image/*,.pdf,application/pdf";
 
 // File size limits (in bytes)
-export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
-export const MAX_FILE_SIZE_DISPLAY = "10MB"; // Display string
+export const MAX_FILE_SIZE = 20 * 1024 * 1024; // 10MB in bytes
+export const MAX_FILE_SIZE_DISPLAY = "20MB"; // Display string
 
 // Chat configuration
 export const MAX_CHAT_STEPS = 5;

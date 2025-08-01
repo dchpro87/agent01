@@ -75,7 +75,7 @@ export const MODEL_DATABASE: Record<string, ModelCapabilities> = {
   },
   "gemma3:1b": {
     tools: false,
-    vision: true,
+    vision: false,
     embedding: false,
     reasoning: false,
     contextSize: 32000,

@@ -21,6 +21,7 @@ import ContextWindowManager from "./ContextWindowManager";
 import MessageComponent from "./Message";
 import MessageItem from "./MessageItem";
 import AttachmentPreview from "./AttachmentPreview";
+import ThemeToggle from "./ThemeToggle";
 
 // Import custom hooks
 import { useConnectionStatus, usePersistedPreferences } from "@/hooks";
@@ -430,6 +431,11 @@ export default function Chat() {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Theme Toggle */}
+            <div className='flex items-center'>
+              <ThemeToggle />
             </div>
           </div>
         </div>

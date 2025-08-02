@@ -140,7 +140,7 @@ export default function ModelSelector({
         className='flex items-center gap-2 px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200'
       >
         <Bot className='w-4 h-4 text-gray-500 dark:text-gray-400' />
-        <span className='text-gray-900 dark:text-white font-medium'>
+        <span className='text-gray-900 dark:text-white font-medium max-w-32 truncate'>
           {getModelDisplayName(selectedModel) || "Select Model"}
         </span>
         <ChevronDown
@@ -151,7 +151,7 @@ export default function ModelSelector({
       </button>
 
       {isOpen && (
-        <div className='absolute top-full left-0 mt-1 w-80 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50 max-h-120 overflow-y-auto'>
+        <div className='absolute top-full left-0 mt-1 w-80 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto scrollbar-thin'>
           {models.map((model) => (
             <button
               key={model.name}

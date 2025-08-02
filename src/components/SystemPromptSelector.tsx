@@ -183,7 +183,7 @@ export default function SystemPromptSelector({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className='absolute top-full left-0 mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-200 overflow-y-auto'>
+        <div className='absolute top-full left-0 mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto scrollbar-thin'>
           {/* Header */}
           <div className='p-3 border-b border-gray-200 dark:border-gray-700'>
             <div className='flex items-center justify-between'>
@@ -255,7 +255,7 @@ export default function SystemPromptSelector({
           )}
 
           {/* Prompt List */}
-          <div className='max-h-100 overflow-y-auto'>
+          <div className='max-h-80 overflow-y-auto scrollbar-thin'>
             {categories.map((category) => (
               <div key={category}>
                 <div className='px-3 py-2 bg-gray-100 dark:bg-gray-700'>

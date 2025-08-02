@@ -9,6 +9,7 @@ import {
   Trash2,
   Search,
   Filter,
+  RefreshCw,
 } from "lucide-react";
 import {
   chromaDBManager,
@@ -54,6 +55,7 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showActiveOnly, setShowActiveOnly] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   // Use external active collections if provided, otherwise use internal state
   const activeCollections =
@@ -79,6 +81,7 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
   }, [isOpen]);
 
   const handleConnect = async () => {
+    setIsRetrying(true);
     try {
       const conn = await chromaDBManager.connect();
       setConnection(conn);
@@ -94,6 +97,8 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
       }
     } catch (error) {
       console.error("Connection error:", error);
+    } finally {
+      setIsRetrying(false);
     }
   };
 
@@ -239,7 +244,7 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
               </h1>
               <div className='flex items-center gap-2'>
                 <p className='text-sm text-gray-500 dark:text-gray-400'>
-                  Manage your vector database and context data
+                  Manage your Chroma vector database and context data
                 </p>
                 {connection?.isConnected && (
                   <span className='text-xs text-green-600 dark:text-green-400 font-medium'>
@@ -248,6 +253,21 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
                 )}
               </div>
             </div>
+
+            {/* Retry Button - Show when not connected */}
+            {!connection?.isConnected && (
+              <button
+                onClick={handleConnect}
+                disabled={isRetrying}
+                className='flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 disabled:opacity-50 disabled:cursor-not-allowed border border-blue-200 dark:border-blue-700 rounded-lg transition-colors'
+                title='Retry connection to ChromaDB'
+              >
+                <RefreshCw
+                  className={`w-4 h-4 ${isRetrying ? "animate-spin" : ""}`}
+                />
+                {isRetrying ? "Connecting..." : "Retry Connection"}
+              </button>
+            )}
           </div>
 
           {/* Active Collections Summary */}
@@ -446,9 +466,19 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
                       Database Not Connected
                     </h3>
                   </div>
-                  <p className='text-sm text-yellow-700 dark:text-yellow-300'>
+                  <p className='text-sm text-yellow-700 dark:text-yellow-300 mb-3'>
                     ChromaDB connection is required.
                   </p>
+                  <button
+                    onClick={handleConnect}
+                    disabled={isRetrying}
+                    className='flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-yellow-800 dark:text-yellow-200 bg-yellow-100 dark:bg-yellow-900/40 hover:bg-yellow-200 dark:hover:bg-yellow-900/60 disabled:opacity-50 disabled:cursor-not-allowed border border-yellow-300 dark:border-yellow-600 rounded transition-colors'
+                  >
+                    <RefreshCw
+                      className={`w-3 h-3 ${isRetrying ? "animate-spin" : ""}`}
+                    />
+                    {isRetrying ? "Connecting..." : "Retry Connection"}
+                  </button>
                 </div>
               </div>
             )}

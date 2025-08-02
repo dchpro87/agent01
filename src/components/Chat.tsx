@@ -337,9 +337,10 @@ export default function Chat() {
     <div className='flex flex-col h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800'>
       {/* Header */}
       <div className='fixed top-0 left-0 right-0 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-40'>
-        <div className='max-w-4xl mx-auto px-4 py-4'>
-          <div className='flex items-center justify-between'>
-            <div className='flex items-center gap-3'>
+        <div className='max-w-7xl mx-auto px-6 py-4'>
+          <div className='flex items-center gap-6'>
+            {/* Left Section - Logo and Title */}
+            <div className='flex items-center gap-3 min-w-0 flex-shrink-0'>
               <div className='p-2 rounded-lg transition-colors duration-200 bg-transparent'>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -354,11 +355,11 @@ export default function Chat() {
                   }}
                 />
               </div>
-              <div>
-                <h1 className='text-xl font-semibold text-gray-900 dark:text-white'>
+              <div className='min-w-0'>
+                <h1 className='text-xl font-semibold text-gray-900 dark:text-white truncate'>
                   AI Monkey
                 </h1>
-                <p className='text-xs text-gray-500 dark:text-gray-400'>
+                <p className='text-xs text-gray-500 dark:text-gray-400 truncate'>
                   {connectionStatus.serverInfo || "Ollama Disconnected"}
                 </p>
               </div>
@@ -368,7 +369,7 @@ export default function Chat() {
                 <button
                   onClick={handleReset}
                   disabled={isStreaming}
-                  className='ml-4 px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors duration-200 flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed'
+                  className='px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors duration-200 flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0'
                   title='Reset conversation'
                 >
                   <RotateCcw className='w-4 h-4' />
@@ -377,64 +378,74 @@ export default function Chat() {
               )}
             </div>
 
-            {/* Model Configuration */}
-            <div className='flex-1 flex justify-center items-center gap-4'>
-              <ModelSelector
-                selectedModel={preferences.selectedModel}
-                onModelChange={preferences.setSelectedModel}
-                disabled={isDisabled}
-              />
-              <SystemPromptSelector
-                selectedPrompt={preferences.systemPrompt}
-                onPromptChange={preferences.setSystemPrompt}
-                disabled={isDisabled}
-              />
-              <ModelConfigSelector
-                selectedOptions={preferences.modelOptions}
-                onOptionsChange={preferences.setModelOptions}
-                disabled={isDisabled}
-              />
-              <ToolSwitch
-                enabled={preferences.toolsEnabled}
-                onChange={preferences.setToolsEnabled}
-                disabled={isDisabled}
-                modelSupportsTools={preferences.modelSupportsTools}
-              />
+            {/* Center Section - Model Configuration with Equal Spacing */}
+            <div className='flex-1 flex items-center justify-center max-w-5xl mx-auto'>
+              <div className='flex items-center gap-4'>
+                <div className='w-54'>
+                  <ModelSelector
+                    selectedModel={preferences.selectedModel}
+                    onModelChange={preferences.setSelectedModel}
+                    disabled={isDisabled}
+                  />
+                </div>
+                <div className='w-54'>
+                  <SystemPromptSelector
+                    selectedPrompt={preferences.systemPrompt}
+                    onPromptChange={preferences.setSystemPrompt}
+                    disabled={isDisabled}
+                  />
+                </div>
+                <div className='w-54'>
+                  <ModelConfigSelector
+                    selectedOptions={preferences.modelOptions}
+                    onOptionsChange={preferences.setModelOptions}
+                    disabled={isDisabled}
+                  />
+                </div>
+                <div className='w-20 flex justify-center'>
+                  <ToolSwitch
+                    enabled={preferences.toolsEnabled}
+                    onChange={preferences.setToolsEnabled}
+                    disabled={isDisabled}
+                    modelSupportsTools={preferences.modelSupportsTools}
+                  />
+                </div>
 
-              {/* Context Window Icon */}
-              <div className='relative flex items-center gap-1'>
-                <button
-                  onClick={() => setIsContextDialogOpen(true)}
-                  disabled={isDisabled}
-                  className={`relative p-2 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
-                    activeCollections.size > 0
-                      ? "text-green-600 dark:text-green-400"
-                      : "text-gray-600 dark:text-gray-400"
-                  }`}
-                  title={`Context Window Management${
-                    activeCollections.size > 0
-                      ? ` (${activeCollections.size} active, ${chunksToRetrieve} chunks each)`
-                      : ` (${chunksToRetrieve} chunks per collection)`
-                  }`}
-                >
-                  <Database className='w-5 h-5' />
-                </button>
-                {/* Collection count and chunk size indicators */}
-                {activeCollections.size > 0 && (
-                  <div className='flex items-center gap-1'>
-                    <span className='bg-green-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium'>
-                      {activeCollections.size}
-                    </span>
-                    <span className='bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium'>
-                      {chunksToRetrieve}
-                    </span>
-                  </div>
-                )}
+                {/* Context Window Icon */}
+                <div className='relative flex items-center gap-1 w-20 justify-center'>
+                  <button
+                    onClick={() => setIsContextDialogOpen(true)}
+                    disabled={isDisabled}
+                    className={`relative p-2 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
+                      activeCollections.size > 0
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-gray-600 dark:text-gray-400"
+                    }`}
+                    title={`Context Window Management${
+                      activeCollections.size > 0
+                        ? ` (${activeCollections.size} active, ${chunksToRetrieve} chunks each)`
+                        : ` (${chunksToRetrieve} chunks per collection)`
+                    }`}
+                  >
+                    <Database className='w-5 h-5' />
+                  </button>
+                  {/* Collection count and chunk size indicators */}
+                  {activeCollections.size > 0 && (
+                    <div className='flex items-center gap-1'>
+                      <span className='bg-green-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium'>
+                        {activeCollections.size}
+                      </span>
+                      <span className='bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium'>
+                        {chunksToRetrieve}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Theme Toggle */}
-            <div className='flex items-center'>
+            {/* Right Section - Theme Toggle */}
+            <div className='flex items-center flex-shrink-0'>
               <ThemeToggle />
             </div>
           </div>
@@ -446,8 +457,8 @@ export default function Chat() {
         preferences.toolsEnabled &&
         !preferences.modelSupportsTools &&
         !preferences.isWarningDismissed && (
-          <div className='fixed top-[73px] left-0 right-0 border-b border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 z-30'>
-            <div className='max-w-4xl mx-auto px-4 py-3'>
+          <div className='fixed top-[85px] left-0 right-0 border-b border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 z-30'>
+            <div className='max-w-7xl mx-auto px-6 py-3'>
               <MessageComponent
                 message={`${preferences.selectedModel} doesn't support tools/function calling. Features like getting current time won't be available. Consider using models like llama3.2, qwen2.5, or mistral for full functionality.`}
                 type='warning'
@@ -466,15 +477,15 @@ export default function Chat() {
           preferences.toolsEnabled &&
           !preferences.modelSupportsTools &&
           !preferences.isWarningDismissed
-            ? "pt-[130px]" // Header + warning
-            : "pt-[73px]" // Just header
+            ? "pt-[142px]" // Header + warning
+            : "pt-[85px]" // Just header
         } ${
           (attachedFiles && attachedFiles.length > 0) || error || fileError
             ? "pb-[240px]" // Extra bottom padding when attachment preview or error is shown
             : "pb-[140px]" // Normal bottom padding
         }`}
       >
-        <div className='max-w-4xl mx-auto px-4 py-6'>
+        <div className='max-w-5xl mx-auto px-6 py-6'>
           {messages.length === 0 ? (
             <div className='text-center pt-24 pb-32'>
               <h2 className='text-xl font-medium text-gray-900 dark:text-white mb-2'>
@@ -521,7 +532,7 @@ export default function Chat() {
               )}
             </div>
           ) : (
-            <div className='space-y-6'>
+            <div className='space-y-8'>
               {messages.map((message) => (
                 <MessageItem
                   key={message.id}
@@ -576,7 +587,7 @@ export default function Chat() {
       {/* File size error message */}
       {fileError && (
         <div className='fixed bottom-[140px] left-0 right-0 z-40'>
-          <div className='max-w-4xl mx-auto px-4 py-2'>
+          <div className='max-w-7xl mx-auto px-6 py-2'>
             <MessageComponent
               message={fileError}
               type='error'
@@ -592,7 +603,7 @@ export default function Chat() {
       {/* Error message */}
       {error && (
         <div className='fixed bottom-[140px] left-0 right-0 z-40'>
-          <div className='max-w-4xl mx-auto px-4 py-2'>
+          <div className='max-w-7xl mx-auto px-6 py-2'>
             <MessageComponent
               message={`Error: ${error.message}`}
               type='error'
@@ -620,7 +631,7 @@ export default function Chat() {
 
       {/* Input form */}
       <div className='fixed bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-30'>
-        <div className='max-w-4xl mx-auto px-4 py-4'>
+        <div className='max-w-7xl mx-auto px-6 py-4'>
           {/* Hidden file input */}
           <input
             type='file'

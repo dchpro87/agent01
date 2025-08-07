@@ -7,7 +7,7 @@ import { DEFAULT_OPTIONS } from "./model-config";
 // Main application configuration
 export const APP_CONFIG: AppConfig = {
   ollama: {
-    baseURL: "http://192.168.0.155:11434",
+    baseURL: "http://192.168.0.145:11434",
     model: "qwen3:0.6b",
     temperature: 0.7,
     maxRetries: 2,

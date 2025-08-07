@@ -18,7 +18,7 @@ import {
 
 import { AILogger, generateRequestId } from "@/lib/ai-middleware";
 import { aiConfig, validateConfig } from "@/lib/ai-config";
-import { tools } from "@/lib/tools-main";
+import { tools } from "@/lib/tools/index";
 import { pdfAttachmentStore } from "@/lib/pdf-attachment-store";
 import { z } from "zod";
 import { OllamaModelOptions } from "@/types/ollama";

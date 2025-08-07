@@ -1,176 +1,178 @@
-# AI SDK v4 Implementation - Production-Ready Chat Application
+# AI SDK Implementation Guide
 
-This document provides comprehensive technical details of the AI SDK v4 implementation in this advanced chat application, showcasing production-grade patterns and best practices for building sophisticated AI-powered applications.
+Technical implementation details for the AI SDK v4 integration with Ollama and ChromaDB.
 
-> **Current Status**: Production-ready implementation with ChromaDB vector database integration, multimodal support, 8 AI personalities, 5 configuration presets, and advanced context management capabilities.
+## Architecture Overview
 
-## 🚀 Key Features Implemented
+This platform uses a **local-first architecture** with no cloud dependencies:
 
-### 1. **Advanced Streaming & Response Handling**
-- **AI SDK v4 streamText**: Production-ready streaming implementation with proper error handling
-- **Request Tracking**: Unique request IDs for comprehensive logging and debugging
-- **Token Usage Monitoring**: Real-time tracking of prompt, completion, and total tokens
-- **Abort Signal Support**: Proper request cancellation and cleanup
-- **Multi-step Processing**: Support for MAX_CHAT_STEPS (5) with tool call sequences
+- **Frontend**: Next.js with React Server Components
+- **AI Models**: Ollama running locally (port 11434)  
+- **Vector Database**: ChromaDB running locally (port 8000)
+- **API Layer**: Next.js API routes for chat, embeddings, and health checks
 
-### 2. **Multimodal Content Support**  
-- **File Attachments**: Support for images, documents, and various file types
-- **experimental_attachments**: Proper handling of multimodal content with AI SDK v4
-- **Content Validation**: Robust validation of multimodal message content with Zod schemas
-- **Vision Model Support**: Automatic detection and handling of vision-capable models
-- **File Preview**: Visual preview of attached files before sending
+## Key Implementation Files
 
-### 3. **Tool Integration & Function Calling**
-- **Smart Tool Detection**: Automatic model capability detection for tool support
-- **Built-in Tools**: Real-time clock, BMI calculator, weather service with comprehensive validation
-- **Tool Execution Feedback**: Visual display of tool calls and results with step-by-step progress
-- **Parameter Validation**: Comprehensive Zod schema validation for all tool parameters
-- **Error Handling**: Graceful tool failure handling with detailed error messages
-- **Tool Toggle**: Enable/disable tools per conversation with user preference persistence
-
-### 4. **Vector Database & Context Management**
-- **ChromaDB Integration**: Full vector database support with semantic search capabilities
-- **Context Window Manager**: Visual interface for managing collections and document context
-- **Active Collection System**: Add/remove collections from chat context with real-time indicators
-- **Semantic Search & Retrieval**: Automatic document retrieval based on user queries
-- **Custom Ollama Embeddings**: nomic-embed-text integration for high-quality embeddings
-- **Document Detail Views**: Browse and examine documents within collections
-- **Context Augmentation**: Retrieved documents automatically enhance AI responses
-
-### 5. **Configuration Management**
-- **Centralized Config**: Static configuration in `src/constraints/app-config.ts` with full type safety
-- **Model Presets**: 5 built-in configuration presets (balanced, creative, precise, coding, analytical)
-- **Runtime Validation**: Comprehensive parameter validation with user-friendly error messages  
-- **Model Options**: Support for temperature, max tokens, context window, top-p, top-k, repeat penalty
-- **Configuration Persistence**: All settings saved to localStorage with automatic restoration
-
-### 6. **Health Monitoring & Diagnostics**
-- **Connection Health**: Real-time Ollama server connectivity monitoring with visual indicators
-- **Model Availability**: Automatic model detection and validation with capability assessment
-- **Diagnostic Information**: Detailed system status with actionable suggestions
-- **Proactive Monitoring**: Early detection of configuration and connection issues
-- **Health Endpoints**: Comprehensive `/api/health` endpoint with detailed diagnostics
-- **ChromaDB Health**: Vector database connection monitoring and status checking
-
-### 7. **Personality System**
-- **8 Pre-built Personalities**: Comprehensive personality system with distinct character traits
-- **Custom Personality Creation**: Full UI for creating and managing custom system prompts
-- **Personality Categorization**: Organized by General, Technical, Creative, Education, Culinary, Support
-- **Dynamic Switching**: Change personalities mid-conversation with full state persistence
-- **Personality Persistence**: All personality preferences saved to localStorage
-
-## 📁 Project Architecture
-
-```
-src/
-├── app/
-│   ├── api/
-│   │   ├── chat/route.ts          # AI SDK v4 streaming endpoint with multimodal support
-│   │   ├── chromadb/route.ts      # ChromaDB integration API with collection management
-│   │   ├── embeddings/route.ts    # Ollama embeddings API for vector generation
-│   │   ├── health/route.ts        # Comprehensive health monitoring & diagnostics  
-│   │   └── models/route.ts        # Model discovery, validation & capability detection
-│   ├── layout.tsx                 # Root layout with theme support and global styles
-│   ├── page.tsx                   # Main application page with chat interface
-│   └── globals.css                # Global styles with Tailwind v4 configuration
-├── components/
-│   ├── Chat.tsx                   # Advanced chat UI with streaming, attachments & tools
-│   ├── CollectionDetail.tsx       # Vector database collection detail view with document browsing
-│   ├── ContextWindowManager.tsx   # ChromaDB context management interface
-│   ├── ModelSelector.tsx          # Model selection with capability indicators
-│   ├── SystemPromptSelector.tsx   # Personality system with 8 pre-built prompts
-│   ├── ModelConfigSelector.tsx    # Advanced parameter configuration interface
-│   └── ToolSwitch.tsx             # Tool enable/disable toggle component
-├── constraints/
-│   ├── app-config.ts              # Static application configuration with validation
-│   ├── chat-constraints.ts          # Chat-specific constraints and configurations
-│   ├── model-config.ts            # Model configuration presets and defaults
-│   └── predefined-system-prompts.ts # Built-in personality definitions
-├── lib/
-│   ├── ai-config.ts               # AI configuration utilities and helpers
-│   ├── ai-health.ts               # Health monitoring utilities and diagnostics
-│   ├── ai-middleware.ts           # Request logging, tracking & performance monitoring
-│   ├── chromadb.ts                # ChromaDB client manager and API interface
-│   ├── ollama-embedding.ts        # Custom Ollama embedding function for ChromaDB
-│   ├── ollama-embedding-new.ts    # Enhanced embedding implementation
-│   └── tools.ts                   # Tool definitions (time, BMI, weather) with Zod validation
-├── types/
-│   ├── index.ts                   # General application type definitions
-│   └── ollama.ts                  # Ollama-specific types and model configurations
-└── utils/                         # Utility functions and helper methods
-```
-
-## 🔧 Technology Stack
-
-### **Core Dependencies**
-```json
-{
-  "@ai-sdk/openai": "^1.3.22",        // OpenAI provider for Ollama compatibility
-  "@ai-sdk/react": "^1.2.12",         // React hooks for AI SDK integration  
-  "ai": "^4.3.16",                     // Core AI SDK v4 with streaming support
-  "chromadb": "^3.0.6",               // ChromaDB JavaScript client for vector database
-  "@chroma-core/default-embed": "^0.1.8", // Default embedding functions for ChromaDB
-  "next": "15.3.4",                    // Next.js with App Router and React 19
-  "react": "^19.0.0",                  // Latest React with concurrent features
-  "zod": "^3.25.67",                   // Runtime validation and type safety
-  "ollama-ai-provider": "^1.2.0",     // Ollama integration provider
-  "react-markdown": "^10.1.0",        // Markdown rendering with GFM support
-  "rehype-highlight": "^7.0.2",       // Code syntax highlighting
-  "remark-gfm": "^4.0.1",             // GitHub Flavored Markdown support
-  "lucide-react": "^0.523.0"          // Modern icon library
+### Core Chat API (`src/app/api/chat/route.ts`)
+```typescript
+export async function POST(request: NextRequest) {
+  // 1. Validate request with Zod schemas
+  const { messages, model, activeCollections } = await request.json();
+  
+  // 2. Augment context with ChromaDB documents
+  if (activeCollections?.length > 0) {
+    const relevantDocs = await queryActiveCollections(activeCollections, query);
+    finalSystemPrompt += formatContextDocuments(relevantDocs);
+  }
+  
+  // 3. Stream response with AI SDK v4
+  const result = streamText({
+    model: ollama(selectedModel),
+    messages: cleanedMessages,
+    system: finalSystemPrompt,
+    tools: supportsTools ? tools : undefined,
+    maxSteps: supportsTools ? 5 : 1,
+  });
+  
+  return result.toDataStreamResponse();
 }
 ```
 
-## 🔧 Environment Configuration
-
-The application uses static configuration in `src/constraints/app-config.ts` for better type safety:
-
+### ChromaDB Integration (`src/lib/chromadb.ts`)
 ```typescript
-// Static configuration with full type safety
+export class ChromaDBManager {
+  // Connect to local ChromaDB instance
+  async connect(): Promise<ChromaDBConnection> {
+    const response = await fetch("/api/chromadb?action=connect");
+    return response.json();
+  }
+  
+  // Query collections for semantic search
+  async queryCollection(name: string, texts: string[]): Promise<Document[]> {
+    const response = await fetch("/api/chromadb", {
+      method: "POST",
+      body: JSON.stringify({
+        action: "query_collection",
+        collection: name,
+        query_texts: texts,
+      }),
+    });
+    return response.json();
+  }
+}
+```
+
+### Custom Ollama Embeddings (`src/lib/ollama-embedding.ts`)
+```typescript
+export class OllamaEmbeddingFunction implements EmbeddingFunction {
+  async generate(texts: string[]): Promise<number[][]> {
+    const embeddings = [];
+    for (const text of texts) {
+      const response = await fetch(`${this.baseURL}/api/embeddings`, {
+        method: "POST",
+        body: JSON.stringify({ model: "nomic-embed-text", prompt: text }),
+      });
+      const data = await response.json();
+      embeddings.push(data.embedding);
+    }
+    return embeddings;
+  }
+}
+```
+
+## Configuration
+
+### App Configuration (`src/constraints/app-config.ts`)
+```typescript
 export const APP_CONFIG: AppConfig = {
   ollama: {
-    baseURL: "http://localhost:11434",    # Ollama server endpoint
-    model: "llama3.2:3b",                 # Default model selection
-    temperature: 0.7,                     # Creativity vs consistency (0.0-2.0)
-    maxRetries: 2,                        # Retry attempts for failed requests
-    defaultOptions: {
-      maxTokens: 4096,                    # Response length limit (1-32,000)
-      // Additional model parameters...
-    },
+    baseURL: "http://localhost:11434",
+    model: "llama3.2:3b",
+    temperature: 0.7,
+    maxRetries: 2,
   },
   streaming: {
-    timeout: 30000,                       # Request timeout (30 seconds)
-    keepAlive: true,                      # Keep connections alive
+    timeout: 30000,
+    keepAlive: true,
   },
   logging: {
-    enabled: true,                        # Enable comprehensive request logging
-    logLevel: "info",                     # Logging verbosity (debug, info, warn, error)
+    enabled: true,
+    logLevel: "info",
   },
 };
 ```
 
-Environment variables are also supported for deployment flexibility:
+## AI SDK v4 Features Implemented
 
-```bash
-# Core Ollama Settings
-OLLAMA_BASE_URL=http://localhost:11434    # Ollama server endpoint
-OLLAMA_MODEL=llama3.2:3b                  # Default model selection
+### 1. Streaming Responses
+- Real-time token streaming with `streamText()`
+- Proper abort signal handling for cancellation
+- Token usage tracking and performance monitoring
 
-# Model Parameters & Performance
-OLLAMA_TEMPERATURE=0.7                    # Creativity vs consistency (0.0-2.0)
-OLLAMA_MAX_TOKENS=4096                    # Response length limit (1-32,000)
-OLLAMA_MAX_RETRIES=2                      # Retry attempts for failed requests
+### 2. Tool Integration  
+- Automatic model capability detection
+- Built-in tools: time, BMI calculator, web search
+- Multi-step conversations (up to 5 tool calls)
 
-# Monitoring, Logging & Development
-AI_LOGGING=true                           # Enable comprehensive request logging
-AI_LOG_LEVEL=info                         # Logging verbosity (debug, info, warn, error)
+### 3. Multimodal Support
+- File attachment processing with `experimental_attachments`
+- Image, PDF, and document support
+- Vision model compatibility detection
 
-# Optional Advanced Settings
-OLLAMA_NUM_CTX=4096                       # Context window size for conversations
-OLLAMA_TOP_P=0.9                          # Nucleus sampling parameter
-OLLAMA_TOP_K=40                           # Top-k sampling parameter
-OLLAMA_REPEAT_PENALTY=1.1                 # Repetition penalty factor
+### 4. Error Handling
+- Comprehensive error boundaries and retry logic
+- Health monitoring for Ollama and ChromaDB  
+- Graceful degradation when services are unavailable
+
+## Development Workflow
+
+### Adding New Tools
+1. Create tool file in `src/lib/tools/`
+2. Export from `src/lib/tools-main.ts`
+3. Tools automatically available to compatible models
+
+### Adding New Models
+1. Pull model with Ollama: `ollama pull model-name`
+2. Model appears automatically in selector
+3. Tool support detected automatically
+
+### Vector Database Setup
+1. Install ChromaDB: `pip install chromadb`
+2. Run server: `chroma run --host localhost --port 8000`
+3. Add collections through the UI or API
+
+## API Endpoints
+
+- `POST /api/chat` - Main chat endpoint with streaming
+- `GET/POST /api/chromadb` - Vector database operations  
+- `GET /api/health` - System health and diagnostics
+- `GET /api/models` - Available Ollama models
+- `POST /api/embeddings` - Generate embeddings with Ollama
+
+## Dependencies
+
+### Core AI Stack
+```json
+{
+  "ai": "^4.3.16",                    // AI SDK v4
+  "@ai-sdk/openai": "^1.3.22",       // OpenAI provider (Ollama compatible)
+  // "ollama-ai-provider": "^1.2.0",    // Official Ollama provider - I can't get it to work, OpenAI provider works better
+  "chromadb": "^3.0.6",              // ChromaDB client
+  "zod": "^3.25.67"                  // Runtime validation
+}
 ```
+
+### UI & Framework
+```json
+{
+  "next": "15.3.4",                  // Next.js with App Router
+  "react": "^19.0.0",               // React 19
+  "react-markdown": "^10.1.0",      // Markdown rendering
+  "lucide-react": "^0.523.0"        // Icons
+}
+```
+
+This implementation provides a complete local AI platform that's production-ready and easily extensible.
 
 ## 🎯 AI SDK v4 Implementation Details
 

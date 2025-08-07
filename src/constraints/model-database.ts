@@ -83,6 +83,18 @@ export const MODEL_DATABASE: Record<string, ModelCapabilities> = {
     description: "Compact Gemma 3 model",
   },
 
+  // OpenAI’s open-weight models designed for powerful reasoning, agentic tasks, and versatile developer use cases.
+  "gpt-oss:20b": {
+    tools: true,
+    vision: false,
+    embedding: false,
+    reasoning: true,
+    contextSize: 128000,
+    family: "gpt-oss",
+    description:
+      "OpenAI's 20B parameter model for advanced reasoning and agentic tasks",
+  },
+
   // Qwen models - Alibaba's multilingual models
   "qwen2.5vl:7b": {
     tools: false,

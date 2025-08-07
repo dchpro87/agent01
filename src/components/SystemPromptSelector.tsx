@@ -225,8 +225,8 @@ export default function SystemPromptSelector({
                   value={newPromptContent}
                   onChange={(e) => setNewPromptContent(e.target.value)}
                   className='w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 resize-none'
-                  rows={3}
-                  maxLength={500}
+                  rows={10}
+                  maxLength={5000}
                 />
                 <div className='flex gap-2'>
                   <button

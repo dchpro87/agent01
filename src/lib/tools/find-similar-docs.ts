@@ -13,13 +13,13 @@ import {
 /** Tool to find similar documents from ChromaDB collections using AI-generated search queries */
 export const find_similar_docs = tool({
   description:
-    "Find similar documents from a ChromaDB collection by analyzing the user's message and generating an optimized search query. This tool takes the user's message, uses the currently selected AI model to understand the intent and generate an appropriate search query, then searches the specified collection for the most relevant documents.",
+    "Local knowledge base. Find similar documents from a ChromaDB collection by analyzing the user's message and generating an optimized search query. This tool takes the user's message, uses the currently selected AI model to understand the intent and generate an appropriate search query, then searches the specified collection for the most relevant documents.",
   parameters: z.object({
     userMessage: z
       .string()
       .min(1)
       .describe(
-        "The user's message or question to find relevant documents for"
+        "The user's message or question to be used to find relevant documents"
       ),
     collectionName: z
       .string()
@@ -103,7 +103,8 @@ export const find_similar_docs = tool({
       );
 
       const queryGenerationResult = await generateText({
-        model: openai(aiConfig.ollama.model),
+        // model: openai(aiConfig.ollama.model),
+        model: openai("gemma3:4b"),
         messages: [
           {
             role: "system",
@@ -132,7 +133,7 @@ Examples:
       });
 
       const optimizedQuery = queryGenerationResult.text.trim();
-      console.log(`🔍 Generated search query: "${optimizedQuery}"`);
+      console.log(`🔍 Generated search query: ${optimizedQuery}`);
 
       // Search the ChromaDB collection using the optimized query
       const queryResults = await collection.query({

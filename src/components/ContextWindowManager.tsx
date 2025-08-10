@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Database,
@@ -10,15 +10,15 @@ import {
   Search,
   Filter,
   RefreshCw,
-} from "lucide-react";
+} from 'lucide-react';
 import {
   chromaDBManager,
   ChromaDBConnection,
   Collection,
-} from "@/lib/chromadb";
-import { CHROMADB_DEFAULTS } from "@/constraints/chromadb-constraints";
-import CollectionDetail from "./CollectionDetail";
-import Message from "./Message";
+} from '@/lib/chromadb';
+import { CHROMADB_DEFAULTS } from '@/constraints/chromadb-constraints';
+import CollectionDetail from './CollectionDetail';
+import Message from './Message';
 
 interface ContextWindowManagerProps {
   isOpen: boolean;
@@ -45,7 +45,7 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
     Set<string>
   >(new Set());
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newCollectionName, setNewCollectionName] = useState("");
+  const [newCollectionName, setNewCollectionName] = useState('');
   const [useOllamaEmbedding, setUseOllamaEmbedding] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -53,7 +53,7 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
     null
   );
   const [isDeleting, setIsDeleting] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [showActiveOnly, setShowActiveOnly] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
 
@@ -92,11 +92,11 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
           const cols = await chromaDBManager.getCollections();
           setCollections(cols);
         } catch (error) {
-          console.error("Failed to fetch collections:", error);
+          console.error('Failed to fetch collections:', error);
         }
       }
     } catch (error) {
-      console.error("Connection error:", error);
+      console.error('Connection error:', error);
     } finally {
       setIsRetrying(false);
     }
@@ -136,7 +136,7 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
       const cols = await chromaDBManager.getCollections();
       setCollections(cols);
     } catch (error) {
-      console.error("Failed to refresh collections:", error);
+      console.error('Failed to refresh collections:', error);
     }
   };
 
@@ -153,7 +153,7 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
       const formattedName = newCollectionName
         .trim()
         .toLowerCase()
-        .replace(/\s+/g, "-");
+        .replace(/\s+/g, '-');
 
       await chromaDBManager.createCollection(formattedName, useOllamaEmbedding);
 
@@ -163,10 +163,10 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
 
       // Reset modal state
       setShowCreateModal(false);
-      setNewCollectionName("");
+      setNewCollectionName('');
       setUseOllamaEmbedding(true);
     } catch (error) {
-      console.error("Failed to create collection:", error);
+      console.error('Failed to create collection:', error);
       // You might want to add error handling/display here
     } finally {
       setIsCreating(false);
@@ -175,7 +175,7 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
 
   const handleCancelCreate = () => {
     setShowCreateModal(false);
-    setNewCollectionName("");
+    setNewCollectionName('');
     setUseOllamaEmbedding(true);
   };
 
@@ -204,7 +204,7 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
       setShowDeleteModal(false);
       setCollectionToDelete(null);
     } catch (error) {
-      console.error("Failed to delete collection:", error);
+      console.error('Failed to delete collection:', error);
       // You might want to add error handling/display here
     } finally {
       setIsDeleting(false);
@@ -226,15 +226,15 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
             <div
               className={`p-2 rounded-lg ${
                 connection?.isConnected
-                  ? "bg-green-100 dark:bg-green-900/30"
-                  : "bg-gray-100 dark:bg-gray-700"
+                  ? 'bg-green-100 dark:bg-green-900/30'
+                  : 'bg-gray-100 dark:bg-gray-700'
               }`}
             >
               <Database
                 className={`w-5 h-5 ${
                   connection?.isConnected
-                    ? "text-green-600 dark:text-green-400"
-                    : "text-gray-600 dark:text-gray-400"
+                    ? 'text-green-600 dark:text-green-400'
+                    : 'text-gray-600 dark:text-gray-400'
                 }`}
               />
             </div>
@@ -263,9 +263,9 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
                 title='Retry connection to ChromaDB'
               >
                 <RefreshCw
-                  className={`w-4 h-4 ${isRetrying ? "animate-spin" : ""}`}
+                  className={`w-4 h-4 ${isRetrying ? 'animate-spin' : ''}`}
                 />
-                {isRetrying ? "Connecting..." : "Retry Connection"}
+                {isRetrying ? 'Connecting...' : 'Retry Connection'}
               </button>
             )}
           </div>
@@ -372,8 +372,8 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
                       key={collection.id || index}
                       className={`p-3 mb-2 rounded-lg border transition-all duration-200 cursor-pointer ${
                         selectedCollection?.id === collection.id
-                          ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700"
-                          : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                          ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700'
+                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
                       }`}
                       onClick={() => handleCollectionClick(collection)}
                     >
@@ -382,21 +382,27 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
                           <div
                             className={`w-6 h-6 rounded flex items-center justify-center ${
                               activeCollections.has(collection.name)
-                                ? "bg-green-100 dark:bg-green-900/30"
-                                : "bg-gray-100 dark:bg-gray-700"
+                                ? 'bg-green-100 dark:bg-green-900/30'
+                                : 'bg-gray-100 dark:bg-gray-700'
                             }`}
                           >
                             <Database
                               className={`w-3 h-3 ${
                                 activeCollections.has(collection.name)
-                                  ? "text-green-600 dark:text-green-400"
-                                  : "text-gray-600 dark:text-gray-400"
+                                  ? 'text-green-600 dark:text-green-400'
+                                  : 'text-gray-600 dark:text-gray-400'
                               }`}
                             />
                           </div>
                           <h4 className='font-medium text-sm text-gray-900 dark:text-white truncate'>
                             {collection.name}
                           </h4>
+                          {collection.metadata?.embedding_function ===
+                            'ollama-nomic-embed' && (
+                            <span className='text-xs text-blue-600 dark:text-blue-400 font-medium'>
+                              Ollama
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -404,9 +410,9 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
                         <span className='text-xs text-gray-500 dark:text-gray-400'>
                           {collection.documentCount !== undefined
                             ? `${collection.documentCount} document${
-                                collection.documentCount !== 1 ? "s" : ""
+                                collection.documentCount !== 1 ? 's' : ''
                               }`
-                            : "Loading..."}
+                            : 'Loading...'}
                         </span>
                         <div className='flex items-center gap-1'>
                           <button
@@ -416,13 +422,13 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
                             }}
                             className={`p-1 rounded transition-colors ${
                               activeCollections.has(collection.name)
-                                ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
-                                : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                             }`}
                             title={
                               activeCollections.has(collection.name)
-                                ? "Remove from context"
-                                : "Add to context"
+                                ? 'Remove from context'
+                                : 'Add to context'
                             }
                           >
                             <Database className='w-3 h-3' />
@@ -447,13 +453,13 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
                   <Database className='w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2' />
                   <p className='text-sm text-gray-500 dark:text-gray-400'>
                     {searchQuery || showActiveOnly
-                      ? "No matching collections"
-                      : "No collections found"}
+                      ? 'No matching collections'
+                      : 'No collections found'}
                   </p>
                   <p className='text-xs text-gray-400 dark:text-gray-500 mt-1'>
                     {searchQuery || showActiveOnly
-                      ? "Try adjusting your filters"
-                      : "Create a collection to get started"}
+                      ? 'Try adjusting your filters'
+                      : 'Create a collection to get started'}
                   </p>
                 </div>
               )
@@ -475,9 +481,9 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
                     className='flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-yellow-800 dark:text-yellow-200 bg-yellow-100 dark:bg-yellow-900/40 hover:bg-yellow-200 dark:hover:bg-yellow-900/60 disabled:opacity-50 disabled:cursor-not-allowed border border-yellow-300 dark:border-yellow-600 rounded transition-colors'
                   >
                     <RefreshCw
-                      className={`w-3 h-3 ${isRetrying ? "animate-spin" : ""}`}
+                      className={`w-3 h-3 ${isRetrying ? 'animate-spin' : ''}`}
                     />
-                    {isRetrying ? "Connecting..." : "Retry Connection"}
+                    {isRetrying ? 'Connecting...' : 'Retry Connection'}
                   </button>
                 </div>
               </div>
@@ -584,7 +590,7 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
                     className='px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed rounded-lg transition-colors'
                     disabled={isCreating || !newCollectionName.trim()}
                   >
-                    {isCreating ? "Creating..." : "Create Collection"}
+                    {isCreating ? 'Creating...' : 'Create Collection'}
                   </button>
                 </div>
               </div>
@@ -619,7 +625,7 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
               <div className='space-y-4'>
                 <div className='bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4'>
                   <p className='text-sm text-red-800 dark:text-red-200 mb-2'>
-                    Are you sure you want to permanently delete the collection{" "}
+                    Are you sure you want to permanently delete the collection{' '}
                     <span className='font-semibold'>
                       &ldquo;{collectionToDelete}&rdquo;
                     </span>
@@ -644,7 +650,7 @@ const ContextWindowManager: React.FC<ContextWindowManagerProps> = ({
                     className='px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed rounded-lg transition-colors'
                     disabled={isDeleting}
                   >
-                    {isDeleting ? "Deleting..." : "Delete Collection"}
+                    {isDeleting ? 'Deleting...' : 'Delete Collection'}
                   </button>
                 </div>
               </div>

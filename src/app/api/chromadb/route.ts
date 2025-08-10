@@ -1,14 +1,66 @@
-import { NextRequest, NextResponse } from "next/server";
-import { ChromaClient } from "chromadb";
-import { createOllamaEmbeddingFunction } from "@/lib/ollama-embedding";
+import { NextRequest, NextResponse } from 'next/server';
+import { ChromaClient } from 'chromadb';
+import { createOllamaEmbeddingFunction } from '@/lib/ollama-embedding';
 import {
   CHROMADB_BASE_URL,
   CHROMADB_API_ENDPOINTS,
   CHROMADB_DEFAULTS,
   CHROMADB_ACTIONS,
-} from "@/constraints/chromadb-constraints";
+} from '@/constraints/chromadb-constraints';
 
 let client: ChromaClient | null = null;
+
+// Helper function to determine embedding function from collection metadata
+async function getCollectionEmbeddingFunction(
+  client: ChromaClient,
+  collectionName: string
+): Promise<ReturnType<typeof createOllamaEmbeddingFunction> | undefined> {
+  try {
+    // Get collection information to check metadata
+    const collections = await client.listCollections();
+    const targetCollection = collections.find(
+      (col) => col.name === collectionName
+    );
+
+    if (!targetCollection?.metadata) {
+      console.log(
+        `No metadata found for collection "${collectionName}". This might be a legacy collection created before embedding function metadata was stored.`
+      );
+
+      // For collections without metadata, assume they need Ollama embedding
+      // This handles legacy collections created before our metadata fix
+      console.log(
+        `Assuming collection "${collectionName}" uses Ollama embedding function (legacy collection fallback)`
+      );
+      return createOllamaEmbeddingFunction();
+    }
+
+    const embeddingFunction = targetCollection.metadata.embedding_function;
+    console.log(
+      `Collection "${collectionName}" metadata:`,
+      targetCollection.metadata
+    );
+
+    // Return Ollama embedding function if the collection was created with it
+    if (embeddingFunction === 'ollama-nomic-embed') {
+      console.log(
+        `Using Ollama embedding function for collection "${collectionName}"`
+      );
+      return createOllamaEmbeddingFunction();
+    }
+
+    console.log(
+      `Using default embedding function for collection "${collectionName}"`
+    );
+    return undefined;
+  } catch (error) {
+    console.warn(
+      `Failed to determine embedding function for collection "${collectionName}":`,
+      error
+    );
+    return undefined;
+  }
+}
 
 async function getClient(): Promise<ChromaClient> {
   if (!client) {
@@ -21,7 +73,7 @@ async function getClient(): Promise<ChromaClient> {
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const action = searchParams.get("action");
+  const action = searchParams.get('action');
 
   try {
     switch (action) {
@@ -32,7 +84,7 @@ export async function GET(request: NextRequest) {
           success: true,
           connected: true,
           version,
-          message: "Connected to ChromaDB",
+          message: 'Connected to ChromaDB',
         });
 
       case CHROMADB_ACTIONS.HEALTH:
@@ -44,7 +96,7 @@ export async function GET(request: NextRequest) {
             const data = await response.json();
             return NextResponse.json({
               success: true,
-              status: "healthy",
+              status: 'healthy',
               details: data,
             });
           } else {
@@ -56,13 +108,13 @@ export async function GET(request: NextRequest) {
               const dataV2 = await responseV2.json();
               return NextResponse.json({
                 success: true,
-                status: "healthy",
+                status: 'healthy',
                 details: dataV2,
               });
             } else {
               return NextResponse.json({
                 success: false,
-                status: "unhealthy",
+                status: 'unhealthy',
                 details: `HTTP ${response.status}`,
               });
             }
@@ -70,8 +122,8 @@ export async function GET(request: NextRequest) {
         } catch (error) {
           return NextResponse.json({
             success: false,
-            status: "error",
-            details: error instanceof Error ? error.message : "Unknown error",
+            status: 'error',
+            details: error instanceof Error ? error.message : 'Unknown error',
           });
         }
 
@@ -92,11 +144,9 @@ export async function GET(request: NextRequest) {
         });
 
       case CHROMADB_ACTIONS.GET_DOCUMENTS:
-        const collectionName = searchParams.get("collection");
-        const limitStr = searchParams.get("limit");
-        const offsetStr = searchParams.get("offset");
-        const useOllamaEmbeddingForGet =
-          searchParams.get("ollama_embedding") === "true";
+        const collectionName = searchParams.get('collection');
+        const limitStr = searchParams.get('limit');
+        const offsetStr = searchParams.get('offset');
         const limit = limitStr ? parseInt(limitStr, 10) : undefined;
         const offset = offsetStr ? parseInt(offsetStr, 10) : undefined;
 
@@ -104,7 +154,7 @@ export async function GET(request: NextRequest) {
           return NextResponse.json(
             {
               success: false,
-              error: "Collection name is required",
+              error: 'Collection name is required',
             },
             { status: 400 }
           );
@@ -113,12 +163,22 @@ export async function GET(request: NextRequest) {
         try {
           const chromaClientForDocs = await getClient();
 
+          // Determine the correct embedding function from collection metadata
+          const embeddingFunction = await getCollectionEmbeddingFunction(
+            chromaClientForDocs,
+            collectionName
+          );
+
+          console.log(
+            `Getting documents from collection "${collectionName}" with ${
+              embeddingFunction ? 'Ollama nomic-embed-text' : 'default'
+            } embedding function`
+          );
+
           // Get collection with the appropriate embedding function
           const collection = await chromaClientForDocs.getCollection({
             name: collectionName,
-            embeddingFunction: useOllamaEmbeddingForGet
-              ? createOllamaEmbeddingFunction()
-              : undefined,
+            embeddingFunction: embeddingFunction,
           });
 
           // Get total count first
@@ -145,15 +205,22 @@ export async function GET(request: NextRequest) {
             totalCount,
             limit: limit || totalCount,
             offset: offset || 0,
+            embeddingFunction: embeddingFunction
+              ? 'ollama-nomic-embed'
+              : 'default',
           });
         } catch (error) {
+          console.error(
+            `Failed to get documents from collection "${collectionName}":`,
+            error
+          );
           return NextResponse.json(
             {
               success: false,
               error:
                 error instanceof Error
                   ? error.message
-                  : "Failed to get documents",
+                  : 'Failed to get documents',
             },
             { status: 500 }
           );
@@ -164,19 +231,19 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
           success: true,
           connected: false,
-          message: "Disconnected from ChromaDB",
+          message: 'Disconnected from ChromaDB',
         });
 
       case CHROMADB_ACTIONS.CREATE_COLLECTION:
-        const newCollectionName = searchParams.get("name");
+        const newCollectionName = searchParams.get('name');
         const useOllamaEmbedding =
-          searchParams.get("ollama_embedding") === "true";
+          searchParams.get('ollama_embedding') === 'true';
 
         if (!newCollectionName) {
           return NextResponse.json(
             {
               success: false,
-              error: "Collection name is required",
+              error: 'Collection name is required',
             },
             { status: 400 }
           );
@@ -185,8 +252,20 @@ export async function GET(request: NextRequest) {
         try {
           const chromaClientForCreate = await getClient();
 
+          // Store embedding function information in collection metadata
+          const collectionMetadata = {
+            created_at: new Date().toISOString(),
+            embedding_function: useOllamaEmbedding
+              ? 'ollama-nomic-embed'
+              : 'default',
+            embedding_model: useOllamaEmbedding
+              ? 'nomic-embed-text'
+              : 'default',
+          };
+
           const collectionOptions = {
             name: newCollectionName,
+            metadata: collectionMetadata,
             embeddingFunction: useOllamaEmbedding
               ? createOllamaEmbeddingFunction()
               : undefined,
@@ -194,7 +273,7 @@ export async function GET(request: NextRequest) {
 
           console.log(
             `Creating collection "${newCollectionName}" with ${
-              useOllamaEmbedding ? "Ollama nomic-embed-text" : "default"
+              useOllamaEmbedding ? 'Ollama nomic-embed-text' : 'default'
             } embedding function`
           );
 
@@ -211,8 +290,8 @@ export async function GET(request: NextRequest) {
             },
             message: `Collection "${newCollectionName}" created successfully`,
             embeddingFunction: useOllamaEmbedding
-              ? "ollama-nomic-embed"
-              : "default",
+              ? 'ollama-nomic-embed'
+              : 'default',
           });
         } catch (error) {
           return NextResponse.json(
@@ -221,20 +300,20 @@ export async function GET(request: NextRequest) {
               error:
                 error instanceof Error
                   ? error.message
-                  : "Failed to create collection",
+                  : 'Failed to create collection',
             },
             { status: 500 }
           );
         }
 
       case CHROMADB_ACTIONS.DELETE_COLLECTION:
-        const deleteCollectionName = searchParams.get("name");
+        const deleteCollectionName = searchParams.get('name');
 
         if (!deleteCollectionName) {
           return NextResponse.json(
             {
               success: false,
-              error: "Collection name is required",
+              error: 'Collection name is required',
             },
             { status: 400 }
           );
@@ -260,7 +339,7 @@ export async function GET(request: NextRequest) {
               error:
                 error instanceof Error
                   ? error.message
-                  : "Failed to delete collection",
+                  : 'Failed to delete collection',
             },
             { status: 500 }
           );
@@ -272,15 +351,15 @@ export async function GET(request: NextRequest) {
             success: false,
             error: `Invalid action. Use: ${Object.values(CHROMADB_ACTIONS)
               .slice(0, 8)
-              .join(", ")}`,
+              .join(', ')}`,
           },
           { status: 400 }
         );
     }
   } catch (error) {
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    console.error("ChromaDB API error:", errorMessage);
+      error instanceof Error ? error.message : 'Unknown error';
+    console.error('ChromaDB API error:', errorMessage);
 
     return NextResponse.json(
       {
@@ -313,7 +392,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({
             success: false,
             connected: false,
-            error: "Not connected to ChromaDB",
+            error: 'Not connected to ChromaDB',
           });
         }
 
@@ -321,7 +400,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: true,
           connected: true,
-          message: "Connection test successful",
+          message: 'Connection test successful',
         });
 
       case CHROMADB_ACTIONS.ADD_DOCUMENTS:
@@ -329,7 +408,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json(
             {
               success: false,
-              error: "Collection name, documents, and ids are required",
+              error: 'Collection name, documents, and ids are required',
             },
             { status: 400 }
           );
@@ -338,21 +417,21 @@ export async function POST(request: NextRequest) {
         try {
           const chromaClient = await getClient();
 
-          // Get collection with the appropriate embedding function
-          const useOllamaEmbedding = body.generate_ollama_embeddings === true;
-          const embeddingFunction = useOllamaEmbedding
-            ? createOllamaEmbeddingFunction()
-            : undefined;
+          // Determine the correct embedding function from collection metadata
+          const embeddingFunction = await getCollectionEmbeddingFunction(
+            chromaClient,
+            collection
+          );
 
           console.log(
             `Adding ${
               documents.length
             } documents to collection "${collection}" with ${
-              useOllamaEmbedding ? "Ollama nomic-embed-text" : "default"
+              embeddingFunction ? 'Ollama nomic-embed-text' : 'default'
             } embedding function`
           );
 
-          if (useOllamaEmbedding && embeddingFunction) {
+          if (embeddingFunction) {
             const config = embeddingFunction.getConfig();
             console.log(`ADD_DOCUMENTS Embedding Config:`, config);
           }
@@ -375,9 +454,9 @@ export async function POST(request: NextRequest) {
             message: `Added ${documents.length} documents to collection "${collection}"`,
             collection,
             addedCount: documents.length,
-            embeddingFunction: useOllamaEmbedding
-              ? "ollama-nomic-embed"
-              : "default",
+            embeddingFunction: embeddingFunction
+              ? 'ollama-nomic-embed'
+              : 'default',
           });
         } catch (error) {
           return NextResponse.json(
@@ -386,7 +465,7 @@ export async function POST(request: NextRequest) {
               error:
                 error instanceof Error
                   ? error.message
-                  : "Failed to add documents",
+                  : 'Failed to add documents',
             },
             { status: 500 }
           );
@@ -397,7 +476,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json(
             {
               success: false,
-              error: "Collection name and document ids are required",
+              error: 'Collection name and document ids are required',
             },
             { status: 400 }
           );
@@ -406,13 +485,21 @@ export async function POST(request: NextRequest) {
         try {
           const chromaClient = await getClient();
 
-          // Get collection with the appropriate embedding function
-          const useOllamaEmbedding = body.generate_ollama_embeddings === true;
-          const embeddingFunction = useOllamaEmbedding
-            ? createOllamaEmbeddingFunction()
-            : undefined;
+          // Determine the correct embedding function from collection metadata
+          const embeddingFunction = await getCollectionEmbeddingFunction(
+            chromaClient,
+            collection
+          );
 
-          if (useOllamaEmbedding && embeddingFunction) {
+          console.log(
+            `Deleting ${
+              ids.length
+            } documents from collection "${collection}" with ${
+              embeddingFunction ? 'Ollama nomic-embed-text' : 'default'
+            } embedding function`
+          );
+
+          if (embeddingFunction) {
             const config = embeddingFunction.getConfig();
             console.log(`DELETE_DOCUMENTS Embedding Config:`, config);
           }
@@ -431,6 +518,9 @@ export async function POST(request: NextRequest) {
             message: `Deleted ${ids.length} documents from collection "${collection}"`,
             collection,
             deletedCount: ids.length,
+            embeddingFunction: embeddingFunction
+              ? 'ollama-nomic-embed'
+              : 'default',
           });
         } catch (error) {
           return NextResponse.json(
@@ -439,7 +529,7 @@ export async function POST(request: NextRequest) {
               error:
                 error instanceof Error
                   ? error.message
-                  : "Failed to delete documents",
+                  : 'Failed to delete documents',
             },
             { status: 500 }
           );
@@ -450,7 +540,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json(
             {
               success: false,
-              error: "Collection name and query texts (array) are required",
+              error: 'Collection name and query texts (array) are required',
             },
             { status: 400 }
           );
@@ -459,21 +549,21 @@ export async function POST(request: NextRequest) {
         try {
           const chromaClient = await getClient();
 
-          // Get collection with the appropriate embedding function
-          const useOllamaEmbedding = body.generate_ollama_embeddings === true;
-          const embeddingFunction = useOllamaEmbedding
-            ? createOllamaEmbeddingFunction()
-            : undefined;
+          // Determine the correct embedding function from collection metadata
+          const embeddingFunction = await getCollectionEmbeddingFunction(
+            chromaClient,
+            collection
+          );
 
           console.log(
             `Querying collection "${collection}" with ${
               query_texts.length
             } queries using ${
-              useOllamaEmbedding ? "Ollama nomic-embed-text" : "default"
+              embeddingFunction ? 'Ollama nomic-embed-text' : 'default'
             } embedding function`
           );
 
-          if (useOllamaEmbedding && embeddingFunction) {
+          if (embeddingFunction) {
             const config = embeddingFunction.getConfig();
             console.log(`QUERY_COLLECTION Embedding Config:`, config);
           }
@@ -506,26 +596,26 @@ export async function POST(request: NextRequest) {
             query: query_texts,
             collection,
             resultsCount: results.length,
-            embeddingFunction: useOllamaEmbedding
-              ? "ollama-nomic-embed"
-              : "default",
+            embeddingFunction: embeddingFunction
+              ? 'ollama-nomic-embed'
+              : 'default',
           });
         } catch (error) {
-          console.error("ChromaDB query error:", error);
+          console.error('ChromaDB query error:', error);
 
           const errorMessage =
-            error instanceof Error ? error.message : "Unknown error";
+            error instanceof Error ? error.message : 'Unknown error';
 
           // Provide more specific error messages for common issues
           let specificError = errorMessage;
           if (
-            errorMessage.includes("Collection") &&
-            errorMessage.includes("does not exist")
+            errorMessage.includes('Collection') &&
+            errorMessage.includes('does not exist')
           ) {
             specificError = `Collection "${collection}" does not exist`;
-          } else if (errorMessage.includes("embedding")) {
+          } else if (errorMessage.includes('embedding')) {
             specificError = `Embedding function mismatch or error: ${errorMessage}`;
-          } else if (errorMessage.includes("dimension")) {
+          } else if (errorMessage.includes('dimension')) {
             specificError = `Embedding dimension mismatch: ${errorMessage}`;
           }
 
@@ -546,15 +636,15 @@ export async function POST(request: NextRequest) {
             success: false,
             error: `Invalid action. Use: ${Object.values(CHROMADB_ACTIONS)
               .slice(7)
-              .join(", ")}`,
-            note: "For add_documents and query_collection, set 'generate_ollama_embeddings: true' to use Ollama nomic-embed-text model",
+              .join(', ')}`,
+            note: 'Collections automatically use the correct embedding function based on their metadata',
           },
           { status: 400 }
         );
     }
   } catch (error) {
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
+      error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       {
         success: false,

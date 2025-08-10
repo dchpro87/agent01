@@ -1,14 +1,14 @@
-import { z } from "zod";
-import { tool } from "ai";
-import { ChromaClient } from "chromadb";
-import { createOllamaEmbeddingFunction } from "@/lib/ollama-embedding";
-import { createOpenAI } from "@ai-sdk/openai";
-import { generateText } from "ai";
-import { aiConfig } from "@/lib/ai-config";
+import { z } from 'zod';
+import { tool } from 'ai';
+import { ChromaClient } from 'chromadb';
+import { createOllamaEmbeddingFunction } from '@/lib/ollama-embedding';
+import { createOpenAI } from '@ai-sdk/openai';
+import { generateText } from 'ai';
+import { aiConfig } from '@/lib/ai-config';
 import {
   CHROMADB_BASE_URL,
   CHROMADB_DEFAULTS,
-} from "@/constraints/chromadb-constraints";
+} from '@/constraints/chromadb-constraints';
 
 /** Tool to find similar documents from ChromaDB collections using AI-generated search queries */
 export const find_similar_docs = tool({
@@ -24,19 +24,19 @@ export const find_similar_docs = tool({
     collectionName: z
       .string()
       .min(1)
-      .describe("The name of the ChromaDB collection to search in"),
+      .describe('The name of the ChromaDB collection to search in'),
     resultsCount: z
       .number()
       .min(1)
       .max(20)
       .optional()
       .default(5)
-      .describe("Number of similar documents to return (1-20, default: 5)"),
+      .describe('Number of similar documents to return (1-20, default: 5)'),
     includeMetadata: z
       .boolean()
       .optional()
       .default(true)
-      .describe("Whether to include document metadata in the results"),
+      .describe('Whether to include document metadata in the results'),
   }),
   execute: async ({
     userMessage,
@@ -44,8 +44,8 @@ export const find_similar_docs = tool({
     resultsCount = 5,
     includeMetadata = true,
   }) => {
-    console.log("🔧 find_similar_docs tool called with:", {
-      userMessage: userMessage.substring(0, 100) + "...",
+    console.log('🔧 find_similar_docs tool called with:', {
+      userMessage: userMessage.substring(0, 100) + '...',
       collectionName,
       resultsCount,
       includeMetadata,
@@ -57,7 +57,7 @@ export const find_similar_docs = tool({
         path: CHROMADB_BASE_URL,
       });
 
-      // Verify the collection exists
+      // Verify the collection exists and determine embedding function
       const collections = await client.listCollections();
       const targetCollection = collections.find(
         (col) => col.name === collectionName
@@ -66,26 +66,37 @@ export const find_similar_docs = tool({
       if (!targetCollection) {
         const availableCollections = collections.map((col) => col.name);
         return {
-          error: "Collection not found",
+          error: 'Collection not found',
           details: `Collection "${collectionName}" does not exist. Available collections: ${availableCollections.join(
-            ", "
+            ', '
           )}`,
           availableCollections,
           success: false,
         };
       }
 
-      // Get the collection to check if it has documents
+      // Determine embedding function from collection metadata
+      const embeddingFunction =
+        targetCollection.metadata?.embedding_function === 'ollama-nomic-embed'
+          ? createOllamaEmbeddingFunction()
+          : undefined;
+
+      console.log(
+        `Collection "${collectionName}" uses ${
+          embeddingFunction ? 'Ollama nomic-embed-text' : 'default'
+        } embedding function`
+      );
+
       const collection = await client.getCollection({
         name: collectionName,
-        embeddingFunction: createOllamaEmbeddingFunction(),
+        embeddingFunction: embeddingFunction,
       });
 
       // Check if collection has documents
       const collectionData = await collection.get({ limit: 1 });
       if (!collectionData.ids || collectionData.ids.length === 0) {
         return {
-          error: "Empty collection",
+          error: 'Empty collection',
           details: `Collection "${collectionName}" exists but contains no documents`,
           success: false,
         };
@@ -93,9 +104,9 @@ export const find_similar_docs = tool({
 
       // Use the current AI model to generate an optimized search query
       const openai = createOpenAI({
-        baseURL: aiConfig.ollama.baseURL + "/v1",
-        apiKey: "ollama",
-        compatibility: "compatible",
+        baseURL: aiConfig.ollama.baseURL + '/v1',
+        apiKey: 'ollama',
+        compatibility: 'compatible',
       });
 
       console.log(
@@ -104,10 +115,10 @@ export const find_similar_docs = tool({
 
       const queryGenerationResult = await generateText({
         // model: openai(aiConfig.ollama.model),
-        model: openai("gemma3:4b"),
+        model: openai('gemma3:4b'),
         messages: [
           {
-            role: "system",
+            role: 'system',
             content: `You are a search query optimization expert. Your task is to analyze the user's message and generate the most effective search query to find relevant documents in a knowledge base.
 
 Instructions:
@@ -124,7 +135,7 @@ Examples:
 - User: "I need help with React component testing" → Query: "React component testing unit tests jest enzyme testing library"`,
           },
           {
-            role: "user",
+            role: 'user',
             content: `Generate an optimized search query for this user message: "${userMessage}"`,
           },
         ],
@@ -145,7 +156,7 @@ Examples:
       const searchResults =
         queryResults.ids[0]?.map((id, index) => ({
           id,
-          document: queryResults.documents?.[0]?.[index] || "",
+          document: queryResults.documents?.[0]?.[index] || '',
           metadata: queryResults.metadatas?.[0]?.[index] || {},
           distance: queryResults.distances?.[0]?.[index] || 0,
         })) || [];
@@ -167,11 +178,11 @@ Examples:
           const result: FormattedResult = {
             rank: index + 1,
             id: doc.id,
-            content: doc.document || "No content available",
+            content: doc.document || 'No content available',
             contentPreview:
               doc.document && doc.document.length > 200
-                ? doc.document.substring(0, 200) + "..."
-                : doc.document || "No content available",
+                ? doc.document.substring(0, 200) + '...'
+                : doc.document || 'No content available',
             distance: doc.distance || 0,
           };
 
@@ -208,15 +219,15 @@ Examples:
         success: true,
       };
 
-      console.log("✅ find_similar_docs completed successfully");
+      console.log('✅ find_similar_docs completed successfully');
       return resultSummary;
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      console.error("❌ find_similar_docs error:", errorMessage);
+      console.error('❌ find_similar_docs error:', errorMessage);
 
       return {
-        error: "Search failed",
+        error: 'Search failed',
         details: errorMessage,
         success: false,
         timestamp: new Date().toISOString(),

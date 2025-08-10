@@ -1,5 +1,5 @@
-import { AppConfig } from "@/types/app-config";
-import { DEFAULT_OPTIONS } from "./model-config";
+import { AppConfig } from '@/types/app-config';
+import { DEFAULT_OPTIONS } from './model-config';
 
 // Application Configuration
 // This file replaces all environment variables with static configuration
@@ -7,8 +7,8 @@ import { DEFAULT_OPTIONS } from "./model-config";
 // Main application configuration
 export const APP_CONFIG: AppConfig = {
   ollama: {
-    baseURL: "http://192.168.0.145:11434",
-    model: "qwen3:0.6b",
+    baseURL: 'http://localhost:11434',
+    model: 'qwen3:0.6b',
     temperature: 0.7,
     maxRetries: 2,
     defaultOptions: {
@@ -22,10 +22,10 @@ export const APP_CONFIG: AppConfig = {
   },
   logging: {
     enabled: true,
-    logLevel: "info",
+    logLevel: 'info',
   },
   serpApi: {
-    apiKey: process.env.SERP_API_KEY || "",
+    apiKey: process.env.SERP_API_KEY || '',
     timeout: 10000, // 10 seconds
   },
 };

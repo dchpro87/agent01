@@ -9,6 +9,7 @@ import {
   SUPPORTED_FILE_TYPES,
   MAX_CHAT_STEPS,
   DEFAULT_CHAT_STEPS,
+  MAX_FILE_SIZE_DISPLAY,
 } from '@/constraints/chat-constraints';
 
 import { Send, RotateCcw, X, Paperclip, Database } from 'lucide-react';
@@ -44,6 +45,10 @@ export default function Chat() {
   const [attachedFiles, setAttachedFiles] = useState<File[] | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [isProcessingFiles, setIsProcessingFiles] = useState<boolean>(false);
+
+  // Drag and drop state
+  const [isDragOver, setIsDragOver] = useState<boolean>(false);
+  const [dragCounter, setDragCounter] = useState<number>(0);
 
   // Context window dialog state
   const [isContextDialogOpen, setIsContextDialogOpen] =
@@ -270,6 +275,72 @@ export default function Chat() {
     }
   };
 
+  // Drag and drop handlers
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragCounter((prev) => prev + 1);
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragOver(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragCounter((prev) => prev - 1);
+    if (dragCounter <= 1) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    setIsDragOver(false);
+    setDragCounter(0);
+
+    if (isDisabled || isProcessingFiles) {
+      return;
+    }
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) {
+      return;
+    }
+
+    setIsProcessingFiles(true);
+    setFileError(null);
+
+    try {
+      // Process files (resize images)
+      const fileList = files as unknown as FileList;
+      const processedFiles = await processFiles(fileList);
+
+      // Validate processed files
+      const validation = validateFiles(processedFiles);
+      if (validation.isValid) {
+        setAttachedFiles(processedFiles);
+        setFileError(null);
+      } else {
+        setFileError(validation.error || 'Invalid file');
+        setAttachedFiles(null);
+      }
+    } catch (error) {
+      console.error('Error processing dropped files:', error);
+      setFileError('Failed to process files. Please try again.');
+      setAttachedFiles(null);
+    } finally {
+      setIsProcessingFiles(false);
+    }
+  };
+
   // Convert files to attachment format for AI SDK
   const convertFilesToAttachments = async (files: File[]) => {
     const attachments = await Promise.all(
@@ -479,8 +550,40 @@ export default function Chat() {
           !preferences.isWarningDismissed
             ? 'pt-[142px]' // Header + warning
             : 'pt-[85px]' // Just header
-        } ${messages.length === 0 ? 'pb-6' : 'pb-32'}`}
+        } ${messages.length === 0 ? 'pb-6' : 'pb-32'} relative`}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
       >
+        {/* Drag overlay */}
+        {isDragOver && (
+          <div className='absolute inset-0 bg-blue-500/10 backdrop-blur-sm z-50 flex items-center justify-center border-2 border-dashed border-blue-500'>
+            <div className='bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-blue-500'>
+              <div className='text-center'>
+                <div className='w-12 h-12 mx-auto mb-3 text-blue-500'>
+                  <svg
+                    fill='currentColor'
+                    viewBox='0 0 20 20'
+                    className='w-full h-full'
+                  >
+                    <path
+                      fillRule='evenodd'
+                      d='M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z'
+                      clipRule='evenodd'
+                    />
+                  </svg>
+                </div>
+                <p className='text-lg font-medium text-gray-900 dark:text-white mb-1'>
+                  Drop files here
+                </p>
+                <p className='text-sm text-gray-500 dark:text-gray-400'>
+                  Images and PDFs supported (max {MAX_FILE_SIZE_DISPLAY})
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         <div className='max-w-4xl mx-auto px-6 py-6'>
           {/* Show connection status info for new conversations */}
           {messages.length === 0 &&

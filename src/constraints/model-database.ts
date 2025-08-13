@@ -95,6 +95,17 @@ export const MODEL_DATABASE: Record<string, ModelCapabilities> = {
       "OpenAI's 20B parameter model for advanced reasoning and agentic tasks",
   },
 
+  // A series of multimodal LLMs (MLLMs) designed for vision-language understanding.
+  "minicpm-v:8b": {
+    tools: false,
+    vision: true,
+    embedding: false,
+    reasoning: false,
+    contextSize: 32000,
+    family: "minicpm",
+    description: "MinicPM-V model with vision capabilities",
+  },
+
   // Qwen models - Alibaba's multilingual models
   "qwen2.5vl:7b": {
     tools: false,

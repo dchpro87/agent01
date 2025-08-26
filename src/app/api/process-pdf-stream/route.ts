@@ -142,6 +142,7 @@ export async function POST(request: NextRequest) {
 
       // Process PDF with real-time updates
       processWithUpdates(request, controller, encoder).catch((error) => {
+        // console.error('💥Stream processing error:', error);
         const errorData = `data: ${JSON.stringify({
           type: 'error',
           error: error instanceof Error ? error.message : 'Processing failed',
@@ -214,6 +215,7 @@ async function processWithUpdates(
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
+    console.log('💥pdf file:', file);
     const collectionName = formData.get('collectionName') as string;
     const useOllamaEmbedding = formData.get('useOllamaEmbedding') === 'true';
 

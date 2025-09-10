@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Settings,
   ChevronDown,
@@ -11,12 +11,13 @@ import {
   Check,
   MessageSquare,
   Sparkles,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   PREDEFINED_PROMPTS,
   type SystemPrompt,
-} from '@/constraints/predefined-system-prompts';
-import { useDropdownState } from '@/hooks';
+} from "@/constraints/predefined-system-prompts";
+import { APP_CONFIG } from "@/constraints/app-config";
+import { useDropdownState } from "@/hooks";
 
 interface SystemPromptSelectorProps {
   selectedPrompt: string;
@@ -31,15 +32,15 @@ export default function SystemPromptSelector({
 }: SystemPromptSelectorProps) {
   const [customPrompts, setCustomPrompts] = useState<SystemPrompt[]>([]);
   const [editingCustom, setEditingCustom] = useState(false);
-  const [newPromptName, setNewPromptName] = useState('');
-  const [newPromptDescription, setNewPromptDescription] = useState('');
-  const [newPromptContent, setNewPromptContent] = useState('');
-  const [selectedPromptId, setSelectedPromptId] = useState('default');
+  const [newPromptName, setNewPromptName] = useState("");
+  const [newPromptDescription, setNewPromptDescription] = useState("");
+  const [newPromptContent, setNewPromptContent] = useState("");
+  const [selectedPromptId, setSelectedPromptId] = useState("default");
   const [isHydrated, setIsHydrated] = useState(false);
   const [hoveredPrompt, setHoveredPrompt] = useState<SystemPrompt | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
-  const [promptUserDescription, setPromptUserDescription] = useState('');
+  const [promptUserDescription, setPromptUserDescription] = useState("");
   const { isOpen, setIsOpen, dropdownRef } = useDropdownState();
 
   // Clear tooltip when dropdown closes
@@ -51,13 +52,13 @@ export default function SystemPromptSelector({
 
   // Load custom prompts from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem('customSystemPrompts');
+    const saved = localStorage.getItem("customSystemPrompts");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         setCustomPrompts(parsed);
       } catch (error) {
-        console.error('Failed to load custom prompts:', error);
+        console.error("Failed to load custom prompts:", error);
       }
     }
     setIsHydrated(true);
@@ -73,13 +74,13 @@ export default function SystemPromptSelector({
     if (matchingPrompt) {
       setSelectedPromptId(matchingPrompt.id);
     } else {
-      setSelectedPromptId('default');
+      setSelectedPromptId("default");
     }
   }, [selectedPrompt, customPrompts, isHydrated]);
 
   // Save custom prompts to localStorage
   const saveCustomPrompts = (prompts: SystemPrompt[]) => {
-    localStorage.setItem('customSystemPrompts', JSON.stringify(prompts));
+    localStorage.setItem("customSystemPrompts", JSON.stringify(prompts));
     setCustomPrompts(prompts);
   };
 
@@ -117,10 +118,10 @@ export default function SystemPromptSelector({
     const newPrompt: SystemPrompt = {
       id: `custom-${Date.now()}`,
       name: newPromptName.trim(),
-      description: newPromptDescription.trim() || 'Custom prompt',
+      description: newPromptDescription.trim() || "Custom prompt",
       prompt: newPromptContent.trim(),
       icon: MessageSquare,
-      category: 'Custom',
+      category: "Custom",
       isCustom: true,
     };
 
@@ -132,9 +133,9 @@ export default function SystemPromptSelector({
 
     // Reset form
     setEditingCustom(false);
-    setNewPromptName('');
-    setNewPromptDescription('');
-    setNewPromptContent('');
+    setNewPromptName("");
+    setNewPromptDescription("");
+    setNewPromptContent("");
   };
 
   // Handle deleting custom prompt
@@ -166,22 +167,25 @@ The system prompt should:
 
 Generate ONLY the system prompt text - no explanations, no quotes, no additional text.`;
 
-      const response = await fetch('http://localhost:11434/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gemma3:4b',
-          prompt: `User description: "${promptUserDescription.trim()}"\n\nGenerate a system prompt:`,
-          system: systemInstructions,
-          stream: false,
-          options: {
-            temperature: 0.7,
-            max_tokens: 200,
+      const response = await fetch(
+        `${APP_CONFIG.ollama.baseURL}/api/generate`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        }),
-      });
+          body: JSON.stringify({
+            model: "gemma3:4b",
+            prompt: `User description: "${promptUserDescription.trim()}"\n\nGenerate a system prompt:`,
+            system: systemInstructions,
+            stream: false,
+            options: {
+              temperature: 0.7,
+              max_tokens: 200,
+            },
+          }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -195,7 +199,7 @@ Generate ONLY the system prompt text - no explanations, no quotes, no additional
         // Generate a name from the description
         const generatedName =
           promptUserDescription.length > 30
-            ? promptUserDescription.substring(0, 30) + '...'
+            ? promptUserDescription.substring(0, 30) + "..."
             : promptUserDescription;
         setNewPromptName(generatedName);
         setNewPromptDescription(
@@ -203,7 +207,7 @@ Generate ONLY the system prompt text - no explanations, no quotes, no additional
         );
       }
     } catch (error) {
-      console.error('Error generating AI prompt:', error);
+      console.error("Error generating AI prompt:", error);
       // Fallback: still allow manual editing
       alert(
         "Failed to connect to Ollama server. Please ensure it's running and try again."
@@ -244,7 +248,7 @@ Generate ONLY the system prompt text - no explanations, no quotes, no additional
         </span>
         <ChevronDown
           className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${
-            isOpen ? 'rotate-180' : ''
+            isOpen ? "rotate-180" : ""
           }`}
         />
       </button>
@@ -294,7 +298,7 @@ Generate ONLY the system prompt text - no explanations, no quotes, no additional
                     className='mt-2 flex items-center gap-1 px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed'
                   >
                     <Sparkles className='w-3 h-3' />
-                    {isGeneratingAI ? 'Generating...' : 'Generate with AI'}
+                    {isGeneratingAI ? "Generating..." : "Generate with AI"}
                   </button>
                 </div>
 
@@ -337,10 +341,10 @@ Generate ONLY the system prompt text - no explanations, no quotes, no additional
                   <button
                     onClick={() => {
                       setEditingCustom(false);
-                      setNewPromptName('');
-                      setNewPromptDescription('');
-                      setNewPromptContent('');
-                      setPromptUserDescription('');
+                      setNewPromptName("");
+                      setNewPromptDescription("");
+                      setNewPromptContent("");
+                      setPromptUserDescription("");
                     }}
                     className='flex items-center gap-1 px-2 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600'
                   >
@@ -370,8 +374,8 @@ Generate ONLY the system prompt text - no explanations, no quotes, no additional
                       key={prompt.id}
                       className={`group px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-l-2 transition-colors ${
                         isSelected
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                          : 'border-transparent'
+                          ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                          : "border-transparent"
                       }`}
                       onClick={() => handlePromptSelect(prompt)}
                       onMouseEnter={(e) => handlePromptHover(prompt, e)}
@@ -381,25 +385,25 @@ Generate ONLY the system prompt text - no explanations, no quotes, no additional
                         <div
                           className={`flex-shrink-0 p-1 rounded ${
                             isSelected
-                              ? 'bg-blue-100 dark:bg-blue-800'
-                              : 'bg-gray-100 dark:bg-gray-600'
+                              ? "bg-blue-100 dark:bg-blue-800"
+                              : "bg-gray-100 dark:bg-gray-600"
                           }`}
                         >
                           {IconComponent &&
-                          typeof IconComponent === 'function' ? (
+                          typeof IconComponent === "function" ? (
                             <IconComponent
                               className={`w-3 h-3 ${
                                 isSelected
-                                  ? 'text-blue-600 dark:text-blue-400'
-                                  : 'text-gray-600 dark:text-gray-400'
+                                  ? "text-blue-600 dark:text-blue-400"
+                                  : "text-gray-600 dark:text-gray-400"
                               }`}
                             />
                           ) : (
                             <MessageSquare
                               className={`w-3 h-3 ${
                                 isSelected
-                                  ? 'text-blue-600 dark:text-blue-400'
-                                  : 'text-gray-600 dark:text-gray-400'
+                                  ? "text-blue-600 dark:text-blue-400"
+                                  : "text-gray-600 dark:text-gray-400"
                               }`}
                             />
                           )}
@@ -409,8 +413,8 @@ Generate ONLY the system prompt text - no explanations, no quotes, no additional
                             <h5
                               className={`text-sm font-medium truncate ${
                                 isSelected
-                                  ? 'text-blue-900 dark:text-blue-100'
-                                  : 'text-gray-900 dark:text-white'
+                                  ? "text-blue-900 dark:text-blue-100"
+                                  : "text-gray-900 dark:text-white"
                               }`}
                             >
                               {prompt.name}
@@ -434,8 +438,8 @@ Generate ONLY the system prompt text - no explanations, no quotes, no additional
                           <p
                             className={`text-xs mt-1 line-clamp-2 ${
                               isSelected
-                                ? 'text-blue-700 dark:text-blue-300'
-                                : 'text-gray-500 dark:text-gray-400'
+                                ? "text-blue-700 dark:text-blue-300"
+                                : "text-gray-500 dark:text-gray-400"
                             }`}
                           >
                             {prompt.description}
@@ -453,14 +457,14 @@ Generate ONLY the system prompt text - no explanations, no quotes, no additional
 
       {/* Tooltip Portal - renders outside the modal to prevent clipping */}
       {hoveredPrompt &&
-        typeof window !== 'undefined' &&
+        typeof window !== "undefined" &&
         createPortal(
           <div
             className='fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-xl z-[9999] max-w-xs'
             style={{
               left: `${tooltipPosition.x}px`,
               top: `${tooltipPosition.y}px`,
-              pointerEvents: 'none', // Prevent tooltip from interfering with mouse events
+              pointerEvents: "none", // Prevent tooltip from interfering with mouse events
             }}
           >
             <h4 className='text-sm font-medium text-gray-900 dark:text-white mb-2'>

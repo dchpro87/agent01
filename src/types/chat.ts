@@ -1,3 +1,5 @@
+import type { Message } from "@ai-sdk/react";
+
 // Type definitions for tool invocations (based on AI SDK structure)
 export type ToolInvocation = {
   toolCallId: string;
@@ -19,3 +21,27 @@ export type ToolPart = {
 };
 
 export type MessagePart = ContentPart | ToolPart;
+
+// Chat History Types
+export interface ChatThread {
+  id: string;
+  title: string;
+  messages: Message[];
+  createdAt: Date;
+  updatedAt: Date;
+  messageCount: number;
+}
+
+export interface ChatHistoryPreview {
+  id: string;
+  title: string;
+  lastMessage?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  messageCount: number;
+}
+
+export interface ChatHistoryOptions {
+  maxThreads?: number;
+  maxMessagesPerThread?: number;
+}

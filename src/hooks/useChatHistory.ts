@@ -33,14 +33,14 @@ export function useChatHistory() {
     async (chatId: string, messages: Message[]) => {
       try {
         await chatHistoryManager.saveThread(chatId, messages);
-        // Reload the chat history to reflect changes
-        await loadChatHistory();
+        // Don't automatically reload history to prevent UI glitches
+        // Only reload when explicitly needed (delete, new chat, etc.)
       } catch (err) {
         setError("Failed to save chat thread");
         console.error("Error saving chat thread:", err);
       }
     },
-    [loadChatHistory]
+    []
   );
 
   // Load a specific chat thread

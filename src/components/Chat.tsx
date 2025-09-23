@@ -44,6 +44,9 @@ export default function Chat() {
   // Sidebar state - open by default on desktop, closed on mobile
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
 
+  // Track when we're loading a thread to prevent auto-save race conditions
+  const [isLoadingThread, setIsLoadingThread] = useState<boolean>(false);
+
   // Generate a unique chat ID that persists across component re-renders
   const [chatId, setChatId] = useState(
     () => `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -57,6 +60,7 @@ export default function Chat() {
     saveThread,
     loadThread,
     deleteThread,
+    refreshHistory,
   } = useChatHistory();
 
   // File attachment state
@@ -93,6 +97,8 @@ export default function Chat() {
   );
 
   // Enhanced chat hook usage with proper tool and attachment handling
+  // Note: The useChat hook needs to be reinitialized when chatId changes
+  // to ensure the correct chat session is maintained
   const {
     messages,
     input,
@@ -166,17 +172,42 @@ export default function Chat() {
 
   // Chat history handlers
   const handleSelectThread = async (threadId: string) => {
-    try {
-      const thread = await loadThread(threadId);
-      if (thread) {
-        // Stop any current streaming
-        if (isStreaming) {
-          stop();
-        }
+    console.log("🔄 Selecting thread:", threadId, "current chatId:", chatId);
 
-        // Update the chat ID and load the thread messages
+    // Don't do anything if already selecting this thread
+    if (threadId === chatId) {
+      return;
+    }
+
+    try {
+      setIsLoadingThread(true);
+
+      // Stop any current streaming
+      if (isStreaming) {
+        stop();
+      }
+
+      const thread = await loadThread(threadId);
+      console.log(
+        "📥 Loaded thread:",
+        thread?.id,
+        "messages count:",
+        thread?.messages.length
+      );
+
+      if (thread) {
+        // Clear messages first to ensure clean state
+        setMessages([]);
+
+        // Update the chat ID
         setChatId(threadId);
-        setMessages(thread.messages);
+        console.log("🆔 Set chatId to:", threadId);
+
+        // Then load the thread messages after a brief delay to ensure state sync
+        setTimeout(() => {
+          console.log("💬 Setting messages:", thread.messages.length);
+          setMessages(thread.messages);
+        }, 50);
 
         // Clear current attachments and errors
         setAttachedFiles(null);
@@ -184,17 +215,18 @@ export default function Chat() {
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
         }
-
-        // Close sidebar on mobile
-        setIsSidebarOpen(false);
       }
     } catch (error) {
       console.error("Error loading chat thread:", error);
       setFileError("Failed to load chat thread");
+    } finally {
+      setIsLoadingThread(false);
     }
   };
 
   const handleNewChat = () => {
+    setIsLoadingThread(true);
+
     // Generate new chat ID
     const newChatId = `chat_${Date.now()}_${Math.random()
       .toString(36)
@@ -212,11 +244,12 @@ export default function Chat() {
       fileInputRef.current.value = "";
     }
 
-    // Close sidebar on mobile
-    setIsSidebarOpen(false);
-
     // Focus input
-    setTimeout(() => inputRef.current?.focus(), 100);
+    setTimeout(() => {
+      inputRef.current?.focus();
+      setIsLoadingThread(false);
+      refreshHistory(); // Ensure chat history updates after new chat
+    }, 100);
   };
 
   const handleDeleteThread = async (threadId: string) => {
@@ -235,14 +268,23 @@ export default function Chat() {
 
   // Auto-save chat when messages change (debounced)
   useEffect(() => {
-    if (messages.length > 0) {
+    if (messages.length > 0 && !isLoadingThread) {
       const timeoutId = setTimeout(() => {
+        console.log(
+          "💾 Auto-saving thread:",
+          chatId,
+          "with",
+          messages.length,
+          "messages"
+        );
+        // Only save if we're not currently loading a thread
+        // to prevent overwriting during thread switching
         saveThread(chatId, messages);
       }, 1000); // Save after 1 second of inactivity
 
       return () => clearTimeout(timeoutId);
     }
-  }, [messages, chatId, saveThread]);
+  }, [messages, chatId, saveThread, isLoadingThread]);
 
   const handleReset = async () => {
     // Use the new chat handler instead of just resetting

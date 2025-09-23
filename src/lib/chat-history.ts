@@ -99,12 +99,35 @@ class ChatHistoryManager {
         messageCount: limitedMessages.length,
       };
 
-      // Check if thread already exists to preserve createdAt
+      // Check if thread already exists to preserve createdAt and potentially title
       const getRequest = store.get(chatId);
       getRequest.onsuccess = () => {
         const existingThread = getRequest.result;
         if (existingThread) {
           chatThread.createdAt = existingThread.createdAt;
+          // Preserve existing title if it's not "New Chat" and we're just updating
+          // Only regenerate title if this is a genuinely new conversation
+          if (existingThread.title && existingThread.title !== "New Chat") {
+            chatThread.title = existingThread.title;
+          }
+
+          // Only update the updatedAt timestamp if the messages have actually changed
+          if (existingThread.messageCount === limitedMessages.length) {
+            // Check if the last message is the same (quick comparison)
+            const lastExisting =
+              existingThread.messages[existingThread.messages.length - 1];
+            const lastNew = limitedMessages[limitedMessages.length - 1];
+
+            if (
+              lastExisting &&
+              lastNew &&
+              lastExisting.content === lastNew.content &&
+              lastExisting.role === lastNew.role
+            ) {
+              // Messages haven't changed, preserve the updatedAt timestamp
+              chatThread.updatedAt = existingThread.updatedAt;
+            }
+          }
         }
 
         const putRequest = store.put(chatThread);

@@ -28,6 +28,20 @@ export default function ChatSidebar({
   const [hoveredThread, setHoveredThread] = useState<string | null>(null);
   const [deletingThread, setDeletingThread] = useState<string | null>(null);
 
+  const handleThreadClick = (threadId: string) => {
+    // Prevent unnecessary calls if already selected
+    if (threadId === currentChatId) {
+      return;
+    }
+    onSelectThread(threadId);
+
+    // Close sidebar on mobile after selection for better UX
+    if (window.innerWidth < 1024) {
+      // lg breakpoint
+      onClose();
+    }
+  };
+
   const handleDeleteClick = async (e: React.MouseEvent, threadId: string) => {
     e.stopPropagation(); // Prevent thread selection
     setDeletingThread(threadId);
@@ -126,7 +140,7 @@ export default function ChatSidebar({
                         ? "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
                         : "hover:bg-gray-50 dark:hover:bg-gray-800 border border-transparent"
                     }`}
-                    onClick={() => onSelectThread(thread.id)}
+                    onClick={() => handleThreadClick(thread.id)}
                     onMouseEnter={() => setHoveredThread(thread.id)}
                     onMouseLeave={() => setHoveredThread(null)}
                   >

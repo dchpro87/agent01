@@ -57,15 +57,94 @@ function getModelWithReasoning(modelName: string) {
   });
 }
 
+// Function to generate optimized vector database query using LLM
+async function generateVectorDBQuery(
+  userQuery: string,
+  modelName: string,
+  conversationContext?: CoreMessage[]
+): Promise<string> {
+  try {
+    console.log("🔍 Original query:", userQuery);
+
+    // Get last user message for context
+    let previousQuery = "";
+    if (conversationContext && conversationContext.length > 1) {
+      for (let i = conversationContext.length - 2; i >= 0; i--) {
+        const msg = conversationContext[i];
+        if (msg.role === "user") {
+          previousQuery = typeof msg.content === "string" ? msg.content : "";
+          break;
+        }
+      }
+    }
+
+    const response = await fetch(
+      `${aiConfig.ollama.baseURL}/v1/chat/completions`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: modelName,
+          messages: [
+            {
+              role: "system",
+              content:
+                "Convert the query into search keywords. If it's a follow-up (like 'and X'), expand it using context. Reply with ONLY the keywords. Never over think the response.",
+            },
+            {
+              role: "user",
+              content: previousQuery
+                ? `Previous: "${previousQuery}"\nCurrent: "${userQuery}"\nKeywords:`
+                : `Query: "${userQuery}"\nKeywords:`,
+            },
+          ],
+          temperature: 0.8,
+          max_tokens: 2500,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      return userQuery;
+    }
+
+    const data = await response.json();
+
+    console.log("🧠 LLM response for query optimization:", data.choices);
+    let optimizedQuery =
+      data.choices?.[0]?.message?.content?.trim() || userQuery;
+
+    // Clean
+    optimizedQuery = optimizedQuery
+      .replace(/^["'`]|["'`]$/g, "")
+      .replace(/^\w+:\s*/i, "")
+      .split("\n")[0]
+      .trim();
+
+    console.log("✅ Optimized query:", optimizedQuery);
+    return optimizedQuery || userQuery;
+  } catch (error) {
+    console.error("❌ Error:", error);
+    return userQuery;
+  }
+}
+
 // Function to query active ChromaDB collections
 async function queryActiveCollections(
   collections: string[],
   query: string,
-  chunksToRetrieve: number = CHROMADB_DEFAULTS.CHUNKS_TO_RETRIEVE
+  chunksToRetrieve: number = CHROMADB_DEFAULTS.CHUNKS_TO_RETRIEVE,
+  modelName?: string,
+  conversationContext?: CoreMessage[]
 ): Promise<
   Array<{ id: string; document?: string; metadata?: Record<string, unknown> }>
 > {
   if (!collections.length) return [];
+
+  // Generate optimized query using LLM with conversation context
+  const optimizedQuery = modelName
+    ? await generateVectorDBQuery(query, modelName, conversationContext)
+    : query;
 
   const allResults: Array<{
     id: string;
@@ -81,7 +160,7 @@ async function queryActiveCollections(
         body: JSON.stringify({
           action: "query_collection",
           collection: collectionName,
-          query_texts: [query],
+          query_texts: [optimizedQuery],
           n_results: chunksToRetrieve,
           generate_ollama_embeddings: true,
         }),
@@ -407,7 +486,9 @@ export async function POST(req: Request) {
           const relevantDocs = await queryActiveCollections(
             activeCollections,
             query,
-            chunksToRetrieve
+            chunksToRetrieve,
+            selectedModel,
+            cleanedMessages
           );
           console.log("🧨 Relevant documents found:", relevantDocs);
 

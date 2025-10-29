@@ -100,6 +100,10 @@ async function generateVectorDBQuery(
           ],
           temperature: 0.8,
           max_tokens: 2500,
+          // Disable reasoning output for reasoning models
+          extra_body: {
+            enable_thinking: false,
+          },
         }),
       }
     );
@@ -110,9 +114,25 @@ async function generateVectorDBQuery(
 
     const data = await response.json();
 
-    console.log("🧠 LLM response for query optimization:", data.choices);
+    console.log(
+      "🧠 LLM response for query optimization:",
+      data.choices?.[0]?.message
+    );
     let optimizedQuery =
       data.choices?.[0]?.message?.content?.trim() || userQuery;
+
+    // Strip out reasoning tags (<think>...</think>) from reasoning models
+    optimizedQuery = optimizedQuery
+      .replace(/<think>[\s\S]*?<\/think>/gi, "")
+      .trim();
+
+    // If after removing reasoning tags the query is empty, fall back to original
+    if (!optimizedQuery) {
+      console.log(
+        "⚠️ Query was empty after removing reasoning tags, using original query"
+      );
+      return userQuery;
+    }
 
     // Clean
     optimizedQuery = optimizedQuery
@@ -268,6 +288,7 @@ export async function POST(req: Request) {
     }
 
     const requestBody = await req.json();
+    console.log("\n");
     console.log("---------------💥💥💥💥-------------------");
     console.log("🔍 Request body received:");
     console.log("- Messages count:", requestBody.messages?.length || 0);
@@ -420,12 +441,12 @@ export async function POST(req: Request) {
     // Pass messages through directly - reasoning will be extracted by middleware
     const cleanedMessages = messages as CoreMessage[];
 
-    console.log("\n-------------------------------------------");
-    console.log(
-      "📨 Messages to be sent to AI SDK:",
-      JSON.stringify(cleanedMessages, null, 2)
-    );
-    console.log("-------------------------------------------");
+    // console.log("\n-------------------------------------------");
+    // console.log(
+    //   "📨 Messages to be sent to AI SDK:",
+    //   JSON.stringify(cleanedMessages, null, 2)
+    // );
+    // console.log("-------------------------------------------");
 
     const { ollama: config } = aiConfig;
     const selectedModel = requestModel || config.model;
@@ -561,11 +582,11 @@ These PDFs have been uploaded by the user and are available for analysis through
       );
     }
 
-    console.log("-------------------------------------------\n");
-    console.log(`💥 System Prompt: ${finalSystemPrompt}\n`);
-    console.log("-------------------------------------------\n");
-    console.log("finalOptions:", finalOptions);
-    console.log("-------------------------------------------");
+    // console.log("-------------------------------------------\n");
+    // console.log(`💥 System Prompt: ${finalSystemPrompt}\n`);
+    // console.log("-------------------------------------------\n");
+    // console.log("finalOptions:", finalOptions);
+    // console.log("-------------------------------------------");
 
     if (shouldUseTools) {
       const localToolNames = Object.keys(tools);

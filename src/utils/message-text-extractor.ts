@@ -123,40 +123,50 @@ export async function copyFormattedTextToClipboard(
   try {
     // Use the modern Clipboard API if available
     if (navigator.clipboard && window.ClipboardItem) {
-      // Create a temporary div to render the markdown as HTML
-      const tempDiv = document.createElement("div");
-      tempDiv.style.position = "absolute";
-      tempDiv.style.left = "-9999px";
-      tempDiv.style.opacity = "0";
-      tempDiv.style.pointerEvents = "none";
+      // Convert markdown-like formatting to HTML
+      // This is a basic conversion for common markdown patterns
+      let htmlContent = text
+        // Code blocks (triple backticks)
+        .replace(/```(\w+)?\n([\s\S]*?)```/g, "<pre><code>$2</code></pre>")
+        // Bold
+        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+        // Italic
+        .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+        // Inline code
+        .replace(/`([^`]+)`/g, "<code>$1</code>")
+        // Links
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+        // Unordered lists
+        .replace(/^\s*[-*]\s+(.+)$/gm, "<li>$1</li>")
+        // Headers
+        .replace(/^### (.+)$/gm, "<h3>$1</h3>")
+        .replace(/^## (.+)$/gm, "<h2>$1</h2>")
+        .replace(/^# (.+)$/gm, "<h1>$1</h1>");
 
-      // Find a rendered markdown element to copy its HTML structure
-      // We'll look for the prose element that contains the rendered markdown
-      const messageElements = document.querySelectorAll(".prose");
-      let htmlContent = "";
+      // Wrap list items in ul tags
+      htmlContent = htmlContent.replace(/(<li>.*<\/li>\n?)+/g, "<ul>$&</ul>");
 
-      // Try to find the matching message content in the DOM
-      for (const element of messageElements) {
-        const elementText = element.textContent || "";
-        // Simple heuristic: if the element contains a significant portion of our text
-        if (
-          elementText.includes(text.substring(0, Math.min(100, text.length)))
-        ) {
-          htmlContent = element.innerHTML;
-          break;
-        }
-      }
-
-      // Fallback: convert markdown-like formatting to HTML manually
-      if (!htmlContent) {
-        htmlContent = text
-          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-          .replace(/\*(.*?)\*/g, "<em>$1</em>")
-          .replace(/`(.*?)`/g, "<code>$1</code>")
-          .replace(/\n\n/g, "</p><p>")
-          .replace(/\n/g, "<br>");
-        htmlContent = `<p>${htmlContent}</p>`;
-      }
+      // Convert double newlines to paragraph breaks
+      const paragraphs = htmlContent.split(/\n\n+/);
+      htmlContent = paragraphs
+        .map((para) => {
+          para = para.trim();
+          // Don't wrap if already wrapped in a block element
+          if (
+            para.startsWith("<h") ||
+            para.startsWith("<pre") ||
+            para.startsWith("<ul") ||
+            para.startsWith("<ol") ||
+            para.startsWith("<blockquote")
+          ) {
+            return para;
+          }
+          // Convert single newlines within paragraphs to <br>
+          para = para.replace(/\n/g, "<br>");
+          return para ? `<p>${para}</p>` : "";
+        })
+        .filter((p) => p)
+        .join("");
 
       // Create clipboard items with both HTML and plain text
       const clipboardItems = new ClipboardItem({
@@ -165,6 +175,7 @@ export async function copyFormattedTextToClipboard(
       });
 
       await navigator.clipboard.write([clipboardItems]);
+      console.log("✅ Copied with basic markdown-to-HTML conversion");
       return true;
     }
 
@@ -203,87 +214,11 @@ export async function copyMessageFromDOM(
   messageText: string
 ): Promise<boolean> {
   try {
-    // Find the parent message container first
-    const messageContainers = document.querySelectorAll('[class*="prose"]');
-    const targetElements: Element[] = [];
-
-    // Find all text elements within the message that are NOT reasoning parts
-    for (const container of messageContainers) {
-      const containerText = container.textContent || "";
-
-      // Check if this container contains our message text
-      if (
-        containerText.includes(
-          messageText.substring(0, Math.min(50, messageText.length))
-        )
-      ) {
-        // Find only the text elements that are not reasoning/thinking parts
-        const textElements = container.querySelectorAll("*");
-
-        for (const element of textElements) {
-          const parent = element.parentElement;
-
-          // Skip elements that are inside reasoning containers
-          // Check for reasoning indicators in classes or content
-          if (
-            parent &&
-            (parent.className.includes("amber") || // reasoning sections use amber colors
-              parent.className.includes("thinking") ||
-              element.textContent?.includes("💭") ||
-              element.closest('[class*="amber"]')) // check if any ancestor has amber styling
-          ) {
-            continue;
-          }
-
-          // Only include elements with actual text content that matches our message
-          const elemText = element.textContent || "";
-          if (
-            elemText.trim() &&
-            messageText.includes(elemText.trim().substring(0, 20))
-          ) {
-            targetElements.push(element);
-          }
-        }
-        break;
-      }
-    }
-
-    // If we found specific text elements, copy them
-    if (
-      targetElements.length > 0 &&
-      navigator.clipboard &&
-      window.ClipboardItem
-    ) {
-      let combinedHtml = "";
-      let combinedText = "";
-
-      // Combine the content from non-reasoning elements
-      for (const element of targetElements) {
-        if (
-          element.tagName === "P" ||
-          element.tagName === "DIV" ||
-          element.className.includes("prose")
-        ) {
-          combinedHtml += element.innerHTML + "\n";
-          combinedText += (element.textContent || "") + "\n";
-        }
-      }
-
-      if (combinedHtml || combinedText) {
-        const clipboardItems = new ClipboardItem({
-          "text/html": new Blob([combinedHtml], { type: "text/html" }),
-          "text/plain": new Blob([combinedText.trim()], { type: "text/plain" }),
-        });
-
-        await navigator.clipboard.write([clipboardItems]);
-        return true;
-      }
-    }
-
-    // Fallback: try to find main prose containers excluding reasoning
+    // Find prose containers (where markdown is rendered)
     const proseElements = document.querySelectorAll(".prose");
+
     for (const prose of proseElements) {
-      // Skip if this prose element is inside a reasoning container
+      // Skip if this prose element is inside a reasoning/thinking container
       if (
         prose.closest('[class*="amber"]') ||
         prose.closest('[class*="thinking"]')
@@ -292,24 +227,34 @@ export async function copyMessageFromDOM(
       }
 
       const proseText = prose.textContent || "";
-      if (
-        proseText.includes(
-          messageText.substring(0, Math.min(100, messageText.length))
-        )
-      ) {
+
+      // Check if this prose element contains our message text
+      // Use a more robust matching approach with a reasonable substring
+      const matchLength = Math.min(150, messageText.length);
+      const messageSubstring = messageText.substring(0, matchLength).trim();
+
+      if (proseText.trim().includes(messageSubstring)) {
+        // Found the matching prose element with rendered HTML
         if (navigator.clipboard && window.ClipboardItem) {
+          // Get the innerHTML which contains the rendered markdown as HTML
+          const htmlContent = prose.innerHTML;
+          const plainText = proseText.trim();
+
+          // Create clipboard items with both HTML (for rich text editors) and plain text
           const clipboardItems = new ClipboardItem({
-            "text/html": new Blob([prose.innerHTML], { type: "text/html" }),
-            "text/plain": new Blob([proseText.trim()], { type: "text/plain" }),
+            "text/html": new Blob([htmlContent], { type: "text/html" }),
+            "text/plain": new Blob([plainText], { type: "text/plain" }),
           });
 
           await navigator.clipboard.write([clipboardItems]);
+          console.log("✅ Copied formatted text from DOM");
           return true;
         }
       }
     }
 
-    // Final fallback to regular copy
+    // If we didn't find a matching prose element, fall back to converting markdown
+    console.log("⚠️ Could not find matching prose element, using fallback");
     return await copyFormattedTextToClipboard(messageText);
   } catch (error) {
     console.error("Failed to copy message from DOM:", error);

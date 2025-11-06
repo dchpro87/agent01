@@ -98,7 +98,7 @@ async function generateVectorDBQuery(
                 : `Query: "${userQuery}"\nKeywords:`,
             },
           ],
-          temperature: 0.8,
+          temperature: 0.2,
           max_tokens: 2500,
           // Disable reasoning output for reasoning models
           extra_body: {
@@ -442,10 +442,10 @@ export async function POST(req: Request) {
     const cleanedMessages = messages as CoreMessage[];
 
     // console.log("\n-------------------------------------------");
-    // console.log(
-    //   "📨 Messages to be sent to AI SDK:",
-    //   JSON.stringify(cleanedMessages, null, 2)
-    // );
+    console.log(
+      "📨 Messages to be sent to AI SDK:",
+      JSON.stringify(cleanedMessages, null, 2)
+    );
     // console.log("-------------------------------------------");
 
     const { ollama: config } = aiConfig;
@@ -511,7 +511,7 @@ export async function POST(req: Request) {
             selectedModel,
             cleanedMessages
           );
-          console.log("🧨 Relevant documents found:", relevantDocs);
+          console.log("🧨 Relevant documents found:", relevantDocs.length);
 
           if (relevantDocs.length > 0) {
             const contextPrompt = `\n\nRelevant context from knowledge base:\n${relevantDocs
@@ -583,7 +583,7 @@ These PDFs have been uploaded by the user and are available for analysis through
     }
 
     // console.log("-------------------------------------------\n");
-    // console.log(`💥 System Prompt: ${finalSystemPrompt}\n`);
+    console.log(`💥 System Prompt: ${finalSystemPrompt}\n`);
     // console.log("-------------------------------------------\n");
     // console.log("finalOptions:", finalOptions);
     // console.log("-------------------------------------------");
@@ -727,7 +727,10 @@ These PDFs have been uploaded by the user and are available for analysis through
       });
     }
 
-    console.error(`❌ Request ${requestId} failed:`, error);
+    console.error(
+      `❌ Request ${requestId} failed:`,
+      error instanceof Error ? error.message : error
+    );
     AILogger.finishRequest(
       requestId,
       undefined,
@@ -745,8 +748,6 @@ These PDFs have been uploaded by the user and are available for analysis through
         headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
       }
     );
-  } finally {
-    console.log(`🏁 Request ${requestId} processing completed`);
   }
 }
 

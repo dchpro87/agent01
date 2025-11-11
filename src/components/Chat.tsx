@@ -72,6 +72,19 @@ export default function Chat() {
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const [dragCounter, setDragCounter] = useState<number>(0);
 
+  // Handle escape key to cancel drag overlay
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isDragOver) {
+        setIsDragOver(false);
+        setDragCounter(0);
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [isDragOver]);
+
   // Context window dialog state
   const [isContextDialogOpen, setIsContextDialogOpen] =
     useState<boolean>(false);
@@ -742,6 +755,13 @@ export default function Chat() {
                   </p>
                   <p className='text-sm text-gray-500 dark:text-gray-400'>
                     Images and PDFs supported (max {MAX_FILE_SIZE_DISPLAY})
+                  </p>
+                  <p className='text-xs text-gray-400 dark:text-gray-500 mt-2'>
+                    Press{" "}
+                    <kbd className='px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-gray-700 dark:text-gray-300 font-mono'>
+                      ESC
+                    </kbd>{" "}
+                    to cancel
                   </p>
                 </div>
               </div>

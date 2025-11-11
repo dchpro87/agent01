@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Database,
@@ -13,15 +13,15 @@ import {
   AlertCircle,
   X,
   Loader2,
-} from "lucide-react";
+} from 'lucide-react';
 import {
   Collection,
   chromaDBManager,
   CollectionDocument,
-} from "@/lib/chromadb";
+} from '@/lib/chromadb';
 
 interface UploadStatus {
-  status: "idle" | "processing" | "success" | "error";
+  status: 'idle' | 'processing' | 'success' | 'error';
   message?: string;
   progress?: {
     current: number;
@@ -43,23 +43,23 @@ interface UploadStatus {
   };
   detailedSteps?: {
     upload: {
-      status: "pending" | "processing" | "complete" | "error";
+      status: 'pending' | 'processing' | 'complete' | 'error';
       time?: number;
     };
     parsing: {
-      status: "pending" | "processing" | "complete" | "error";
+      status: 'pending' | 'processing' | 'complete' | 'error';
       time?: number;
     };
     chunking: {
-      status: "pending" | "processing" | "complete" | "error";
+      status: 'pending' | 'processing' | 'complete' | 'error';
       time?: number;
     };
     embedding: {
-      status: "pending" | "processing" | "complete" | "error";
+      status: 'pending' | 'processing' | 'complete' | 'error';
       time?: number;
     };
     storage: {
-      status: "pending" | "processing" | "complete" | "error";
+      status: 'pending' | 'processing' | 'complete' | 'error';
       time?: number;
     };
   };
@@ -83,7 +83,7 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>({
-    status: "idle",
+    status: 'idle',
   });
   const [abortController, setAbortController] =
     useState<AbortController | null>(null);
@@ -109,8 +109,8 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
         setTotalCount(response.totalCount);
       } catch (err) {
         const errorMessage =
-          err instanceof Error ? err.message : "Failed to fetch documents";
-        console.error("Failed to fetch documents:", err);
+          err instanceof Error ? err.message : 'Failed to fetch documents';
+        console.error('Failed to fetch documents:', err);
         setError(errorMessage);
         setDocuments([]);
         setTotalCount(0);
@@ -125,13 +125,13 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (file.type === "application/pdf") {
+      if (file.type === 'application/pdf' || file.type === 'text/plain') {
         setSelectedFile(file);
-        setUploadStatus({ status: "idle" });
+        setUploadStatus({ status: 'idle' });
       } else {
         setUploadStatus({
-          status: "error",
-          message: "Please select a PDF file only.",
+          status: 'error',
+          message: 'Please select a PDF or TXT file only.',
         });
       }
     }
@@ -146,16 +146,16 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
 
     // Initialize detailed step tracking
     const initialSteps = {
-      upload: { status: "pending" as const },
-      parsing: { status: "pending" as const },
-      chunking: { status: "pending" as const },
-      embedding: { status: "pending" as const },
-      storage: { status: "pending" as const },
+      upload: { status: 'pending' as const },
+      parsing: { status: 'pending' as const },
+      chunking: { status: 'pending' as const },
+      embedding: { status: 'pending' as const },
+      storage: { status: 'pending' as const },
     };
 
     setUploadStatus({
-      status: "processing",
-      progress: { current: 0, total: 4, step: "Preparing upload..." },
+      status: 'processing',
+      progress: { current: 0, total: 4, step: 'Preparing upload...' },
       telemetry: {
         startTime,
         fileSize: selectedFile.size,
@@ -167,22 +167,22 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
       // Step 1: Upload
       setUploadStatus((prev) => ({
         ...prev,
-        progress: { current: 1, total: 4, step: "Uploading PDF file..." },
+        progress: { current: 1, total: 4, step: 'Uploading file...' },
         detailedSteps: {
           ...prev.detailedSteps!,
-          upload: { status: "processing" },
+          upload: { status: 'processing' },
         },
       }));
 
       const uploadStartTime = Date.now();
       const formData = new FormData();
-      formData.append("file", selectedFile);
-      formData.append("collectionName", collection.name);
-      formData.append("useOllamaEmbedding", "true");
+      formData.append('file', selectedFile);
+      formData.append('collectionName', collection.name);
+      formData.append('useOllamaEmbedding', 'true');
 
       // Use the streaming endpoint for real-time updates
-      const response = await fetch("/api/process-pdf-stream", {
-        method: "POST",
+      const response = await fetch('/api/process-pdf-stream', {
+        method: 'POST',
         body: formData,
         signal: controller.signal,
       });
@@ -203,15 +203,15 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
       const decoder = new TextDecoder();
 
       if (!reader) {
-        throw new Error("No response stream available");
+        throw new Error('No response stream available');
       }
 
-      let buffer = "";
+      let buffer = '';
 
       while (true) {
         // Check if cancelled
         if (controller.signal.aborted) {
-          throw new Error("Upload cancelled by user");
+          throw new Error('Upload cancelled by user');
         }
 
         const { done, value } = await reader.read();
@@ -221,16 +221,16 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
         buffer += decoder.decode(value, { stream: true });
 
         // Process complete lines
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || ""; // Keep the incomplete line in buffer
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep the incomplete line in buffer
 
         for (const line of lines) {
-          if (line.startsWith("data: ")) {
+          if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6));
               await handleStreamUpdate(data, startTime, uploadStartTime);
             } catch (error) {
-              console.error("Error parsing SSE data:", error);
+              console.error('Error parsing SSE data:', error);
             }
           }
         }
@@ -243,7 +243,7 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
       // Refresh documents
       handleDocumentsAdded();
     } catch (error) {
-      console.error("Error processing document:", error);
+      console.error('Error processing document:', error);
       const totalTime = Date.now() - startTime;
 
       // Clear abort controller
@@ -252,19 +252,19 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
       // Handle cancellation vs actual error
       if (
         error instanceof Error &&
-        error.message === "Upload cancelled by user"
+        error.message === 'Upload cancelled by user'
       ) {
         setUploadStatus({
-          status: "error",
-          message: "Upload cancelled by user. Performing cleanup...",
+          status: 'error',
+          message: 'Upload cancelled by user. Performing cleanup...',
         });
 
         // Perform cleanup
         await performCleanup();
-      } else if (error instanceof Error && error.name === "AbortError") {
+      } else if (error instanceof Error && error.name === 'AbortError') {
         setUploadStatus({
-          status: "error",
-          message: "Upload cancelled by user. Performing cleanup...",
+          status: 'error',
+          message: 'Upload cancelled by user. Performing cleanup...',
         });
 
         // Perform cleanup
@@ -272,11 +272,11 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
       } else {
         setUploadStatus((prev) => ({
           ...prev,
-          status: "error",
+          status: 'error',
           message:
             error instanceof Error
               ? error.message
-              : "Failed to process document.",
+              : 'Failed to process document.',
           telemetry: {
             ...prev.telemetry,
             totalTime,
@@ -319,45 +319,45 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
     uploadStartTime: number
   ) => {
     switch (data.type) {
-      case "progress":
-        if (data.step === "upload" && data.status === "complete") {
+      case 'progress':
+        if (data.step === 'upload' && data.status === 'complete') {
           setUploadStatus((prev) => ({
             ...prev,
             progress: {
               current: 1,
               total: 4,
-              step: "Upload completed, starting server processing...",
+              step: 'Upload completed, starting server processing...',
             },
             detailedSteps: {
               ...prev.detailedSteps!,
               upload: {
-                status: "complete",
+                status: 'complete',
                 time: data.time || Date.now() - uploadStartTime,
               },
             },
           }));
         }
 
-        if (data.step === "parsing") {
-          if (data.status === "processing") {
+        if (data.step === 'parsing') {
+          if (data.status === 'processing') {
             setUploadStatus((prev) => ({
               ...prev,
               progress: {
                 current: 2,
                 total: 4,
-                step: "Parsing PDF content...",
+                step: 'Parsing PDF content...',
               },
               detailedSteps: {
                 ...prev.detailedSteps!,
-                parsing: { status: "processing" },
+                parsing: { status: 'processing' },
               },
             }));
-          } else if (data.status === "complete") {
+          } else if (data.status === 'complete') {
             setUploadStatus((prev) => ({
               ...prev,
               detailedSteps: {
                 ...prev.detailedSteps!,
-                parsing: { status: "complete", time: data.time },
+                parsing: { status: 'complete', time: data.time },
               },
               telemetry: {
                 ...prev.telemetry!,
@@ -368,26 +368,26 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
           }
         }
 
-        if (data.step === "chunking") {
-          if (data.status === "processing") {
+        if (data.step === 'chunking') {
+          if (data.status === 'processing') {
             setUploadStatus((prev) => ({
               ...prev,
               progress: {
                 current: 2,
                 total: 4,
-                step: "Splitting text into chunks...",
+                step: 'Splitting text into chunks...',
               },
               detailedSteps: {
                 ...prev.detailedSteps!,
-                chunking: { status: "processing" },
+                chunking: { status: 'processing' },
               },
             }));
-          } else if (data.status === "complete") {
+          } else if (data.status === 'complete') {
             setUploadStatus((prev) => ({
               ...prev,
               detailedSteps: {
                 ...prev.detailedSteps!,
-                chunking: { status: "complete", time: data.time },
+                chunking: { status: 'complete', time: data.time },
               },
               telemetry: {
                 ...prev.telemetry!,
@@ -397,25 +397,25 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
           }
         }
 
-        if (data.step === "embedding") {
-          if (data.status === "processing") {
+        if (data.step === 'embedding') {
+          if (data.status === 'processing') {
             const progressMsg = data.progress
               ? `Generating embeddings... ${data.progress}%`
-              : "Generating AI embeddings...";
+              : 'Generating AI embeddings...';
             setUploadStatus((prev) => ({
               ...prev,
               progress: { current: 3, total: 4, step: progressMsg },
               detailedSteps: {
                 ...prev.detailedSteps!,
-                embedding: { status: "processing" },
+                embedding: { status: 'processing' },
               },
             }));
-          } else if (data.status === "complete") {
+          } else if (data.status === 'complete') {
             setUploadStatus((prev) => ({
               ...prev,
               detailedSteps: {
                 ...prev.detailedSteps!,
-                embedding: { status: "complete", time: data.time },
+                embedding: { status: 'complete', time: data.time },
               },
               telemetry: {
                 ...prev.telemetry!,
@@ -426,42 +426,42 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
           }
         }
 
-        if (data.step === "storage") {
-          if (data.status === "processing") {
+        if (data.step === 'storage') {
+          if (data.status === 'processing') {
             setUploadStatus((prev) => ({
               ...prev,
               progress: {
                 current: 4,
                 total: 4,
-                step: "Storing in ChromaDB...",
+                step: 'Storing in ChromaDB...',
               },
               detailedSteps: {
                 ...prev.detailedSteps!,
-                storage: { status: "processing" },
+                storage: { status: 'processing' },
               },
             }));
-          } else if (data.status === "complete") {
+          } else if (data.status === 'complete') {
             setUploadStatus((prev) => ({
               ...prev,
               detailedSteps: {
                 ...prev.detailedSteps!,
-                storage: { status: "complete", time: data.time },
+                storage: { status: 'complete', time: data.time },
               },
             }));
           }
         }
         break;
 
-      case "complete":
+      case 'complete':
         if (!data.data || !selectedFile) {
-          throw new Error("Invalid completion data or missing file");
+          throw new Error('Invalid completion data or missing file');
         }
 
         const totalTime = Date.now() - startTime;
         const metrics = data.data.processingMetrics;
 
         setUploadStatus({
-          status: "success",
+          status: 'success',
           message: `Successfully processed "${selectedFile.name}" and added ${data.data.totalChunks} chunks to the collection.`,
           telemetry: {
             startTime,
@@ -477,26 +477,26 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
             embeddingsGenerated: data.data.embeddingsGenerated,
           },
           detailedSteps: {
-            upload: { status: "complete", time: Date.now() - uploadStartTime },
-            parsing: { status: "complete", time: metrics?.parseTime || 0 },
-            chunking: { status: "complete", time: metrics?.chunkingTime || 0 },
+            upload: { status: 'complete', time: Date.now() - uploadStartTime },
+            parsing: { status: 'complete', time: metrics?.parseTime || 0 },
+            chunking: { status: 'complete', time: metrics?.chunkingTime || 0 },
             embedding: {
-              status: "complete",
+              status: 'complete',
               time: metrics?.embeddingTime || 0,
             },
-            storage: { status: "complete", time: metrics?.storageTime || 0 },
+            storage: { status: 'complete', time: metrics?.storageTime || 0 },
           },
         });
         break;
 
-      case "error":
+      case 'error':
         throw new Error(data.error);
     }
   };
 
   const clearFile = async () => {
     // If processing, we need to cancel and cleanup
-    if (uploadStatus.status === "processing" && abortController) {
+    if (uploadStatus.status === 'processing' && abortController) {
       setIsCancelling(true);
 
       // Cancel the ongoing upload
@@ -505,8 +505,8 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
 
       // Show cancelling status
       setUploadStatus({
-        status: "error",
-        message: "Cancelling upload and performing cleanup...",
+        status: 'error',
+        message: 'Cancelling upload and performing cleanup...',
       });
 
       // Perform cleanup
@@ -515,7 +515,7 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
     } else {
       // Just clear the file selection
       setSelectedFile(null);
-      setUploadStatus({ status: "idle" });
+      setUploadStatus({ status: 'idle' });
 
       // Cancel any pending upload
       if (abortController) {
@@ -528,10 +528,10 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
   const performCleanup = async () => {
     try {
       // Call a cleanup endpoint to remove any partially processed data
-      const response = await fetch("/api/cancel-upload", {
-        method: "POST",
+      const response = await fetch('/api/cancel-upload', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           collectionName: collection.name,
@@ -540,28 +540,28 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
       });
 
       if (!response.ok) {
-        console.error("Cleanup failed:", response.statusText);
+        console.error('Cleanup failed:', response.statusText);
       } else {
-        console.log("Cleanup completed successfully");
+        console.log('Cleanup completed successfully');
       }
     } catch (error) {
-      console.error("Error during cleanup:", error);
+      console.error('Error during cleanup:', error);
     } finally {
       // Reset state regardless of cleanup success
       setUploadStatus({
-        status: "idle",
-        message: "Upload cancelled and cleaned up.",
+        status: 'idle',
+        message: 'Upload cancelled and cleaned up.',
       });
       setSelectedFile(null);
     }
   };
 
   const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return "0 Bytes";
+    if (bytes === 0) return '0 Bytes';
     const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   const formatDuration = (ms: number): string => {
@@ -576,14 +576,14 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
   };
 
   const getStepIcon = (
-    status: "pending" | "processing" | "complete" | "error"
+    status: 'pending' | 'processing' | 'complete' | 'error'
   ) => {
     switch (status) {
-      case "complete":
+      case 'complete':
         return <CheckCircle className='w-4 h-4 text-green-500' />;
-      case "processing":
+      case 'processing':
         return <Loader2 className='w-4 h-4 animate-spin text-blue-500' />;
-      case "error":
+      case 'error':
         return <AlertCircle className='w-4 h-4 text-red-500' />;
       default:
         return (
@@ -597,7 +597,7 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
     totalSteps: number,
     elapsedTime: number
   ): string => {
-    if (currentStep === 0) return "Calculating...";
+    if (currentStep === 0) return 'Calculating...';
     const avgTimePerStep = elapsedTime / currentStep;
     const remainingSteps = totalSteps - currentStep;
     const estimatedRemaining = remainingSteps * avgTimePerStep;
@@ -605,9 +605,9 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
   };
 
   const getProgressColor = (progress: number): string => {
-    if (progress < 30) return "bg-red-500";
-    if (progress < 70) return "bg-yellow-500";
-    return "bg-green-500";
+    if (progress < 30) return 'bg-red-500';
+    if (progress < 70) return 'bg-yellow-500';
+    return 'bg-green-500';
   };
 
   const handleDocumentsAdded = () => {
@@ -629,8 +629,8 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
         onCollectionUpdated?.();
       } catch (err) {
         const errorMessage =
-          err instanceof Error ? err.message : "Failed to fetch documents";
-        console.error("Failed to fetch documents:", err);
+          err instanceof Error ? err.message : 'Failed to fetch documents';
+        console.error('Failed to fetch documents:', err);
         setError(errorMessage);
         setDocuments([]);
         setTotalCount(0);
@@ -645,7 +645,7 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
   const getDocumentContent = (doc: CollectionDocument): string => {
     const content = doc.document || `Document ID: ${doc.id}`;
     // Truncate long content for better UI display
-    return content.length > 200 ? content.substring(0, 200) + "..." : content;
+    return content.length > 200 ? content.substring(0, 200) + '...' : content;
   };
 
   const totalPages = Math.ceil(totalCount / documentsPerPage);
@@ -716,18 +716,18 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
             <label htmlFor='file-input' className='inline-block'>
               <span className='bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg cursor-pointer transition-colors font-medium text-sm flex items-center gap-2'>
                 <Upload className='w-4 h-4' />
-                Select PDF File
+                Select File
               </span>
               <input
                 id='file-input'
                 type='file'
-                accept='.pdf'
+                accept='.pdf,.txt'
                 onChange={handleFileSelect}
                 className='hidden'
               />
             </label>
             <span className='text-xs text-gray-500 dark:text-gray-400'>
-              PDF files only, max 10MB
+              PDF or TXT files, max 10MB
             </span>
           </div>
         ) : (
@@ -745,8 +745,8 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
                   </p>
                 </div>
               </div>
-              {(uploadStatus.status === "idle" ||
-                uploadStatus.status === "error") && (
+              {(uploadStatus.status === 'idle' ||
+                uploadStatus.status === 'error') && (
                 <button
                   onClick={clearFile}
                   className='p-1 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 rounded transition-colors'
@@ -758,7 +758,7 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
             </div>
 
             {/* Processing Status */}
-            {uploadStatus.status === "processing" && uploadStatus.progress && (
+            {uploadStatus.status === 'processing' && uploadStatus.progress && (
               <div className='space-y-4'>
                 {/* Progress Bar */}
                 <div className='space-y-2'>
@@ -768,12 +768,12 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
                     </span>
                     <div className='flex items-center gap-2'>
                       <span className='text-gray-500 dark:text-gray-400'>
-                        {uploadStatus.progress.current} /{" "}
+                        {uploadStatus.progress.current} /{' '}
                         {uploadStatus.progress.total}
                       </span>
                       {uploadStatus.telemetry?.startTime && (
                         <span className='text-xs text-gray-400'>
-                          ETA:{" "}
+                          ETA:{' '}
                           {estimateTimeRemaining(
                             uploadStatus.progress.current,
                             uploadStatus.progress.total,
@@ -811,13 +811,13 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
                       <div className='flex items-center gap-3 text-sm'>
                         {getStepIcon(uploadStatus.detailedSteps.upload.status)}
                         <span className='text-gray-700 dark:text-gray-300'>
-                          Upload PDF file
+                          Upload file
                         </span>
                         <span className='text-xs text-gray-500'>
                           {uploadStatus.detailedSteps.upload.status ===
-                            "processing" && "Transferring..."}
+                            'processing' && 'Transferring...'}
                           {uploadStatus.detailedSteps.upload.status ===
-                            "complete" && "✓ Uploaded"}
+                            'complete' && '✓ Uploaded'}
                         </span>
                         {uploadStatus.detailedSteps.upload.time && (
                           <span className='text-xs text-gray-500 ml-auto'>
@@ -830,13 +830,13 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
                       <div className='flex items-center gap-3 text-sm'>
                         {getStepIcon(uploadStatus.detailedSteps.parsing.status)}
                         <span className='text-gray-700 dark:text-gray-300'>
-                          Parse PDF content
+                          Parse content
                         </span>
                         <span className='text-xs text-gray-500'>
                           {uploadStatus.detailedSteps.parsing.status ===
-                            "processing" && "Processing on server..."}
+                            'processing' && 'Processing on server...'}
                           {uploadStatus.detailedSteps.parsing.status ===
-                            "complete" && "✓ Text extracted"}
+                            'complete' && '✓ Text extracted'}
                         </span>
                         {uploadStatus.detailedSteps.parsing.time && (
                           <span className='text-xs text-gray-500 ml-auto'>
@@ -855,9 +855,9 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
                         </span>
                         <span className='text-xs text-gray-500'>
                           {uploadStatus.detailedSteps.chunking.status ===
-                            "processing" && "Processing on server..."}
+                            'processing' && 'Processing on server...'}
                           {uploadStatus.detailedSteps.chunking.status ===
-                            "complete" && "✓ Chunks created"}
+                            'complete' && '✓ Chunks created'}
                         </span>
                         {uploadStatus.detailedSteps.chunking.time && (
                           <span className='text-xs text-gray-500 ml-auto'>
@@ -876,9 +876,9 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
                         </span>
                         <span className='text-xs text-gray-500'>
                           {uploadStatus.detailedSteps.embedding.status ===
-                            "processing" && "Processing on server..."}
+                            'processing' && 'Processing on server...'}
                           {uploadStatus.detailedSteps.embedding.status ===
-                            "complete" && "✓ Vectors generated"}
+                            'complete' && '✓ Vectors generated'}
                         </span>
                         {uploadStatus.detailedSteps.embedding.time && (
                           <span className='text-xs text-gray-500 ml-auto'>
@@ -895,9 +895,9 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
                         </span>
                         <span className='text-xs text-gray-500'>
                           {uploadStatus.detailedSteps.storage.status ===
-                            "processing" && "Processing on server..."}
+                            'processing' && 'Processing on server...'}
                           {uploadStatus.detailedSteps.storage.status ===
-                            "complete" && "✓ Stored successfully"}
+                            'complete' && '✓ Stored successfully'}
                         </span>
                         {uploadStatus.detailedSteps.storage.time && (
                           <span className='text-xs text-gray-500 ml-auto'>
@@ -949,7 +949,7 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
                     {/* Server processing notice */}
                     {uploadStatus.progress?.current === 2 && (
                       <div className='mt-2 text-xs text-blue-600 dark:text-blue-400'>
-                        📡 Server is processing your PDF - this may take a
+                        📡 Server is processing your file - this may take a
                         moment for large files (AI embedding generation in
                         progress)
                       </div>
@@ -960,7 +960,7 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
             )}
 
             {/* Status Messages */}
-            {uploadStatus.status === "success" && (
+            {uploadStatus.status === 'success' && (
               <div className='space-y-4'>
                 {/* Success Message */}
                 <div className='flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 rounded-lg'>
@@ -998,7 +998,7 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
                               Total Pages:
                             </span>
                             <span className='text-gray-900 dark:text-white'>
-                              {uploadStatus.telemetry.totalPages || "N/A"}
+                              {uploadStatus.telemetry.totalPages || 'N/A'}
                             </span>
                           </div>
                           <div className='flex justify-between'>
@@ -1015,7 +1015,7 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
                             </span>
                             <span className='text-gray-900 dark:text-white'>
                               {uploadStatus.telemetry.textLength?.toLocaleString() ||
-                                "N/A"}{" "}
+                                'N/A'}{' '}
                               chars
                             </span>
                           </div>
@@ -1026,7 +1026,7 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
                             <span className='text-gray-900 dark:text-white'>
                               {uploadStatus.telemetry.avgChunkSize
                                 ? `${uploadStatus.telemetry.avgChunkSize} chars`
-                                : "N/A"}
+                                : 'N/A'}
                             </span>
                           </div>
                         </div>
@@ -1059,7 +1059,7 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
                                     uploadStatus.telemetry.totalChunks,
                                     uploadStatus.telemetry.totalTime
                                   )
-                                : "N/A"}
+                                : 'N/A'}
                             </span>
                           </div>
                           <div className='flex justify-between'>
@@ -1075,7 +1075,7 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
                                     1024 /
                                     (uploadStatus.telemetry.totalTime / 1000)
                                   ).toFixed(2)} MB/s`
-                                : "N/A"}
+                                : 'N/A'}
                             </span>
                           </div>
                           <div className='flex justify-between'>
@@ -1084,8 +1084,8 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
                             </span>
                             <span className='text-gray-900 dark:text-white'>
                               {uploadStatus.telemetry.embeddingsGenerated
-                                ? "Generated"
-                                : "Skipped"}
+                                ? 'Generated'
+                                : 'Skipped'}
                             </span>
                           </div>
                           {uploadStatus.telemetry.embeddingDimensions && (
@@ -1134,7 +1134,7 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
               </div>
             )}
 
-            {uploadStatus.status === "error" && (
+            {uploadStatus.status === 'error' && (
               <div className='flex items-center gap-2 p-2 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 rounded border border-red-200 dark:border-red-700'>
                 <AlertCircle className='w-4 h-4' />
                 <p className='text-xs'>{uploadStatus.message}</p>
@@ -1142,7 +1142,7 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
             )}
 
             {/* Upload Buttons */}
-            {uploadStatus.status === "idle" && (
+            {uploadStatus.status === 'idle' && (
               <div className='flex items-center gap-2'>
                 <button
                   onClick={processAndUploadDocument}
@@ -1160,7 +1160,7 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
               </div>
             )}
 
-            {uploadStatus.status === "processing" && (
+            {uploadStatus.status === 'processing' && (
               <div className='flex items-center gap-2'>
                 <button
                   disabled
@@ -1201,7 +1201,7 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
           </h3>
           <div className='flex items-center gap-3'>
             <span className='text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full'>
-              {loading ? "Loading..." : `${totalCount} total documents`}
+              {loading ? 'Loading...' : `${totalCount} total documents`}
             </span>
             {totalCount > 0 && !loading && (
               <span className='text-xs text-gray-400 dark:text-gray-500'>
@@ -1262,7 +1262,7 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
 
                       {doc.metadata && (
                         <div className='text-xs text-gray-500 dark:text-gray-400 mt-auto'>
-                          <strong>Metadata:</strong>{" "}
+                          <strong>Metadata:</strong>{' '}
                           <span className='break-words'>
                             {JSON.stringify(doc.metadata).length > 50
                               ? `${JSON.stringify(doc.metadata).substring(
@@ -1322,8 +1322,8 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
                           onClick={() => handlePageClick(pageNumber)}
                           className={`w-8 h-8 text-sm font-medium rounded-lg transition-colors ${
                             currentPage === pageNumber
-                              ? "bg-blue-600 text-white"
-                              : "text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                              ? 'bg-blue-600 text-white'
+                              : 'text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
                           }`}
                         >
                           {pageNumber}
@@ -1367,7 +1367,7 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
                     Document Details
                   </h3>
                   <p className='text-sm text-gray-500 dark:text-gray-400'>
-                    ID:{" "}
+                    ID:{' '}
                     {selectedDocument.id.length > 16
                       ? `${selectedDocument.id.substring(0, 16)}...`
                       : selectedDocument.id}
@@ -1394,13 +1394,13 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
                   <div
                     className='bg-gray-50 dark:bg-gray-700 rounded-lg p-4 overflow-y-scroll border border-gray-200 dark:border-gray-600'
                     style={{
-                      height: "400px",
-                      minHeight: "300px",
-                      maxHeight: "500px",
+                      height: '400px',
+                      minHeight: '300px',
+                      maxHeight: '500px',
                     }}
                   >
                     <pre className='text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono leading-relaxed break-words'>
-                      {selectedDocument.document || "No content available"}
+                      {selectedDocument.document || 'No content available'}
                     </pre>
                   </div>
                 </div>
@@ -1414,8 +1414,8 @@ const CollectionDetail: React.FC<CollectionDetailProps> = ({
                     <div
                       className='bg-gray-50 dark:bg-gray-700 rounded-lg p-3 overflow-y-scroll border border-gray-200 dark:border-gray-600'
                       style={{
-                        height: "150px",
-                        maxHeight: "200px",
+                        height: '150px',
+                        maxHeight: '200px',
                       }}
                     >
                       <pre className='text-xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap break-words'>

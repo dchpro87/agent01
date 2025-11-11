@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
       })}\n\n`;
       controller.enqueue(encoder.encode(data));
 
-      // Process PDF with real-time updates
+      // Process document with real-time updates
       processWithUpdates(request, controller, encoder).catch((error) => {
         // console.error('💥Stream processing error:', error);
         const errorData = `data: ${JSON.stringify({
@@ -215,7 +215,7 @@ async function processWithUpdates(
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
-    console.log('💥pdf file:', file);
+    console.log('💥file:', file);
     const collectionName = formData.get('collectionName') as string;
     const useOllamaEmbedding = formData.get('useOllamaEmbedding') === 'true';
 
@@ -223,39 +223,57 @@ async function processWithUpdates(
       throw new Error('Missing required fields');
     }
 
-    if (file.type !== 'application/pdf') {
-      throw new Error('Only PDF files are supported');
+    if (file.type !== 'application/pdf' && file.type !== 'text/plain') {
+      throw new Error('Only PDF and TXT files are supported');
     }
+
+    const isPDF = file.type === 'application/pdf';
 
     // Step 1: Upload complete (already done by this point)
     sendUpdate({
       type: 'progress',
       step: 'upload',
       status: 'complete',
-      message: 'PDF upload completed',
+      message: `${isPDF ? 'PDF' : 'TXT'} upload completed`,
       current: 1,
       total: 4,
     });
 
-    // Step 2: Parse PDF
+    // Step 2: Parse/Read file content
     sendUpdate({
       type: 'progress',
       step: 'parsing',
       status: 'processing',
-      message: 'Parsing PDF content...',
+      message: `${isPDF ? 'Parsing PDF' : 'Reading TXT'} content...`,
       current: 2,
       total: 4,
     });
 
     parseStartTime = Date.now();
-    console.log(`📄 Processing PDF: ${file.name} (${file.size} bytes)`);
+    console.log(
+      `📄 Processing ${isPDF ? 'PDF' : 'TXT'}: ${file.name} (${
+        file.size
+      } bytes)`
+    );
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const pdfData = await parsePDF(buffer);
-    console.log(
-      `📖 Extracted ${pdfData.numpages} pages, ${pdfData.text.length} characters`
-    );
+
+    let extractedText: string;
+    let totalPages = 1;
+
+    if (isPDF) {
+      const pdfData = await parsePDF(buffer);
+      extractedText = pdfData.text;
+      totalPages = pdfData.numpages;
+      console.log(
+        `📖 Extracted ${pdfData.numpages} pages, ${pdfData.text.length} characters`
+      );
+    } else {
+      // For TXT files, just decode the text
+      extractedText = buffer.toString('utf-8');
+      console.log(`📖 Read TXT file, ${extractedText.length} characters`);
+    }
 
     const parseTime = Date.now() - parseStartTime;
 
@@ -263,14 +281,16 @@ async function processWithUpdates(
       type: 'progress',
       step: 'parsing',
       status: 'complete',
-      message: `Extracted ${pdfData.numpages} pages`,
+      message: isPDF
+        ? `Extracted ${totalPages} pages`
+        : 'Text file read successfully',
       time: parseTime,
-      pages: pdfData.numpages,
-      textLength: pdfData.text.length,
+      pages: totalPages,
+      textLength: extractedText.length,
     });
 
     // Clean and normalize text
-    const cleanedText = cleanText(pdfData.text);
+    const cleanedText = cleanText(extractedText);
     console.log(
       `🧹 Text cleaned: ${cleanedText.length} characters after normalization`
     );
@@ -316,7 +336,7 @@ async function processWithUpdates(
       chunk_length: chunk.content.length,
       upload_timestamp: new Date().toISOString(),
       file_size: file.size,
-      total_pages: pdfData.numpages,
+      total_pages: totalPages,
       parse_time_ms: parseTime,
       chunking_time_ms: chunkingTime,
     }));
@@ -333,7 +353,7 @@ async function processWithUpdates(
     });
 
     console.log(
-      `PDF Stream Processing: Using collection "${collectionName}" with ${
+      `Document Stream Processing: Using collection "${collectionName}" with ${
         useOllamaEmbedding ? 'Ollama nomic-embed-text' : 'default'
       } embedding function`
     );
@@ -542,7 +562,7 @@ async function processWithUpdates(
       message: finalMessage,
       data: {
         totalChunks: successfullyStored, // Use successfully stored count instead of total chunks
-        totalPages: pdfData.numpages,
+        totalPages: totalPages,
         filename: file.name,
         collectionName,
         embeddingsGenerated: useOllamaEmbedding,
@@ -556,15 +576,15 @@ async function processWithUpdates(
           avgChunkSize: Math.round(avgChunkSize),
           processingRate: Math.round(processingRate * 100) / 100,
           textLength: cleanedText.length,
-          originalTextLength: pdfData.text.length,
+          originalTextLength: extractedText.length,
         },
       },
     });
   } catch (error) {
-    console.error('Error processing PDF:', error);
+    console.error('Error processing file:', error);
     sendUpdate({
       type: 'error',
-      error: error instanceof Error ? error.message : 'Failed to process PDF',
+      error: error instanceof Error ? error.message : 'Failed to process file',
     });
   } finally {
     controller.close();

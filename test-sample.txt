@@ -1,0 +1,44 @@
+This is a sample text file for testing the Context Window Manager's TXT file upload feature.
+
+The system should be able to:
+1. Accept TXT files in addition to PDF files
+2. Read the text content from the TXT file
+3. Chunk the text into smaller segments
+4. Generate embeddings using Ollama (nomic-embed-text)
+5. Store the chunks and embeddings in ChromaDB
+
+Benefits of supporting TXT files:
+- Users can upload plain text documents
+- No need to convert text to PDF format
+- Simpler parsing process compared to PDFs
+- Faster processing for text-only content
+
+Technical Implementation:
+The API route now checks the file type and handles both application/pdf and text/plain MIME types. For TXT files, it simply decodes the buffer to UTF-8 string, while PDF files go through the pdf-parse library. Both file types then follow the same chunking and embedding pipeline.
+
+This feature enhances the flexibility of the Context Window Manager and makes it easier for users to add various types of content to their knowledge base.
+
+Testing Checklist:
+- File selection accepts both .pdf and .txt files
+- Validation rejects unsupported file types
+- TXT files are properly parsed and chunked
+- Embeddings are generated correctly
+- Documents appear in the collection after upload
+- Both file types can be uploaded to the same collection
+- Error handling works for both file types
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+Additional test content to ensure proper chunking:
+
+Chapter 1: Introduction
+The quick brown fox jumps over the lazy dog. This pangram contains every letter of the English alphabet at least once. It is commonly used for testing fonts, keyboards, and other applications.
+
+Chapter 2: Advanced Features
+The system uses recursive text splitting with configurable chunk sizes and overlaps. This ensures that context is maintained across chunk boundaries while keeping individual chunks within the token limits of the embedding model.
+
+Chapter 3: Performance Optimization
+Batch processing is implemented to handle large documents efficiently. Chunks are processed in batches of 10 to balance memory usage and processing speed. Each batch is embedded and stored before moving to the next batch.
+
+Conclusion:
+This implementation provides a robust and flexible document processing pipeline that can handle various file formats and scale to handle large documents.

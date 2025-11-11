@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
-import { Settings, ChevronDown, RotateCcw, Check } from "lucide-react";
-import { OllamaModelOptions, MODEL_PRESETS, ModelPreset } from "@/types/ollama";
-import { DEFAULT_OPTIONS, PRESET_INFO } from "@/constraints/model-config";
-import { VALIDATION_LIMITS } from "@/constraints/chat-constraints";
-import { useDropdownState } from "@/hooks";
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { Settings, ChevronDown, RotateCcw, Check } from 'lucide-react';
+import { OllamaModelOptions, MODEL_PRESETS, ModelPreset } from '@/types/ollama';
+import { DEFAULT_OPTIONS, PRESET_INFO } from '@/constraints/model-config';
+import { VALIDATION_LIMITS } from '@/constraints/chat-constraints';
+import { useDropdownState } from '@/hooks';
 
 interface ModelConfigSelectorProps {
   selectedOptions: OllamaModelOptions;
@@ -20,13 +20,13 @@ const formatPresetParameters = (preset: ModelPreset): string => {
   return Object.entries(params)
     .map(([key, value]) => {
       const formattedKey = key
-        .replace(/_/g, " ")
+        .replace(/_/g, ' ')
         .replace(/\b\w/g, (l) => l.toUpperCase());
       const formattedValue =
-        typeof value === "number" && value % 1 !== 0 ? value.toFixed(2) : value;
+        typeof value === 'number' && value % 1 !== 0 ? value.toFixed(2) : value;
       return `${formattedKey}: ${formattedValue}`;
     })
-    .join("\n");
+    .join('\n');
 };
 
 export default function ModelConfigSelector({
@@ -34,20 +34,47 @@ export default function ModelConfigSelector({
   onOptionsChange,
   disabled = false,
 }: ModelConfigSelectorProps) {
-  const [activeTab, setActiveTab] = useState<"presets" | "advanced">("presets");
+  const [activeTab, setActiveTab] = useState<'presets' | 'advanced'>('presets');
   const [currentOptions, setCurrentOptions] = useState<OllamaModelOptions>({
     ...DEFAULT_OPTIONS,
     ...selectedOptions,
   });
   const [hoveredPreset, setHoveredPreset] = useState<ModelPreset | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [maxHeight, setMaxHeight] = useState<number>(384); // Default to max-h-96 equivalent
   const { isOpen, setIsOpen, dropdownRef } = useDropdownState();
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   // Clear tooltip when dropdown closes
   useEffect(() => {
     if (!isOpen) {
       setHoveredPreset(null);
     }
+  }, [isOpen]);
+
+  // Calculate max height for dropdown based on available viewport space
+  useEffect(() => {
+    if (!isOpen || !buttonRef.current) return;
+
+    const calculateMaxHeight = () => {
+      const buttonRect = buttonRef.current?.getBoundingClientRect();
+      if (!buttonRect) return;
+
+      const viewportHeight = window.innerHeight;
+      const spaceBelow = viewportHeight - buttonRect.bottom - 8; // 8px margin
+      const padding = 16; // Account for some padding/spacing
+
+      setMaxHeight(Math.max(200, spaceBelow - padding)); // Minimum 200px
+    };
+
+    calculateMaxHeight();
+    window.addEventListener('resize', calculateMaxHeight);
+    window.addEventListener('scroll', calculateMaxHeight, true);
+
+    return () => {
+      window.removeEventListener('resize', calculateMaxHeight);
+      window.removeEventListener('scroll', calculateMaxHeight, true);
+    };
   }, [isOpen]);
 
   // Update local state when props change
@@ -121,6 +148,7 @@ export default function ModelConfigSelector({
   return (
     <div className='relative' ref={dropdownRef}>
       <button
+        ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
         disabled={disabled}
         className='flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
@@ -130,17 +158,20 @@ export default function ModelConfigSelector({
         <span className='text-sm text-gray-700 dark:text-gray-300 max-w-32 truncate'>
           {currentPreset
             ? currentPreset.charAt(0).toUpperCase() + currentPreset.slice(1)
-            : "Custom"}
+            : 'Custom'}
         </span>
         <ChevronDown
           className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${
-            isOpen ? "rotate-180" : ""
+            isOpen ? 'rotate-180' : ''
           }`}
         />
       </button>
 
       {isOpen && (
-        <div className='absolute top-full left-0 mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto scrollbar-thin'>
+        <div
+          className='absolute top-full left-0 mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-y-auto scrollbar-thin'
+          style={{ maxHeight: `${maxHeight}px` }}
+        >
           {/* Header */}
           <div className='p-3 border-b border-gray-200 dark:border-gray-700'>
             <div className='flex items-center justify-between'>
@@ -158,16 +189,16 @@ export default function ModelConfigSelector({
                 <button
                   onClick={() =>
                     setActiveTab(
-                      activeTab === "presets" ? "advanced" : "presets"
+                      activeTab === 'presets' ? 'advanced' : 'presets'
                     )
                   }
                   className={`p-1 transition-colors ${
-                    activeTab === "advanced"
-                      ? "text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 rounded"
-                      : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                    activeTab === 'advanced'
+                      ? 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 rounded'
+                      : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                   }`}
                   title={
-                    activeTab === "presets" ? "Advanced settings" : "Presets"
+                    activeTab === 'presets' ? 'Advanced settings' : 'Presets'
                   }
                 >
                   <Settings className='w-4 h-4' />
@@ -178,7 +209,7 @@ export default function ModelConfigSelector({
 
           {/* Content */}
           <div className='max-h-80 overflow-y-auto scrollbar-thin'>
-            {activeTab === "presets" && (
+            {activeTab === 'presets' && (
               <div>
                 <div className='px-3 py-2 bg-gray-100 dark:bg-gray-700'>
                   <h4 className='text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide'>
@@ -193,8 +224,8 @@ export default function ModelConfigSelector({
                       key={preset}
                       className={`group px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-l-2 transition-colors ${
                         isSelected
-                          ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                          : "border-transparent"
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                          : 'border-transparent'
                       }`}
                       onClick={() => handlePresetSelect(preset as ModelPreset)}
                       onMouseEnter={(e) => {
@@ -211,8 +242,8 @@ export default function ModelConfigSelector({
                         <div
                           className={`flex-shrink-0 p-1 rounded ${
                             isSelected
-                              ? "bg-blue-100 dark:bg-blue-800"
-                              : "bg-gray-100 dark:bg-gray-600"
+                              ? 'bg-blue-100 dark:bg-blue-800'
+                              : 'bg-gray-100 dark:bg-gray-600'
                           }`}
                         >
                           <Icon className={`w-3 h-3 text-${info.color}-500`} />
@@ -222,8 +253,8 @@ export default function ModelConfigSelector({
                             <h5
                               className={`text-sm font-medium truncate capitalize ${
                                 isSelected
-                                  ? "text-blue-900 dark:text-blue-100"
-                                  : "text-gray-900 dark:text-white"
+                                  ? 'text-blue-900 dark:text-blue-100'
+                                  : 'text-gray-900 dark:text-white'
                               }`}
                             >
                               {preset}
@@ -235,8 +266,8 @@ export default function ModelConfigSelector({
                           <p
                             className={`text-xs mt-1 line-clamp-2 ${
                               isSelected
-                                ? "text-blue-700 dark:text-blue-300"
-                                : "text-gray-500 dark:text-gray-400"
+                                ? 'text-blue-700 dark:text-blue-300'
+                                : 'text-gray-500 dark:text-gray-400'
                             }`}
                           >
                             {info.description}
@@ -249,7 +280,7 @@ export default function ModelConfigSelector({
               </div>
             )}
 
-            {activeTab === "advanced" && (
+            {activeTab === 'advanced' && (
               <div>
                 <div className='px-3 py-2 bg-gray-100 dark:bg-gray-700'>
                   <h4 className='text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide'>
@@ -279,7 +310,7 @@ export default function ModelConfigSelector({
                           value={currentOptions.temperature || 0.7}
                           onChange={(e) =>
                             handleOptionChange(
-                              "temperature",
+                              'temperature',
                               parseFloat(e.target.value)
                             )
                           }
@@ -307,7 +338,7 @@ export default function ModelConfigSelector({
                           value={currentOptions.top_k || 40}
                           onChange={(e) =>
                             handleOptionChange(
-                              "top_k",
+                              'top_k',
                               parseInt(e.target.value)
                             )
                           }
@@ -329,24 +360,24 @@ export default function ModelConfigSelector({
                               onClick={() => {
                                 if (currentOptions.top_p === 0) {
                                   // Enable with default value of 0.7
-                                  handleOptionChange("top_p", 0.7);
+                                  handleOptionChange('top_p', 0.7);
                                 } else {
                                   // Disable by setting to 0
-                                  handleOptionChange("top_p", 0);
+                                  handleOptionChange('top_p', 0);
                                 }
                               }}
                               className={`px-2 py-1 text-xs rounded transition-colors ${
                                 currentOptions.top_p === 0
-                                  ? "bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400"
-                                  : "bg-blue-500 text-white"
+                                  ? 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400'
+                                  : 'bg-blue-500 text-white'
                               }`}
                             >
                               {currentOptions.top_p === 0
-                                ? "Enable"
-                                : "Disable"}
+                                ? 'Enable'
+                                : 'Disable'}
                             </button>
                             <span className='text-xs text-gray-500'>
-                              {currentOptions.top_p?.toFixed(1) || "0.0"}
+                              {currentOptions.top_p?.toFixed(1) || '0.0'}
                             </span>
                           </div>
                         </div>
@@ -359,12 +390,12 @@ export default function ModelConfigSelector({
                           disabled={currentOptions.top_p === 0}
                           onChange={(e) =>
                             handleOptionChange(
-                              "top_p",
+                              'top_p',
                               parseFloat(e.target.value)
                             )
                           }
                           className={`w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer ${
-                            currentOptions.top_p === 0 ? "opacity-50" : ""
+                            currentOptions.top_p === 0 ? 'opacity-50' : ''
                           }`}
                         />
                         <div className='text-xs text-gray-500 mt-2'>
@@ -374,8 +405,8 @@ export default function ModelConfigSelector({
                         </div>
                         <div className='text-xs text-gray-500 mt-1'>
                           {currentOptions.top_p === 0
-                            ? " Disabled - using temperature for randomness control"
-                            : " Enabled - overrides temperature setting (0.1-1.0, default 0.7)"}
+                            ? ' Disabled - using temperature for randomness control'
+                            : ' Enabled - overrides temperature setting (0.1-1.0, default 0.7)'}
                         </div>
                       </div>
 
@@ -395,7 +426,7 @@ export default function ModelConfigSelector({
                           value={currentOptions.repeat_penalty || 1.1}
                           onChange={(e) =>
                             handleOptionChange(
-                              "repeat_penalty",
+                              'repeat_penalty',
                               parseFloat(e.target.value)
                             )
                           }
@@ -430,7 +461,7 @@ export default function ModelConfigSelector({
                           value={currentOptions.num_ctx || 4096}
                           onChange={(e) =>
                             handleOptionChange(
-                              "num_ctx",
+                              'num_ctx',
                               parseInt(e.target.value)
                             )
                           }
@@ -457,7 +488,7 @@ export default function ModelConfigSelector({
                           value={currentOptions.maxTokens || 1024}
                           onChange={(e) =>
                             handleOptionChange(
-                              "maxTokens",
+                              'maxTokens',
                               parseInt(e.target.value)
                             )
                           }
@@ -481,7 +512,7 @@ export default function ModelConfigSelector({
                         <label className='flex items-center justify-between text-sm text-gray-700 dark:text-gray-300 mb-2'>
                           Min P
                           <span className='text-xs text-gray-500'>
-                            {currentOptions.min_p?.toFixed(3) || "0.000"}
+                            {currentOptions.min_p?.toFixed(3) || '0.000'}
                           </span>
                         </label>
                         <input
@@ -492,7 +523,7 @@ export default function ModelConfigSelector({
                           value={currentOptions.min_p || 0}
                           onChange={(e) =>
                             handleOptionChange(
-                              "min_p",
+                              'min_p',
                               parseFloat(e.target.value)
                             )
                           }
@@ -511,10 +542,10 @@ export default function ModelConfigSelector({
                         <input
                           type='number'
                           placeholder='Random'
-                          value={currentOptions.seed || ""}
+                          value={currentOptions.seed || ''}
                           onChange={(e) =>
                             handleOptionChange(
-                              "seed",
+                              'seed',
                               e.target.value
                                 ? parseInt(e.target.value)
                                 : undefined
@@ -537,14 +568,14 @@ export default function ModelConfigSelector({
 
       {/* Tooltip Portal - renders outside the modal to prevent clipping */}
       {hoveredPreset &&
-        typeof window !== "undefined" &&
+        typeof window !== 'undefined' &&
         createPortal(
           <div
             className='fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-xl z-[9999] max-w-xs'
             style={{
               left: `${tooltipPosition.x}px`,
               top: `${tooltipPosition.y}px`,
-              pointerEvents: "none", // Prevent tooltip from interfering with mouse events
+              pointerEvents: 'none', // Prevent tooltip from interfering with mouse events
             }}
           >
             <div className='text-sm font-medium text-gray-900 dark:text-white mb-2 capitalize'>

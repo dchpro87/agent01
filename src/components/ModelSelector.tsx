@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from 'react';
 import {
   ChevronDown,
   Loader2,
@@ -10,9 +10,9 @@ import {
   Eye,
   Brain,
   Database,
-} from "lucide-react";
-import Message from "./Message";
-import { useDropdownState } from "@/hooks";
+} from 'lucide-react';
+import Message from './Message';
+import { useDropdownState } from '@/hooks';
 
 interface Model {
   name: string;
@@ -50,7 +50,9 @@ export default function ModelSelector({
   const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [maxHeight, setMaxHeight] = useState<number>(384); // Default to max-h-96 equivalent
   const { isOpen, setIsOpen, dropdownRef } = useDropdownState();
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const fetchModels = async () => {
@@ -58,9 +60,9 @@ export default function ModelSelector({
         setLoading(true);
         setError(null);
 
-        const response = await fetch("/api/models");
+        const response = await fetch('/api/models');
         if (!response.ok) {
-          throw new Error("Failed to fetch models");
+          throw new Error('Failed to fetch models');
         }
 
         const data = await response.json();
@@ -72,14 +74,14 @@ export default function ModelSelector({
 
         // Only set default if no model is selected and none is saved in localStorage
         if (!selectedModel && data.default) {
-          const savedModel = localStorage.getItem("selectedModel");
+          const savedModel = localStorage.getItem('selectedModel');
           if (!savedModel) {
             onModelChange(data.default);
           }
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
-        console.error("Failed to fetch models:", err);
+        setError(err instanceof Error ? err.message : 'Unknown error');
+        console.error('Failed to fetch models:', err);
       } finally {
         setLoading(false);
       }
@@ -88,16 +90,41 @@ export default function ModelSelector({
     fetchModels();
   }, [selectedModel, onModelChange]);
 
+  // Calculate max height for dropdown based on available viewport space
+  useEffect(() => {
+    if (!isOpen || !buttonRef.current) return;
+
+    const calculateMaxHeight = () => {
+      const buttonRect = buttonRef.current?.getBoundingClientRect();
+      if (!buttonRect) return;
+
+      const viewportHeight = window.innerHeight;
+      const spaceBelow = viewportHeight - buttonRect.bottom - 8; // 8px margin
+      const padding = 16; // Account for some padding/spacing
+
+      setMaxHeight(Math.max(200, spaceBelow - padding)); // Minimum 200px
+    };
+
+    calculateMaxHeight();
+    window.addEventListener('resize', calculateMaxHeight);
+    window.addEventListener('scroll', calculateMaxHeight, true);
+
+    return () => {
+      window.removeEventListener('resize', calculateMaxHeight);
+      window.removeEventListener('scroll', calculateMaxHeight, true);
+    };
+  }, [isOpen]);
+
   const formatModelSize = (bytes: number) => {
-    const sizes = ["B", "KB", "MB", "GB"];
-    if (bytes === 0) return "0 B";
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    if (bytes === 0) return '0 B';
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + " " + sizes[i];
+    return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + ' ' + sizes[i];
   };
 
   const getModelDisplayName = (modelName: string) => {
     // Remove common suffixes for cleaner display
-    return modelName.replace(/:latest$/, "").replace(/:.+$/, (match) => {
+    return modelName.replace(/:latest$/, '').replace(/:.+$/, (match) => {
       return match; // Keep version tags for now
     });
   };
@@ -120,7 +147,7 @@ export default function ModelSelector({
         </div>
         <div className='absolute top-full left-0 mt-2 w-80 z-50'>
           <Message
-            message={error || "No models available"}
+            message={error || 'No models available'}
             type='error'
             isVisible={true}
             onClose={() => setError(null)}
@@ -135,23 +162,27 @@ export default function ModelSelector({
   return (
     <div className='relative' ref={dropdownRef}>
       <button
+        ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
         disabled={disabled}
         className='flex items-center gap-2 px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200'
       >
         <Bot className='w-4 h-4 text-gray-500 dark:text-gray-400' />
         <span className='text-gray-900 dark:text-white font-medium max-w-32 truncate'>
-          {getModelDisplayName(selectedModel) || "Select Model"}
+          {getModelDisplayName(selectedModel) || 'Select Model'}
         </span>
         <ChevronDown
           className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform duration-200 ${
-            isOpen ? "rotate-180" : ""
+            isOpen ? 'rotate-180' : ''
           }`}
         />
       </button>
 
       {isOpen && (
-        <div className='absolute top-full left-0 mt-1 w-80 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto scrollbar-thin'>
+        <div
+          className='absolute top-full left-0 mt-1 w-80 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50 overflow-y-auto scrollbar-thin'
+          style={{ maxHeight: `${maxHeight}px` }}
+        >
           {models.map((model) => (
             <button
               key={model.name}
@@ -161,8 +192,8 @@ export default function ModelSelector({
               }}
               className={`w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 border-b border-gray-100 dark:border-gray-700 last:border-b-0 ${
                 selectedModel === model.name
-                  ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
-                  : "text-gray-900 dark:text-white"
+                  ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                  : 'text-gray-900 dark:text-white'
               }`}
             >
               <div className='flex items-center justify-between'>

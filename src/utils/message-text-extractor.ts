@@ -1,24 +1,24 @@
-import type { Message } from "@ai-sdk/react";
+import type { Message } from '@ai-sdk/react';
 
 // Message parts type matching the components
 interface MessagePartType {
   type:
-    | "text"
-    | "text-delta"
-    | "tool-invocation"
-    | "tool-call"
-    | "tool-result"
-    | "step-start"
-    | "reasoning"
-    | "source"
-    | "file";
+    | 'text'
+    | 'text-delta'
+    | 'tool-invocation'
+    | 'tool-call'
+    | 'tool-result'
+    | 'step-start'
+    | 'reasoning'
+    | 'source'
+    | 'file';
   text?: string;
   textDelta?: string;
   toolInvocation?: {
     toolCallId: string;
     toolName: string;
     args: Record<string, unknown>;
-    state: "partial-call" | "call" | "result";
+    state: 'partial-call' | 'call' | 'result';
     result?: unknown;
   };
   toolCallId?: string;
@@ -38,9 +38,9 @@ interface MessagePartType {
  * in the UI for copying purposes.
  */
 export function extractMainTextContent(message: Message): string {
-  if (message.role === "user") {
+  if (message.role === 'user') {
     // For user messages, return the content directly
-    return message.content || "";
+    return message.content || '';
   }
 
   // For assistant messages, we need to extract only the main text parts
@@ -50,24 +50,24 @@ export function extractMainTextContent(message: Message): string {
 
     (message.parts as MessagePartType[]).forEach((part) => {
       switch (part.type) {
-        case "text":
-        case "text-delta":
+        case 'text':
+        case 'text-delta':
           // Only include main text content, not reasoning
-          const textContent = part.text || part.textDelta || "";
+          const textContent = part.text || part.textDelta || '';
           if (textContent.trim()) {
             // Additional filtering to exclude thinking/reasoning patterns
             const cleanedText = textContent.trim();
 
             // Skip text that looks like reasoning patterns
             if (
-              cleanedText.startsWith("💭") ||
-              cleanedText.includes("thinking...") ||
-              cleanedText.includes("reasoning:") ||
-              cleanedText.toLowerCase().includes("let me think") ||
-              cleanedText.toLowerCase().includes("i need to") ||
-              (cleanedText.startsWith("<") &&
-                cleanedText.includes("thinking")) ||
-              (cleanedText.startsWith("[") && cleanedText.includes("reasoning"))
+              cleanedText.startsWith('💭') ||
+              cleanedText.includes('thinking...') ||
+              cleanedText.includes('reasoning:') ||
+              cleanedText.toLowerCase().includes('let me think') ||
+              cleanedText.toLowerCase().includes('i need to') ||
+              (cleanedText.startsWith('<') &&
+                cleanedText.includes('thinking')) ||
+              (cleanedText.startsWith('[') && cleanedText.includes('reasoning'))
             ) {
               return; // Skip this part
             }
@@ -76,40 +76,40 @@ export function extractMainTextContent(message: Message): string {
           }
           break;
         // Skip reasoning, tool-invocations, tool-calls, tool-results, etc.
-        case "reasoning":
-        case "tool-invocation":
-        case "tool-call":
-        case "tool-result":
-        case "source":
-        case "file":
-        case "step-start":
+        case 'reasoning':
+        case 'tool-invocation':
+        case 'tool-call':
+        case 'tool-result':
+        case 'source':
+        case 'file':
+        case 'step-start':
         default:
           // Intentionally skip these parts
           break;
       }
     });
 
-    return textParts.join("\n\n").trim();
+    return textParts.join('\n\n').trim();
   }
 
   // Fallback to legacy content if no parts, but also filter reasoning from legacy content
-  const content = message.content || "";
+  const content = message.content || '';
 
   // If using legacy content, try to filter out obvious reasoning sections
-  const lines = content.split("\n");
+  const lines = content.split('\n');
   const filteredLines = lines.filter((line) => {
     const trimmedLine = line.trim();
     return !(
-      trimmedLine.startsWith("💭") ||
-      trimmedLine.includes("thinking...") ||
-      trimmedLine.includes("reasoning:") ||
-      trimmedLine.toLowerCase().includes("let me think") ||
-      (trimmedLine.startsWith("<") && trimmedLine.includes("thinking")) ||
-      (trimmedLine.startsWith("[") && trimmedLine.includes("reasoning"))
+      trimmedLine.startsWith('💭') ||
+      trimmedLine.includes('thinking...') ||
+      trimmedLine.includes('reasoning:') ||
+      trimmedLine.toLowerCase().includes('let me think') ||
+      (trimmedLine.startsWith('<') && trimmedLine.includes('thinking')) ||
+      (trimmedLine.startsWith('[') && trimmedLine.includes('reasoning'))
     );
   });
 
-  return filteredLines.join("\n").trim();
+  return filteredLines.join('\n').trim();
 }
 
 /**
@@ -127,24 +127,24 @@ export async function copyFormattedTextToClipboard(
       // This is a basic conversion for common markdown patterns
       let htmlContent = text
         // Code blocks (triple backticks)
-        .replace(/```(\w+)?\n([\s\S]*?)```/g, "<pre><code>$2</code></pre>")
+        .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
         // Bold
-        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
         // Italic
-        .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
         // Inline code
-        .replace(/`([^`]+)`/g, "<code>$1</code>")
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
         // Links
         .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
         // Unordered lists
-        .replace(/^\s*[-*]\s+(.+)$/gm, "<li>$1</li>")
+        .replace(/^\s*[-*]\s+(.+)$/gm, '<li>$1</li>')
         // Headers
-        .replace(/^### (.+)$/gm, "<h3>$1</h3>")
-        .replace(/^## (.+)$/gm, "<h2>$1</h2>")
-        .replace(/^# (.+)$/gm, "<h1>$1</h1>");
+        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+        .replace(/^# (.+)$/gm, '<h1>$1</h1>');
 
       // Wrap list items in ul tags
-      htmlContent = htmlContent.replace(/(<li>.*<\/li>\n?)+/g, "<ul>$&</ul>");
+      htmlContent = htmlContent.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
 
       // Convert double newlines to paragraph breaks
       const paragraphs = htmlContent.split(/\n\n+/);
@@ -153,29 +153,29 @@ export async function copyFormattedTextToClipboard(
           para = para.trim();
           // Don't wrap if already wrapped in a block element
           if (
-            para.startsWith("<h") ||
-            para.startsWith("<pre") ||
-            para.startsWith("<ul") ||
-            para.startsWith("<ol") ||
-            para.startsWith("<blockquote")
+            para.startsWith('<h') ||
+            para.startsWith('<pre') ||
+            para.startsWith('<ul') ||
+            para.startsWith('<ol') ||
+            para.startsWith('<blockquote')
           ) {
             return para;
           }
           // Convert single newlines within paragraphs to <br>
-          para = para.replace(/\n/g, "<br>");
-          return para ? `<p>${para}</p>` : "";
+          para = para.replace(/\n/g, '<br>');
+          return para ? `<p>${para}</p>` : '';
         })
         .filter((p) => p)
-        .join("");
+        .join('');
 
       // Create clipboard items with both HTML and plain text
       const clipboardItems = new ClipboardItem({
-        "text/html": new Blob([htmlContent], { type: "text/html" }),
-        "text/plain": new Blob([text], { type: "text/plain" }),
+        'text/html': new Blob([htmlContent], { type: 'text/html' }),
+        'text/plain': new Blob([text], { type: 'text/plain' }),
       });
 
       await navigator.clipboard.write([clipboardItems]);
-      console.log("✅ Copied with basic markdown-to-HTML conversion");
+      console.log('✅ Copied with basic markdown-to-HTML conversion');
       return true;
     }
 
@@ -186,78 +186,146 @@ export async function copyFormattedTextToClipboard(
     }
 
     // Fallback for older browsers
-    const textArea = document.createElement("textarea");
+    const textArea = document.createElement('textarea');
     textArea.value = text;
-    textArea.style.position = "fixed";
-    textArea.style.left = "-999999px";
-    textArea.style.top = "-999999px";
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
     document.body.appendChild(textArea);
     textArea.focus();
     textArea.select();
 
-    const successful = document.execCommand("copy");
+    const successful = document.execCommand('copy');
     document.body.removeChild(textArea);
 
     return successful;
   } catch (error) {
-    console.error("Failed to copy text to clipboard:", error);
+    console.error('Failed to copy text to clipboard:', error);
     return false;
   }
 }
 
 /**
- * Enhanced copy function that tries to preserve formatting by copying from DOM
- * This function attempts to copy the actual rendered content from the DOM element
- * to preserve the exact formatting that the user sees, while excluding reasoning parts
+ * Enhanced copy function that uses the Selection API to copy text exactly as if
+ * the user selected it with the mouse. This preserves all formatting.
  */
 export async function copyMessageFromDOM(
-  messageText: string
+  messageText: string,
+  buttonElement?: HTMLElement
 ): Promise<boolean> {
   try {
-    // Find prose containers (where markdown is rendered)
-    const proseElements = document.querySelectorAll(".prose");
+    let proseElement: Element | null = null;
 
-    for (const prose of proseElements) {
-      // Skip if this prose element is inside a reasoning/thinking container
-      if (
-        prose.closest('[class*="amber"]') ||
-        prose.closest('[class*="thinking"]')
-      ) {
-        continue;
+    // If we have the button element, traverse up to find the message container
+    if (buttonElement) {
+      // Find the parent message bubble (the div with rounded-2xl class)
+      const messageContainer = buttonElement.closest('.rounded-2xl');
+
+      if (messageContainer) {
+        // Find all prose elements inside this specific container
+        const proseElements = messageContainer.querySelectorAll('.prose');
+
+        // Find the main content prose element (not inside tool/reasoning boxes)
+        for (const prose of proseElements) {
+          // Skip prose elements that are inside tool invocation or reasoning boxes
+          if (
+            prose.closest('[class*="border-blue"]') ||
+            prose.closest('[class*="border-amber"]') ||
+            prose.closest('[class*="bg-blue"]') ||
+            prose.closest('[class*="bg-amber"]')
+          ) {
+            continue;
+          }
+
+          // This should be the main message prose element
+          proseElement = prose;
+          break;
+        }
       }
+    }
 
-      const proseText = prose.textContent || "";
+    // If we found the prose element, use the Selection API to copy it
+    if (proseElement) {
+      // Create a range that selects the entire prose element content
+      const range = document.createRange();
+      range.selectNodeContents(proseElement);
 
-      // Check if this prose element contains our message text
-      // Use a more robust matching approach with a reasonable substring
-      const matchLength = Math.min(150, messageText.length);
-      const messageSubstring = messageText.substring(0, matchLength).trim();
+      // Get the current selection and clear it
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(range);
 
-      if (proseText.trim().includes(messageSubstring)) {
-        // Found the matching prose element with rendered HTML
-        if (navigator.clipboard && window.ClipboardItem) {
-          // Get the innerHTML which contains the rendered markdown as HTML
-          const htmlContent = prose.innerHTML;
-          const plainText = proseText.trim();
+        // Use the browser's native copy command
+        const successful = document.execCommand('copy');
 
-          // Create clipboard items with both HTML (for rich text editors) and plain text
-          const clipboardItems = new ClipboardItem({
-            "text/html": new Blob([htmlContent], { type: "text/html" }),
-            "text/plain": new Blob([plainText], { type: "text/plain" }),
-          });
+        // Clear the selection so it doesn't show visually
+        selection.removeAllRanges();
 
-          await navigator.clipboard.write([clipboardItems]);
-          console.log("✅ Copied formatted text from DOM");
+        if (successful) {
+          console.log('✅ Copied text using Selection API');
           return true;
         }
       }
     }
 
+    // Fallback: try to find by searching all rounded message bubbles
+    if (!proseElement) {
+      const messageContainers = document.querySelectorAll('.rounded-2xl');
+
+      for (const container of messageContainers) {
+        const containerText = container.textContent || '';
+
+        // Check if this container has our message text
+        const matchLength = Math.min(150, messageText.length);
+        const messageSubstring = messageText.substring(0, matchLength).trim();
+
+        if (containerText.trim().includes(messageSubstring)) {
+          // Found the matching container
+          // Now find the prose element inside it (excluding tool invocation boxes)
+          const proseElements = container.querySelectorAll('.prose');
+
+          for (const prose of proseElements) {
+            // Skip prose elements that are inside tool invocation or reasoning boxes
+            if (
+              prose.closest('[class*="border-blue"]') ||
+              prose.closest('[class*="border-amber"]') ||
+              prose.closest('[class*="bg-blue"]') ||
+              prose.closest('[class*="bg-amber"]')
+            ) {
+              continue;
+            }
+
+            const proseText = prose.textContent || '';
+            if (proseText.trim().includes(messageSubstring)) {
+              // Found the correct prose element, use Selection API
+              const range = document.createRange();
+              range.selectNodeContents(prose);
+
+              const selection = window.getSelection();
+              if (selection) {
+                selection.removeAllRanges();
+                selection.addRange(range);
+
+                const successful = document.execCommand('copy');
+                selection.removeAllRanges();
+
+                if (successful) {
+                  console.log('✅ Copied text using Selection API (fallback)');
+                  return true;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     // If we didn't find a matching prose element, fall back to converting markdown
-    console.log("⚠️ Could not find matching prose element, using fallback");
+    console.log('⚠️ Could not find matching prose element, using fallback');
     return await copyFormattedTextToClipboard(messageText);
   } catch (error) {
-    console.error("Failed to copy message from DOM:", error);
+    console.error('Failed to copy message from DOM:', error);
     // Fallback to regular copy
     return await copyFormattedTextToClipboard(messageText);
   }

@@ -8,21 +8,21 @@
  * - Content processing
  */
 
-import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenAI } from '@ai-sdk/openai';
 import {
   streamText,
   CoreMessage,
   wrapLanguageModel,
   extractReasoningMiddleware,
-} from "ai";
+} from 'ai';
 
-import { AILogger, generateRequestId } from "@/lib/ai-middleware";
-import { aiConfig, validateConfig } from "@/lib/ai-config";
-import { tools } from "@/lib/tools/index";
-import { pdfAttachmentStore } from "@/lib/pdf-attachment-store";
-import { z } from "zod";
-import { OllamaModelOptions } from "@/types/ollama";
-import { CHROMADB_DEFAULTS } from "@/constraints/chromadb-constraints";
+import { AILogger, generateRequestId } from '@/lib/ai-middleware';
+import { aiConfig, validateConfig } from '@/lib/ai-config';
+import { tools } from '@/lib/tools/index';
+import { pdfAttachmentStore } from '@/lib/pdf-attachment-store';
+import { z } from 'zod';
+import { OllamaModelOptions } from '@/types/ollama';
+import { CHROMADB_DEFAULTS } from '@/constraints/chromadb-constraints';
 import {
   checkModelSupportsTools,
   ERROR_MESSAGES,
@@ -33,13 +33,13 @@ import {
   DEFAULT_SYSTEM_PROMPTS,
   MAX_CHAT_STEPS,
   DEFAULT_CHAT_STEPS,
-} from "@/constraints/chat-constraints";
+} from '@/constraints/chat-constraints';
 
 // Create configured OpenAI provider instance for Ollama compatibility
 const openai = createOpenAI({
-  baseURL: aiConfig.ollama.baseURL + "/v1",
-  apiKey: "ollama", // Ollama doesn't require a real API key
-  compatibility: "compatible", // Use compatible mode for 3rd party providers
+  baseURL: aiConfig.ollama.baseURL + '/v1',
+  apiKey: 'ollama', // Ollama doesn't require a real API key
+  compatibility: 'compatible', // Use compatible mode for 3rd party providers
 });
 
 // Create a function to get wrapped model with reasoning extraction
@@ -50,7 +50,7 @@ function getModelWithReasoning(modelName: string) {
   return wrapLanguageModel({
     model: baseModel,
     middleware: extractReasoningMiddleware({
-      tagName: "think",
+      tagName: 'think',
       // Set to true if you want the model to start responses with thinking
       startWithReasoning: false,
     }),
@@ -64,15 +64,15 @@ async function generateVectorDBQuery(
   conversationContext?: CoreMessage[]
 ): Promise<string> {
   try {
-    console.log("🔍 Original query:", userQuery);
+    console.log('🔍 Original query:', userQuery);
 
     // Get last user message for context
-    let previousQuery = "";
+    let previousQuery = '';
     if (conversationContext && conversationContext.length > 1) {
       for (let i = conversationContext.length - 2; i >= 0; i--) {
         const msg = conversationContext[i];
-        if (msg.role === "user") {
-          previousQuery = typeof msg.content === "string" ? msg.content : "";
+        if (msg.role === 'user') {
+          previousQuery = typeof msg.content === 'string' ? msg.content : '';
           break;
         }
       }
@@ -81,18 +81,18 @@ async function generateVectorDBQuery(
     const response = await fetch(
       `${aiConfig.ollama.baseURL}/v1/chat/completions`,
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: modelName,
           messages: [
             {
-              role: "system",
+              role: 'system',
               content:
                 "Convert the query into search keywords. If it's a follow-up (like 'and X'), expand it using context. Reply with ONLY the keywords. Never over think the response.",
             },
             {
-              role: "user",
+              role: 'user',
               content: previousQuery
                 ? `Previous: "${previousQuery}"\nCurrent: "${userQuery}"\nKeywords:`
                 : `Query: "${userQuery}"\nKeywords:`,
@@ -115,7 +115,7 @@ async function generateVectorDBQuery(
     const data = await response.json();
 
     console.log(
-      "🧠 LLM response for query optimization:",
+      '🧠 LLM response for query optimization:',
       data.choices?.[0]?.message
     );
     let optimizedQuery =
@@ -123,28 +123,28 @@ async function generateVectorDBQuery(
 
     // Strip out reasoning tags (<think>...</think>) from reasoning models
     optimizedQuery = optimizedQuery
-      .replace(/<think>[\s\S]*?<\/think>/gi, "")
+      .replace(/<think>[\s\S]*?<\/think>/gi, '')
       .trim();
 
     // If after removing reasoning tags the query is empty, fall back to original
     if (!optimizedQuery) {
       console.log(
-        "⚠️ Query was empty after removing reasoning tags, using original query"
+        '⚠️ Query was empty after removing reasoning tags, using original query'
       );
       return userQuery;
     }
 
     // Clean
     optimizedQuery = optimizedQuery
-      .replace(/^["'`]|["'`]$/g, "")
-      .replace(/^\w+:\s*/i, "")
-      .split("\n")[0]
+      .replace(/^["'`]|["'`]$/g, '')
+      .replace(/^\w+:\s*/i, '')
+      .split('\n')[0]
       .trim();
 
-    console.log("✅ Optimized query:", optimizedQuery);
+    console.log('✅ Optimized query:', optimizedQuery);
     return optimizedQuery || userQuery;
   } catch (error) {
-    console.error("❌ Error:", error);
+    console.error('❌ Error:', error);
     return userQuery;
   }
 }
@@ -174,11 +174,11 @@ async function queryActiveCollections(
 
   const queryPromises = collections.map(async (collectionName) => {
     try {
-      const response = await fetch("http://localhost:3000/api/chromadb", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('http://localhost:3000/api/chromadb', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: "query_collection",
+          action: 'query_collection',
           collection: collectionName,
           query_texts: [optimizedQuery],
           n_results: chunksToRetrieve,
@@ -201,7 +201,7 @@ async function queryActiveCollections(
     results.forEach((result) => allResults.push(...result));
     return allResults.slice(0, chunksToRetrieve);
   } catch (error) {
-    console.error("Error querying ChromaDB collections:", error);
+    console.error('Error querying ChromaDB collections:', error);
     return [];
   }
 }
@@ -211,7 +211,7 @@ const RequestSchema = z.object({
   messages: z
     .array(
       z.object({
-        role: z.enum(["user", "assistant", "system", "tool"]),
+        role: z.enum(['user', 'assistant', 'system', 'tool']),
         content: z.union([
           z.string().min(1, ERROR_MESSAGES.MESSAGE_CONTENT_EMPTY),
           z
@@ -267,7 +267,7 @@ export async function POST(req: Request) {
   try {
     const abortController = new AbortController();
 
-    req.signal?.addEventListener("abort", () => {
+    req.signal?.addEventListener('abort', () => {
       console.log(`🚫 Request ${requestId} aborted by client`);
       abortController.abort();
     });
@@ -282,23 +282,23 @@ export async function POST(req: Request) {
         }),
         {
           status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-          headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
+          headers: { 'Content-Type': HTTP_HEADERS.CONTENT_TYPE_JSON },
         }
       );
     }
 
     const requestBody = await req.json();
-    console.log("\n");
-    console.log("---------------💥💥💥💥-------------------");
-    console.log("🔍 Request body received:");
-    console.log("- Messages count:", requestBody.messages?.length || 0);
+    console.log('\n');
+    console.log('---------------💥💥💥💥-------------------');
+    console.log('🔍 Request body received:');
+    console.log('- Messages count:', requestBody.messages?.length || 0);
 
     // Check for attachments in messages
     const hasAttachments = requestBody.messages?.some(
       (m: { experimental_attachments?: unknown[] }) =>
         m.experimental_attachments && m.experimental_attachments.length > 0
     );
-    console.log("- Has attachments:", !!hasAttachments);
+    console.log('- Has attachments:', !!hasAttachments);
 
     const pdfAttachments: Array<{
       name: string;
@@ -325,9 +325,9 @@ export async function POST(req: Request) {
 
             message.experimental_attachments.forEach((attachment) => {
               if (
-                attachment.contentType === "application/pdf" ||
+                attachment.contentType === 'application/pdf' ||
                 (attachment.name &&
-                  attachment.name.toLowerCase().endsWith(".pdf"))
+                  attachment.name.toLowerCase().endsWith('.pdf'))
               ) {
                 // This is a PDF attachment, move it to pdfAttachments
                 pdfAttachments.push(attachment);
@@ -354,19 +354,19 @@ export async function POST(req: Request) {
       );
 
       console.log(
-        "- Non-PDF attachment details:",
+        '- Non-PDF attachment details:',
         allAttachments.map(
           (a: { name: string; contentType: string; url: string }) => ({
             name: a.name,
             contentType: a.contentType,
             urlLength: a.url?.length || 0,
-            urlStart: a.url?.substring(0, 50) + "...",
+            urlStart: a.url?.substring(0, 50) + '...',
           })
         )
       );
 
       console.log(
-        "- PDF attachments found:",
+        '- PDF attachments found:',
         pdfAttachments.map(
           (a: { name: string; contentType: string; url: string }) => ({
             name: a.name,
@@ -384,12 +384,12 @@ export async function POST(req: Request) {
         JSON.stringify({
           error: ERROR_MESSAGES.INVALID_REQUEST_FORMAT,
           details: validationResult.error.issues.map(
-            (issue) => `${issue.path.join(".")}: ${issue.message}`
+            (issue) => `${issue.path.join('.')}: ${issue.message}`
           ),
         }),
         {
           status: HTTP_STATUS.BAD_REQUEST,
-          headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
+          headers: { 'Content-Type': HTTP_HEADERS.CONTENT_TYPE_JSON },
         }
       );
     }
@@ -407,7 +407,7 @@ export async function POST(req: Request) {
 
     // Store PDF attachments globally for tool access (after we have chatId)
     if (pdfAttachments.length > 0) {
-      console.log("📄 Storing PDF attachments globally for tool access...");
+      console.log('📄 Storing PDF attachments globally for tool access...');
       try {
         const storePromises = pdfAttachments.map(async (pdfAttachment) => {
           const attachmentId = await pdfAttachmentStore.storePDFAttachment(
@@ -416,7 +416,7 @@ export async function POST(req: Request) {
           );
           console.log(
             `✅ Stored PDF "${pdfAttachment.name}" with ID: ${attachmentId}${
-              chatId ? ` for chat: ${chatId}` : ""
+              chatId ? ` for chat: ${chatId}` : ''
             }`
           );
           return attachmentId;
@@ -433,7 +433,7 @@ export async function POST(req: Request) {
           `📊 PDF Store Stats: ${stats.count} files, ${stats.totalSizeMB}MB total`
         );
       } catch (error) {
-        console.error("❌ Failed to store PDF attachments globally:", error);
+        console.error('❌ Failed to store PDF attachments globally:', error);
         // Continue processing even if PDF storage fails
       }
     }
@@ -443,7 +443,7 @@ export async function POST(req: Request) {
 
     // console.log("\n-------------------------------------------");
     console.log(
-      "📨 Messages to be sent to AI SDK:",
+      '📨 Messages to be sent to AI SDK:',
       JSON.stringify(cleanedMessages, null, 2)
     );
     // console.log("-------------------------------------------");
@@ -467,7 +467,7 @@ export async function POST(req: Request) {
         }),
         {
           status: HTTP_STATUS.BAD_REQUEST,
-          headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
+          headers: { 'Content-Type': HTTP_HEADERS.CONTENT_TYPE_JSON },
         }
       );
     }
@@ -488,21 +488,21 @@ export async function POST(req: Request) {
     // Add tool instruction if tools are enabled
     if (shouldUseTools) {
       finalSystemPrompt +=
-        "\n\nUse any of the available tools paying attention to what parameters are required. After calling a tool and receiving the result, you MUST provide a clear and direct answer to the user using the information returned by the tool. Do not end the conversation after tool execution - always provide a final response summarizing the results.";
+        '\n\nUse any of the available tools paying attention to what parameters are required. After calling a tool and receiving the result, you MUST provide a clear and direct answer to the user using the information returned by the tool. Do not end the conversation after tool execution - always provide a final response summarizing the results.';
     } else {
       finalSystemPrompt +=
-        "\n\nThe Assistant has NO access to tools of any kind. User should enable Tools icon in the top right of the UI.";
+        '\n\nThe Assistant has NO access to tools of any kind. If tools are required then the User should click the Tools icon in the top right of the UI.';
     }
 
     // Add ChromaDB context if available
     if (activeCollections.length > 0 && cleanedMessages.length > 0) {
       const lastUserMessage = cleanedMessages[cleanedMessages.length - 1];
-      if (lastUserMessage.role === "user") {
+      if (lastUserMessage.role === 'user') {
         try {
           const query =
-            typeof lastUserMessage.content === "string"
+            typeof lastUserMessage.content === 'string'
               ? lastUserMessage.content
-              : "search query";
+              : 'search query';
 
           const relevantDocs = await queryActiveCollections(
             activeCollections,
@@ -511,19 +511,19 @@ export async function POST(req: Request) {
             selectedModel,
             cleanedMessages
           );
-          console.log("🧨 Relevant documents found:", relevantDocs.length);
+          console.log('🧨 Relevant documents found:', relevantDocs.length);
 
           if (relevantDocs.length > 0) {
             const contextPrompt = `\n\nRelevant context from knowledge base:\n${relevantDocs
               .map((doc, i) => `[${i + 1}] ${doc.document || doc.id}`)
               .join(
-                "\n\n"
+                '\n\n'
               )}\n\nAlways use this context to provide a more informed response.`;
 
             finalSystemPrompt += contextPrompt;
           }
         } catch (error) {
-          console.error("Failed to query ChromaDB collections:", error);
+          console.error('Failed to query ChromaDB collections:', error);
           // Continue without context if ChromaDB fails
         }
       }
@@ -535,7 +535,7 @@ export async function POST(req: Request) {
       : pdfAttachmentStore.getAllPDFAttachments();
 
     if (availablePDFs.length > 0) {
-      const pdfNames = availablePDFs.map((pdf) => pdf.name).join(", ");
+      const pdfNames = availablePDFs.map((pdf) => pdf.name).join(', ');
       const pdfInstructions = `\n\nIMPORTANT: PDF Documents Available for Analysis
 You have access to ${availablePDFs.length} PDF document(s)${
         chatId ? ` for this chat session` : ` in the global attachment store`
@@ -547,7 +547,7 @@ These PDFs have been uploaded by the user and are available for analysis through
       console.log(
         `📄 Added PDF attachment instructions for ${
           availablePDFs.length
-        } documents${chatId ? ` (chat: ${chatId})` : ""}: ${pdfNames}`
+        } documents${chatId ? ` (chat: ${chatId})` : ''}: ${pdfNames}`
       );
     }
 
@@ -573,11 +573,11 @@ These PDFs have been uploaded by the user and are available for analysis through
           details:
             connectionError instanceof Error
               ? connectionError.message
-              : "Unknown connection error",
+              : 'Unknown connection error',
         }),
         {
           status: HTTP_STATUS.SERVICE_UNAVAILABLE,
-          headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
+          headers: { 'Content-Type': HTTP_HEADERS.CONTENT_TYPE_JSON },
         }
       );
     }
@@ -590,7 +590,7 @@ These PDFs have been uploaded by the user and are available for analysis through
 
     if (shouldUseTools) {
       const localToolNames = Object.keys(tools);
-      console.log("🛠️  Available local tools:", localToolNames);
+      console.log('🛠️  Available local tools:', localToolNames);
     }
 
     // Create streamText configuration following AI SDK v4 best practices
@@ -614,7 +614,7 @@ These PDFs have been uploaded by the user and are available for analysis through
 
       // Add tools only if supported
       ...(shouldUseTools && { tools }),
-      toolChoice: shouldUseTools ? ("auto" as const) : ("none" as const),
+      toolChoice: shouldUseTools ? ('auto' as const) : ('none' as const),
 
       // Provider-specific options for Ollama
       providerOptions: {
@@ -645,7 +645,7 @@ These PDFs have been uploaded by the user and are available for analysis through
         console.log(`📡 Tool results: ${toolResults?.length || 0}`);
         if (toolCalls && toolCalls.length > 0) {
           console.log(
-            "📡 Tool calls:",
+            '📡 Tool calls:',
             toolCalls.map(
               (tc: { toolName: string; args: Record<string, unknown> }) => ({
                 name: tc.toolName,
@@ -656,7 +656,7 @@ These PDFs have been uploaded by the user and are available for analysis through
         }
         if (toolResults && toolResults.length > 0) {
           console.log(
-            "📡 Tool results:",
+            '📡 Tool results:',
             toolResults.map((tr: { toolName: string; result: unknown }) => ({
               name: tr.toolName,
               resultLength: JSON.stringify(tr.result).length,
@@ -680,10 +680,10 @@ These PDFs have been uploaded by the user and are available for analysis through
           completionTokens: event.usage?.completionTokens,
           totalTokens: event.usage?.totalTokens,
         });
-        console.log("🏁 Request completed:", requestId, event.usage);
+        console.log('🏁 Request completed:', requestId, event.usage);
         if (event.response?.messages) {
           console.log(
-            "🏁 Final response messages:",
+            '🏁 Final response messages:',
             event.response.messages.length
           );
         }
@@ -705,10 +705,10 @@ These PDFs have been uploaded by the user and are available for analysis through
     // Return AI SDK streaming response with clean configuration
     return result.toDataStreamResponse({
       headers: {
-        "Cache-Control": HTTP_HEADERS.CACHE_CONTROL_NO_CACHE,
+        'Cache-Control': HTTP_HEADERS.CACHE_CONTROL_NO_CACHE,
         Connection: HTTP_HEADERS.CONNECTION_KEEP_ALIVE,
-        "X-Request-ID": requestId,
-        "X-Model": selectedModel,
+        'X-Request-ID': requestId,
+        'X-Model': selectedModel,
       },
       // Enable sending reasoning parts in the stream
       sendReasoning: true,
@@ -716,7 +716,7 @@ These PDFs have been uploaded by the user and are available for analysis through
       sendSources: true,
     });
   } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
+    if (error instanceof Error && error.name === 'AbortError') {
       AILogger.finishRequest(
         requestId,
         undefined,
@@ -734,18 +734,18 @@ These PDFs have been uploaded by the user and are available for analysis through
     AILogger.finishRequest(
       requestId,
       undefined,
-      error instanceof Error ? error : new Error("Unknown error")
+      error instanceof Error ? error : new Error('Unknown error')
     );
 
     return new Response(
       JSON.stringify({
         error: ERROR_MESSAGES.CHAT_REQUEST_FAILED,
-        details: error instanceof Error ? error.message : "Unknown error",
+        details: error instanceof Error ? error.message : 'Unknown error',
         requestId,
       }),
       {
         status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        headers: { "Content-Type": HTTP_HEADERS.CONTENT_TYPE_JSON },
+        headers: { 'Content-Type': HTTP_HEADERS.CONTENT_TYPE_JSON },
       }
     );
   }
@@ -786,7 +786,7 @@ const validateModelOptions = (options: OllamaModelOptions) => {
     ) {
       errors.push(VALIDATION_ERROR_MESSAGES.TOP_P_RANGE);
     }
-    const decimalPlaces = (options.top_p.toString().split(".")[1] || "").length;
+    const decimalPlaces = (options.top_p.toString().split('.')[1] || '').length;
     if (decimalPlaces > VALIDATION_LIMITS.TOP_P_MAX_DECIMALS) {
       errors.push(VALIDATION_ERROR_MESSAGES.TOP_P_DECIMALS);
     }
